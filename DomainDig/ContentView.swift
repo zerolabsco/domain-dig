@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct ContentView: View {
     @State private var viewModel = DomainViewModel()
@@ -10,21 +11,15 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     inputSection
                     if viewModel.hasRun {
-                        if viewModel.resultsLoaded {
-                            HStack {
-                                Spacer()
-                                Button {
-                                    shareResults()
-                                } label: {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.system(.body))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .padding(.top, 8)
-                        }
+                        actionButtons
+                        reachabilitySection
+                        redirectChainSection
                         dnsResultsSection
+                        emailSecuritySection
                         sslResultsSection
+                        httpHeadersSection
+                        ipGeolocationSection
+                        portScanSection
                     } else if !viewModel.recentSearches.isEmpty {
                         recentSearchesSection
                     }
@@ -36,6 +31,30 @@ struct ContentView: View {
             .navigationTitle("DomainDig")
             .toolbarColorScheme(.dark, for: .navigationBar)
             .preferredColorScheme(.dark)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if viewModel.hasRun {
+                        Button {
+                            viewModel.reset()
+                        } label: {
+                            Image(systemName: "xmark.circle")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    NavigationLink {
+                        SavedDomainsView(viewModel: viewModel)
+                    } label: {
+                        Image(systemName: "bookmark")
+                            .foregroundStyle(.secondary)
+                    }
+                    NavigationLink {
+                        HistoryView(viewModel: viewModel)
+                    } label: {
+                        Image(systemName: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
         .onAppear {
             domainFieldFocused = true
@@ -70,6 +89,31 @@ struct ContentView: View {
             .disabled(viewModel.trimmedDomain.isEmpty)
         }
         .padding(.vertical, 16)
+    }
+
+    // MARK: - Action Buttons (Share + Bookmark)
+
+    private var actionButtons: some View {
+        HStack {
+            Spacer()
+            if viewModel.resultsLoaded {
+                Button {
+                    viewModel.toggleSavedDomain()
+                } label: {
+                    Image(systemName: viewModel.isCurrentDomainSaved ? "bookmark.fill" : "bookmark")
+                        .font(.system(.body))
+                        .foregroundStyle(viewModel.isCurrentDomainSaved ? .yellow : .secondary)
+                }
+                Button {
+                    shareResults()
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(.body))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.top, 8)
     }
 
     // MARK: - Recent Searches
@@ -108,6 +152,110 @@ struct ContentView: View {
         .padding(.top, 8)
     }
 
+    // MARK: - Reachability
+
+    private var reachabilitySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Reachability")
+
+            if viewModel.reachabilityLoading {
+                ProgressView("Checking ports…")
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else if let error = viewModel.reachabilityError {
+                errorLabel(error)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(viewModel.reachabilityResults) { result in
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(result.reachable ? Color.green : Color.red)
+                                .frame(width: 8, height: 8)
+                            Text("Port \(result.port)")
+                                .font(.system(.caption, design: .monospaced))
+                            if result.reachable, let ms = result.latencyMs {
+                                Text("\(ms)ms")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                            } else if !result.reachable {
+                                Text("—")
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(result.reachable ? "Reachable" : "Unreachable")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(result.reachable ? .green : .red)
+                        }
+                    }
+                }
+                .padding(10)
+                .background(Color(.systemGray6).opacity(0.5))
+                .cornerRadius(6)
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    // MARK: - Redirect Chain
+
+    private var redirectChainSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Redirect Chain")
+
+            if viewModel.redirectChainLoading {
+                ProgressView("Tracing redirects…")
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else if let error = viewModel.redirectChainError {
+                errorLabel(error)
+            } else if viewModel.redirectChain.isEmpty {
+                Text("No redirect data")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(8)
+            } else if viewModel.redirectChain.count == 1,
+                      let only = viewModel.redirectChain.first,
+                      only.isFinal, !(300...399).contains(only.statusCode) {
+                Text("No redirects — direct connection")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemGray6).opacity(0.5))
+                    .cornerRadius(6)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(viewModel.redirectChain) { hop in
+                        HStack(alignment: .top, spacing: 6) {
+                            Text("\(hop.stepNumber)")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 16, alignment: .trailing)
+                            Text("\(hop.statusCode)")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.cyan)
+                                .frame(width: 30, alignment: .leading)
+                            Text(hop.url)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.primary)
+                                .textSelection(.enabled)
+                            if hop.isFinal {
+                                Text("(final)")
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .padding(10)
+                .background(Color(.systemGray6).opacity(0.5))
+                .cornerRadius(6)
+            }
+        }
+        .padding(.top, 16)
+    }
+
     // MARK: - DNS Results
 
     private var dnsResultsSection: some View {
@@ -123,10 +271,40 @@ struct ContentView: View {
             } else {
                 ForEach(viewModel.dnsSections) { section in
                     dnsRecordSection(section)
+                    if section.recordType == .A {
+                        ptrRow
+                    }
                 }
             }
         }
-        .padding(.top, 8)
+        .padding(.top, 16)
+    }
+
+    private var ptrRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("PTR (Reverse DNS)")
+                .font(.system(.subheadline, design: .monospaced))
+                .fontWeight(.semibold)
+                .foregroundStyle(.cyan)
+
+            if viewModel.ptrLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(4)
+            } else if let ptr = viewModel.ptrRecord {
+                Text(ptr)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.primary)
+                    .textSelection(.enabled)
+            } else {
+                Text("No PTR record found")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(6)
     }
 
     private func dnsRecordSection(_ section: DNSSection) -> some View {
@@ -146,7 +324,6 @@ struct ContentView: View {
                 dnsRecordRows(section.records)
             }
 
-            // Wildcard sub-section (only shown when records exist)
             if !section.wildcardRecords.isEmpty {
                 Text("*.\(viewModel.searchedDomain)")
                     .font(.system(.caption, design: .monospaced))
@@ -177,6 +354,66 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Email Security
+
+    @State private var expandedEmailField: String?
+
+    private var emailSecuritySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Email Security")
+
+            if viewModel.emailSecurityLoading {
+                ProgressView("Checking email records…")
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else if let error = viewModel.emailSecurityError {
+                errorLabel(error)
+            } else if let email = viewModel.emailSecurity {
+                VStack(alignment: .leading, spacing: 6) {
+                    emailSecurityRow("SPF", record: email.spf)
+                    emailSecurityRow("DMARC", record: email.dmarc)
+                    emailSecurityRow("DKIM", record: email.dkim)
+                }
+                .padding(10)
+                .background(Color(.systemGray6).opacity(0.5))
+                .cornerRadius(6)
+            }
+        }
+        .padding(.top, 16)
+    }
+
+    private func emailSecurityRow(_ label: String, record: EmailSecurityRecord) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Text(label)
+                    .font(.system(.caption, design: .monospaced))
+                    .fontWeight(.semibold)
+                    .frame(width: 52, alignment: .leading)
+                Text(record.found ? "✓" : "✗")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(record.found ? .green : .red)
+                if let value = record.value {
+                    let isExpanded = expandedEmailField == label
+                    let displayValue = isExpanded ? value : String(value.prefix(80))
+                    Text(displayValue)
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(.primary)
+                        .textSelection(.enabled)
+                        .lineLimit(isExpanded ? nil : 1)
+                        .onTapGesture {
+                            withAnimation {
+                                expandedEmailField = isExpanded ? nil : label
+                            }
+                        }
+                } else {
+                    Text("No record found")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
     // MARK: - SSL Results
 
     private var sslResultsSection: some View {
@@ -201,7 +438,6 @@ struct ContentView: View {
             certRow("Common Name", info.commonName)
             certRow("Issuer", info.issuer)
 
-            // SANs
             VStack(alignment: .leading, spacing: 2) {
                 Text("SANs")
                     .font(.system(.caption2, design: .monospaced))
@@ -233,6 +469,136 @@ struct ContentView: View {
         .padding(10)
         .background(Color(.systemGray6).opacity(0.5))
         .cornerRadius(6)
+    }
+
+    // MARK: - HTTP Headers
+
+    private var httpHeadersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("HTTP Headers")
+
+            if viewModel.httpHeadersLoading {
+                ProgressView("Fetching headers…")
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else if let error = viewModel.httpHeadersError {
+                errorLabel(error)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(viewModel.httpHeaders) { header in
+                        HStack(alignment: .top, spacing: 4) {
+                            Text(header.name + ":")
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(header.isSecurityHeader ? .yellow : .cyan)
+                            Text(header.value)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.primary)
+                                .textSelection(.enabled)
+                        }
+                    }
+                }
+                .padding(10)
+                .background(Color(.systemGray6).opacity(0.5))
+                .cornerRadius(6)
+            }
+        }
+        .padding(.top, 16)
+    }
+
+    // MARK: - IP Geolocation
+
+    private var ipGeolocationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("IP Location")
+
+            if viewModel.ipGeolocationLoading {
+                ProgressView("Looking up location…")
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else if let geo = viewModel.ipGeolocation {
+                ipGeolocationDetail(geo)
+            } else if let error = viewModel.ipGeolocationError {
+                if error == "No A record available" {
+                    Text("No location data available")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .padding(8)
+                } else {
+                    errorLabel(error)
+                }
+            }
+        }
+        .padding(.top, 16)
+    }
+
+    private func ipGeolocationDetail(_ geo: IPGeolocation) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            certRow("IP", geo.ip)
+            if let org = geo.org {
+                certRow("Org / ISP", org)
+            }
+            let location = [geo.city, geo.region, geo.country_name].compactMap { $0 }.joined(separator: ", ")
+            if !location.isEmpty {
+                certRow("Location", location)
+            }
+            if let lat = geo.latitude, let lon = geo.longitude {
+                let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                Map(initialPosition: .region(MKCoordinateRegion(
+                    center: coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 1)
+                ))) {
+                    Marker(geo.ip, coordinate: coordinate)
+                }
+                .mapStyle(.standard)
+                .frame(height: 180)
+                .cornerRadius(8)
+            }
+        }
+        .padding(10)
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(6)
+    }
+
+    // MARK: - Port Scan
+
+    private var portScanSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Open Ports")
+
+            if viewModel.portScanLoading {
+                ProgressView("Scanning ports…")
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else if let error = viewModel.portScanError {
+                errorLabel(error)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(viewModel.portScanResults) { result in
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(result.open ? Color.green : Color(.systemGray4))
+                                .frame(width: 8, height: 8)
+                            Text("\(result.port)")
+                                .font(.system(.caption, design: .monospaced))
+                                .frame(width: 44, alignment: .leading)
+                            Text(result.service)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(result.open ? .primary : .secondary)
+                            Spacer()
+                            if result.open {
+                                Text("Open")
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                    }
+                }
+                .padding(10)
+                .background(Color(.systemGray6).opacity(0.5))
+                .cornerRadius(6)
+            }
+        }
+        .padding(.top, 16)
     }
 
     // MARK: - Helpers
@@ -269,8 +635,6 @@ struct ContentView: View {
 
     private func shareResults() {
         let text = viewModel.exportText()
-
-        // Write to a named temp file so "Save to Files" uses a proper filename
         let dateFmt = DateFormatter()
         dateFmt.dateFormat = "yyyyMMdd_HHmmss"
         let timestamp = dateFmt.string(from: Date())
@@ -295,7 +659,7 @@ struct ContentView: View {
     }
 }
 
-private extension DateFormatter {
+extension DateFormatter {
     static let certDate: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium

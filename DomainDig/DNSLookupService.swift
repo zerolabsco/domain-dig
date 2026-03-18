@@ -35,15 +35,16 @@ struct DNSLookupService {
             }
     }
 
-    /// Record types that support wildcard queries.
-    private nonisolated(unsafe) static let wildcardTypes: Set<DNSRecordType> = [.A, .AAAA, .MX, .TXT]
-
     static func lookupAll(domain: String) async -> [DNSSection] {
         // Each task returns (recordType, apex records, wildcard records).
         typealias Result = (type: DNSRecordType, records: [DNSRecord], wildcard: [DNSRecord], error: String?)
 
+        // Record types that support wildcard queries
+        let wildcardTypes: Set<DNSRecordType> = [.A, .AAAA, .MX, .TXT]
+
         return await withTaskGroup(of: Result.self, returning: [DNSSection].self) { group in
             for recordType in DNSRecordType.allCases {
+                let shouldQueryWildcard = wildcardTypes.contains(recordType)
                 group.addTask {
                     var apexRecords: [DNSRecord] = []
                     var wildcardRecords: [DNSRecord] = []
@@ -57,7 +58,7 @@ struct DNSLookupService {
                     }
 
                     // Wildcard query (only for applicable types, and only if apex didn't fail)
-                    if wildcardTypes.contains(recordType) && lookupError == nil {
+                    if shouldQueryWildcard && lookupError == nil {
                         do {
                             wildcardRecords = try await lookup(domain: "*.\(domain)", recordType: recordType)
                         } catch {
