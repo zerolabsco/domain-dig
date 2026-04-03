@@ -15,6 +15,8 @@ final class DomainViewModel {
     var sslInfo: SSLCertificateInfo?
     var sslLoading = false
     var sslError: String?
+    var hstsPreloaded: Bool?
+    var hstsLoading = false
 
     // HTTP Headers
     var httpHeaders: [HTTPHeader] = []
@@ -115,7 +117,8 @@ final class DomainViewModel {
             emailSecurity: emailSecurity,
             ptrRecord: ptrRecord,
             redirectChain: redirectChain,
-            portScanResults: portScanResults
+            portScanResults: portScanResults,
+            hstsPreloaded: hstsPreloaded
         )
         history.insert(entry, at: 0)
         if history.count > Self.maxHistory {
@@ -145,7 +148,7 @@ final class DomainViewModel {
 
     /// True when all lookups have finished (regardless of success/failure).
     var resultsLoaded: Bool {
-        hasRun && !dnsLoading && !sslLoading && !httpHeadersLoading && !reachabilityLoading
+        hasRun && !dnsLoading && !sslLoading && !hstsLoading && !httpHeadersLoading && !reachabilityLoading
             && !ipGeolocationLoading && !emailSecurityLoading && !ptrLoading
             && !redirectChainLoading && !portScanLoading
     }
@@ -161,6 +164,8 @@ final class DomainViewModel {
         sslInfo = nil
         sslError = nil
         sslLoading = false
+        hstsPreloaded = nil
+        hstsLoading = false
         httpHeaders = []
         httpHeadersError = nil
         httpHeadersLoading = false
@@ -201,6 +206,8 @@ final class DomainViewModel {
         sslInfo = nil
         sslError = nil
         sslLoading = true
+        hstsPreloaded = nil
+        hstsLoading = true
         httpHeaders = []
         httpHeadersError = nil
         httpHeadersLoading = true
@@ -245,6 +252,9 @@ final class DomainViewModel {
                     await self.runSSL(domain: target)
                 }
                 group.addTask { @MainActor in
+                    await self.runHSTSPreload(domain: target)
+                }
+                group.addTask { @MainActor in
                     await self.runHTTPHeaders(domain: target)
                 }
                 group.addTask { @MainActor in
@@ -280,6 +290,11 @@ final class DomainViewModel {
             sslError = error.localizedDescription
         }
         sslLoading = false
+    }
+
+    private func runHSTSPreload(domain: String) async {
+        hstsPreloaded = await SSLCheckService.checkHSTSPreload(domain: domain)
+        hstsLoading = false
     }
 
     private func runHTTPHeaders(domain: String) async {
@@ -363,6 +378,7 @@ final class DomainViewModel {
             dnsSections: dnsSections,
             sslInfo: sslInfo,
             sslError: sslError,
+            hstsPreloaded: hstsPreloaded,
             httpHeaders: httpHeaders,
             httpHeadersError: httpHeadersError,
             reachabilityResults: reachabilityResults,
@@ -381,6 +397,7 @@ final class DomainViewModel {
         dnsSections: [DNSSection],
         sslInfo: SSLCertificateInfo?,
         sslError: String? = nil,
+        hstsPreloaded: Bool? = nil,
         httpHeaders: [HTTPHeader],
         httpHeadersError: String? = nil,
         reachabilityResults: [PortReachability],
@@ -484,6 +501,22 @@ final class DomainViewModel {
             lines.append("Valid Until: \(certDateFmt.string(from: info.validUntil))")
             lines.append("Days Until Expiry: \(info.daysUntilExpiry)")
             lines.append("Chain Depth: \(info.chainDepth)")
+            if let tlsVersion = info.tlsVersion {
+                lines.append("TLS Version: \(tlsVersion)")
+            }
+            if let cipherSuite = info.cipherSuite {
+                lines.append("Cipher Suite: \(cipherSuite)")
+            }
+            if let hstsPreloaded {
+                lines.append("HSTS Preload: \(hstsPreloaded ? "Preloaded" : "Not preloaded")")
+            }
+            if !info.chain.isEmpty {
+                lines.append("Certificate Chain:")
+                for certificate in info.chain {
+                    lines.append("  Subject: \(certificate.subject)")
+                    lines.append("  Issuer: \(certificate.issuer)")
+                }
+            }
         } else if let error = sslError {
             lines.append("")
             lines.append("SSL / TLS Certificate")

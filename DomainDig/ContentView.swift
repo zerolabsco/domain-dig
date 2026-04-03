@@ -433,13 +433,13 @@ struct ContentView: View {
             } else if let error = viewModel.sslError {
                 errorLabel(error)
             } else if let info = viewModel.sslInfo {
-                sslDetail(info)
+                sslDetail(info, domain: viewModel.searchedDomain)
             }
         }
         .padding(.top, 16)
     }
 
-    private func sslDetail(_ info: SSLCertificateInfo) -> some View {
+    private func sslDetail(_ info: SSLCertificateInfo, domain: String) -> some View {
         horizontallyScrollableCard(spacing: 8) {
             certRow("Common Name", info.commonName)
             certRow("Issuer", info.issuer)
@@ -471,6 +471,41 @@ struct ContentView: View {
             }
 
             certRow("Chain Depth", "\(info.chainDepth)")
+            if viewModel.hstsLoading {
+                hstsLoadingRow
+            } else if let hstsPreloaded = viewModel.hstsPreloaded {
+                hstsStatusRow(hstsPreloaded)
+            }
+            if let tlsVersion = info.tlsVersion {
+                certRow("TLS Version", tlsVersion)
+            }
+            if let cipherSuite = info.cipherSuite {
+                certRow("Cipher Suite", cipherSuite)
+            }
+            if !info.chain.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Certificate Chain")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    ForEach(Array(info.chain.enumerated()), id: \.offset) { index, certificate in
+                        DisclosureGroup {
+                            Text(certificate.issuer)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        } label: {
+                            Text(certificate.subject)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.primary)
+                                .textSelection(.enabled)
+                        }
+                        .tint(index == 0 ? .cyan : .secondary)
+                    }
+                }
+            }
+            Link("View on crt.sh →", destination: URL(string: "https://crt.sh/?q=\(domain)")!)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(.cyan)
         }
     }
 
@@ -625,6 +660,29 @@ struct ContentView: View {
             Text(value)
                 .font(.system(.caption, design: .monospaced))
                 .textSelection(.enabled)
+        }
+    }
+
+    private var hstsLoadingRow: some View {
+        HStack {
+            Text("HSTS Preload")
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(.secondary)
+            Spacer()
+            ProgressView()
+                .controlSize(.small)
+        }
+    }
+
+    private func hstsStatusRow(_ isPreloaded: Bool) -> some View {
+        HStack {
+            Text("HSTS Preload")
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(isPreloaded ? "Preloaded" : "Not preloaded")
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(isPreloaded ? .green : .secondary)
         }
     }
 

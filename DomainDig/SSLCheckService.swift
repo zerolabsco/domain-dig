@@ -22,10 +22,32 @@ struct SSLCheckService {
             throw SSLError.noCertificate
         }
 
-        return try extractCertificateInfo(from: trust)
+        return try extractCertificateInfo(from: trust, metadata: delegate.tlsMetadata)
     }
 
-    private static func extractCertificateInfo(from trust: SecTrust) throws -> SSLCertificateInfo {
+    static func checkHSTSPreload(domain: String) async -> Bool? {
+        var components = URLComponents(string: "https://hstspreload.org/api/v2/status")
+        components?.queryItems = [
+            URLQueryItem(name: "domain", value: domain)
+        ]
+
+        guard let url = components?.url else {
+            return nil
+        }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(HSTSPreloadResponse.self, from: data)
+            return response.status == "preloaded"
+        } catch {
+            return nil
+        }
+    }
+
+    private static func extractCertificateInfo(
+        from trust: SecTrust,
+        metadata: TLSMetadata?
+    ) throws -> SSLCertificateInfo {
         let chainCount = SecTrustGetCertificateCount(trust)
         guard chainCount > 0,
               let certChain = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
@@ -69,6 +91,15 @@ struct SSLCheckService {
             }
         }
 
+        let chain = certChain.map { certificate in
+            let subject = SecCertificateCopySubjectSummary(certificate) as String? ?? "Unknown"
+            let parsedCertificate = DERCertificateParser.parse(SecCertificateCopyData(certificate) as Data)
+            return SSLCertificateInfo.CertChainEntry(
+                subject: subject,
+                issuer: parsedCertificate.issuerCommonName ?? "Unknown"
+            )
+        }
+
         return SSLCertificateInfo(
             commonName: commonName,
             subjectAltNames: sans,
@@ -76,9 +107,21 @@ struct SSLCheckService {
             validFrom: validFrom,
             validUntil: validUntil,
             daysUntilExpiry: daysUntilExpiry,
-            chainDepth: Int(chainCount)
+            chainDepth: Int(chainCount),
+            tlsVersion: metadata?.tlsVersion,
+            cipherSuite: metadata?.cipherSuite,
+            chain: chain
         )
     }
+}
+
+fileprivate struct TLSMetadata {
+    let tlsVersion: String?
+    let cipherSuite: String?
+}
+
+private struct HSTSPreloadResponse: Decodable {
+    let status: String
 }
 
 // MARK: - Minimal DER/ASN.1 parser for X.509 certificate fields
@@ -294,11 +337,18 @@ enum SSLError: LocalizedError {
 final class SSLSessionDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
     private let lock = NSLock()
     private var _serverTrust: SecTrust?
+    private var _tlsMetadata: TLSMetadata?
 
     var serverTrust: SecTrust? {
         lock.lock()
         defer { lock.unlock() }
         return _serverTrust
+    }
+
+    fileprivate var tlsMetadata: TLSMetadata? {
+        lock.lock()
+        defer { lock.unlock() }
+        return _tlsMetadata
     }
 
     func urlSession(
@@ -318,5 +368,68 @@ final class SSLSessionDelegate: NSObject, URLSessionDelegate, @unchecked Sendabl
 
         let credential = URLCredential(trust: trust)
         completionHandler(.useCredential, credential)
+    }
+}
+
+extension SSLSessionDelegate: URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didFinishCollecting metrics: URLSessionTaskMetrics
+    ) {
+        guard let transaction = metrics.transactionMetrics.last else {
+            return
+        }
+
+        let tlsVersion = transaction.negotiatedTLSProtocolVersion.map {
+            Self.describeTLSVersion($0)
+        }
+        let cipherSuite = transaction.negotiatedTLSCipherSuite.map {
+            Self.describeCipherSuite($0)
+        }
+
+        lock.lock()
+        _tlsMetadata = TLSMetadata(tlsVersion: tlsVersion, cipherSuite: cipherSuite)
+        lock.unlock()
+    }
+
+    private static func describeTLSVersion(_ version: tls_protocol_version_t) -> String {
+        switch version.rawValue {
+        case 0x0301:
+            return "TLS 1.0"
+        case 0x0302:
+            return "TLS 1.1"
+        case 0x0303:
+            return "TLS 1.2"
+        case 0x0304:
+            return "TLS 1.3"
+        default:
+            return String(describing: version)
+        }
+    }
+
+    private static func describeCipherSuite(_ suite: tls_ciphersuite_t) -> String {
+        switch suite.rawValue {
+        case 0x1301:
+            return "TLS_AES_128_GCM_SHA256"
+        case 0x1302:
+            return "TLS_AES_256_GCM_SHA384"
+        case 0x1303:
+            return "TLS_CHACHA20_POLY1305_SHA256"
+        case 0xC02F:
+            return "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        case 0xC030:
+            return "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        case 0xC02B:
+            return "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        case 0xC02C:
+            return "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+        case 0xCCA8:
+            return "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+        case 0xCCA9:
+            return "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"
+        default:
+            return String(format: "0x%04X", suite.rawValue)
+        }
     }
 }

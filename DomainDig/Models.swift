@@ -57,6 +57,11 @@ struct DNSSection: Identifiable, Codable {
 // MARK: - SSL Models
 
 struct SSLCertificateInfo: Codable {
+    struct CertChainEntry: Codable {
+        let subject: String
+        let issuer: String
+    }
+
     let commonName: String
     let subjectAltNames: [String]
     let issuer: String
@@ -64,6 +69,47 @@ struct SSLCertificateInfo: Codable {
     let validUntil: Date
     let daysUntilExpiry: Int
     let chainDepth: Int
+    let tlsVersion: String?
+    let cipherSuite: String?
+    let chain: [CertChainEntry]
+
+    init(
+        commonName: String,
+        subjectAltNames: [String],
+        issuer: String,
+        validFrom: Date,
+        validUntil: Date,
+        daysUntilExpiry: Int,
+        chainDepth: Int,
+        tlsVersion: String? = nil,
+        cipherSuite: String? = nil,
+        chain: [CertChainEntry] = []
+    ) {
+        self.commonName = commonName
+        self.subjectAltNames = subjectAltNames
+        self.issuer = issuer
+        self.validFrom = validFrom
+        self.validUntil = validUntil
+        self.daysUntilExpiry = daysUntilExpiry
+        self.chainDepth = chainDepth
+        self.tlsVersion = tlsVersion
+        self.cipherSuite = cipherSuite
+        self.chain = chain
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        commonName = try container.decode(String.self, forKey: .commonName)
+        subjectAltNames = try container.decode([String].self, forKey: .subjectAltNames)
+        issuer = try container.decode(String.self, forKey: .issuer)
+        validFrom = try container.decode(Date.self, forKey: .validFrom)
+        validUntil = try container.decode(Date.self, forKey: .validUntil)
+        daysUntilExpiry = try container.decode(Int.self, forKey: .daysUntilExpiry)
+        chainDepth = try container.decode(Int.self, forKey: .chainDepth)
+        tlsVersion = try container.decodeIfPresent(String.self, forKey: .tlsVersion)
+        cipherSuite = try container.decodeIfPresent(String.self, forKey: .cipherSuite)
+        chain = try container.decodeIfPresent([CertChainEntry].self, forKey: .chain) ?? []
+    }
 }
 
 // MARK: - HTTP Headers Models
@@ -154,12 +200,14 @@ struct HistoryEntry: Identifiable, Codable {
     var ptrRecord: String?
     var redirectChain: [RedirectHop]
     var portScanResults: [PortScanResult]
+    var hstsPreloaded: Bool?
 
     init(domain: String, timestamp: Date, dnsSections: [DNSSection],
          sslInfo: SSLCertificateInfo?, httpHeaders: [HTTPHeader],
          reachabilityResults: [PortReachability], ipGeolocation: IPGeolocation?,
          emailSecurity: EmailSecurityResult? = nil, ptrRecord: String? = nil,
-         redirectChain: [RedirectHop] = [], portScanResults: [PortScanResult] = []) {
+         redirectChain: [RedirectHop] = [], portScanResults: [PortScanResult] = [],
+         hstsPreloaded: Bool? = nil) {
         self.domain = domain
         self.timestamp = timestamp
         self.dnsSections = dnsSections
@@ -171,6 +219,7 @@ struct HistoryEntry: Identifiable, Codable {
         self.ptrRecord = ptrRecord
         self.redirectChain = redirectChain
         self.portScanResults = portScanResults
+        self.hstsPreloaded = hstsPreloaded
     }
 
     init(from decoder: Decoder) throws {
@@ -187,6 +236,7 @@ struct HistoryEntry: Identifiable, Codable {
         ptrRecord = try container.decodeIfPresent(String.self, forKey: .ptrRecord)
         redirectChain = try container.decodeIfPresent([RedirectHop].self, forKey: .redirectChain) ?? []
         portScanResults = try container.decodeIfPresent([PortScanResult].self, forKey: .portScanResults) ?? []
+        hstsPreloaded = try container.decodeIfPresent(Bool.self, forKey: .hstsPreloaded)
     }
 }
 
