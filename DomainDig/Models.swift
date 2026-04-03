@@ -228,6 +228,23 @@ struct PortScanResult: Identifiable, Codable {
     let port: UInt16
     let service: String
     let open: Bool
+    var banner: String?
+
+    nonisolated init(port: UInt16, service: String, open: Bool, banner: String? = nil) {
+        self.port = port
+        self.service = service
+        self.open = open
+        self.banner = banner
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        port = try container.decode(UInt16.self, forKey: .port)
+        service = try container.decode(String.self, forKey: .service)
+        open = try container.decode(Bool.self, forKey: .open)
+        banner = try container.decodeIfPresent(String.self, forKey: .banner)
+    }
 }
 
 // MARK: - History Models
@@ -292,6 +309,7 @@ struct HistoryEntry: Identifiable, Codable {
 
 struct CloudflareDNSResponse: Decodable {
     let Status: Int
+    let AD: Bool?
     let Answer: [CloudflareDNSAnswer]?
 
     struct CloudflareDNSAnswer: Decodable {

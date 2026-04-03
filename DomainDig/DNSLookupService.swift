@@ -58,6 +58,7 @@ enum DNSResolverOption: String, CaseIterable, Identifiable {
 
 struct DNSLookupService {
     private static let rrsigQueryType = 46
+    private static let dnskeyQueryType = 48
     private static let internetClass = 1
 
     static func lookup(domain: String, recordType: DNSRecordType) async throws -> [DNSRecord] {
@@ -73,13 +74,13 @@ struct DNSLookupService {
         recordType: DNSRecordType,
         resolverURLString: String
     ) async throws -> [DNSRecord] {
-        let answers = try await lookupAnswers(
+        let response = try await lookupResponse(
             domain: domain,
             queryType: recordType.queryType,
             resolverURLString: resolverURLString
         )
 
-        return answers
+        return response.answers
             .filter { $0.type == recordType.queryType }
             .map { answer in
                 let value: String
@@ -103,6 +104,10 @@ struct DNSLookupService {
 
         let wildcardTypes: Set<DNSRecordType> = [.A, .AAAA, .MX, .TXT, .SRV, .CAA]
         let resolverURLString = currentResolverURLString()
+        let dnssecSigned = try? await lookupDNSSECStatus(
+            domain: domain,
+            resolverURLString: resolverURLString
+        )
 
         return await withTaskGroup(of: Result.self, returning: [DNSSection].self) { group in
             for recordType in DNSRecordType.allCases {
@@ -110,17 +115,12 @@ struct DNSLookupService {
                 group.addTask {
                     var apexRecords: [DNSRecord] = []
                     var wildcardRecords: [DNSRecord] = []
-                    var dnssecSigned: Bool?
                     var lookupError: String?
 
                     do {
                         apexRecords = try await lookup(
                             domain: domain,
                             recordType: recordType,
-                            resolverURLString: resolverURLString
-                        )
-                        dnssecSigned = try await lookupDNSSECStatus(
-                            domain: domain,
                             resolverURLString: resolverURLString
                         )
                     } catch {
@@ -161,17 +161,21 @@ struct DNSLookupService {
         }
     }
 
-    private static func lookupAnswers(
+    private static func lookupResponse(
         domain: String,
         queryType: Int,
-        resolverURLString: String
-    ) async throws -> [CloudflareDNSResponse.CloudflareDNSAnswer] {
+        resolverURLString: String,
+        includeDNSSECData: Bool = false
+    ) async throws -> DNSLookupResponse {
         let resolverURL = try validatedResolverURL(from: resolverURLString)
         var components = URLComponents(url: resolverURL, resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "name", value: domain),
             URLQueryItem(name: "type", value: String(queryType))
         ]
+        if includeDNSSECData {
+            components.queryItems?.append(URLQueryItem(name: "do", value: "1"))
+        }
 
         var request = URLRequest(url: components.url!)
         request.setValue("application/dns-json", forHTTPHeaderField: "Accept")
@@ -180,28 +184,38 @@ struct DNSLookupService {
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
-            return try await lookupAnswersViaRFC8484(
+            return try await lookupResponseViaRFC8484(
                 domain: domain,
                 queryType: queryType,
-                resolverURL: resolverURL
+                resolverURL: resolverURL,
+                includeDNSSECData: includeDNSSECData
             )
         }
 
         let dnsResponse = try JSONDecoder().decode(CloudflareDNSResponse.self, from: data)
 
-        return dnsResponse.Answer ?? []
+        return DNSLookupResponse(
+            answers: dnsResponse.Answer ?? [],
+            authenticatedData: dnsResponse.AD ?? false
+        )
     }
 
     private static func lookupDNSSECStatus(
         domain: String,
         resolverURLString: String
     ) async throws -> Bool {
-        let answers = try await lookupAnswers(
+        // Query SOA with the DNSSEC OK bit set. The resolver validates the full
+        // DNSSEC chain and reflects the result in the AD (Authenticated Data) bit
+        // of the response flags. This is more reliable than querying DNSKEY directly,
+        // because resolvers don't always set AD on DNSKEY queries and many zones
+        // don't return DNSKEY records via DoH JSON.
+        let response = try await lookupResponse(
             domain: domain,
-            queryType: rrsigQueryType,
-            resolverURLString: resolverURLString
+            queryType: 6, // SOA
+            resolverURLString: resolverURLString,
+            includeDNSSECData: true
         )
-        return answers.contains(where: { $0.type == rrsigQueryType })
+        return response.authenticatedData
     }
 
     private static func currentResolverURLString() -> String {
@@ -216,12 +230,17 @@ struct DNSLookupService {
         return url
     }
 
-    private static func lookupAnswersViaRFC8484(
+    private static func lookupResponseViaRFC8484(
         domain: String,
         queryType: Int,
-        resolverURL: URL
-    ) async throws -> [CloudflareDNSResponse.CloudflareDNSAnswer] {
-        let queryData = try buildDNSQueryMessage(domain: domain, queryType: queryType)
+        resolverURL: URL,
+        includeDNSSECData: Bool
+    ) async throws -> DNSLookupResponse {
+        let queryData = try buildDNSQueryMessage(
+            domain: domain,
+            queryType: queryType,
+            dnssecOK: includeDNSSECData
+        )
         let encodedQuery = base64URLEncodedString(for: queryData)
 
         var components = URLComponents(url: resolverURL, resolvingAgainstBaseURL: false)!
@@ -240,7 +259,7 @@ struct DNSLookupService {
         return try parseDNSMessage(data)
     }
 
-    private static func buildDNSQueryMessage(domain: String, queryType: Int) throws -> Data {
+    private static func buildDNSQueryMessage(domain: String, queryType: Int, dnssecOK: Bool = false) throws -> Data {
         let normalizedName = domain.trimmingCharacters(in: .whitespacesAndNewlines)
         let labels = normalizedName.split(separator: ".")
 
@@ -250,7 +269,7 @@ struct DNSLookupService {
         data.appendUInt16(1)
         data.appendUInt16(0)
         data.appendUInt16(0)
-        data.appendUInt16(0)
+        data.appendUInt16(dnssecOK ? 1 : 0)
 
         for label in labels {
             guard let labelData = label.data(using: .utf8),
@@ -265,6 +284,18 @@ struct DNSLookupService {
         data.appendUInt16(UInt16(queryType))
         data.appendUInt16(UInt16(internetClass))
 
+        if dnssecOK {
+            data.appendUInt16(0)
+            data.appendUInt16(1)
+            data.appendUInt16(0)
+            data.appendUInt16(0)
+            data.appendUInt16(11)
+            data.appendUInt16(10)
+            data.appendUInt16(8_192)
+            data.appendUInt16(32_768)
+            data.appendUInt16(0)
+        }
+
         return data
     }
 
@@ -275,11 +306,12 @@ struct DNSLookupService {
             .replacingOccurrences(of: "=", with: "")
     }
 
-    private static func parseDNSMessage(_ data: Data) throws -> [CloudflareDNSResponse.CloudflareDNSAnswer] {
+    private static func parseDNSMessage(_ data: Data) throws -> DNSLookupResponse {
         guard data.count >= 12 else {
             throw URLError(.cannotParseResponse)
         }
 
+        let flags = readUInt16(in: data, at: 2)
         let answerCount = Int(readUInt16(in: data, at: 6))
         let questionCount = Int(readUInt16(in: data, at: 4))
         var offset = 12
@@ -324,7 +356,10 @@ struct DNSLookupService {
             ))
         }
 
-        return answers
+        return DNSLookupResponse(
+            answers: answers,
+            authenticatedData: (flags & 0x0020) != 0
+        )
     }
 
     private static func parseRecordData(
@@ -482,6 +517,11 @@ struct DNSLookupService {
         let fourth = UInt32(data[offset + 3])
         return first | second | third | fourth
     }
+}
+
+private struct DNSLookupResponse {
+    let answers: [CloudflareDNSResponse.CloudflareDNSAnswer]
+    let authenticatedData: Bool
 }
 
 private extension Data {

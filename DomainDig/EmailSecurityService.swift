@@ -9,9 +9,10 @@ struct EmailSecurityService {
     /// Analyze email security records. SPF is parsed from existing TXT records;
     /// DMARC and DKIM require additional DoH queries.
     static func analyze(domain: String, txtRecords: [DNSRecord]) async -> EmailSecurityResult {
-        // SPF: extract from existing TXT records
-        let spfRecord = txtRecords.first(where: { $0.value.lowercased().hasPrefix("v=spf1") })
-        let spf = EmailSecurityRecord(found: spfRecord != nil, value: spfRecord?.value)
+        // SPF: prefer the already-fetched apex TXT records, but fall back to a direct lookup
+        // in case the earlier DNS section missed or normalized the record differently.
+        let localSPFRecord = txtRecords.first(where: { isMatchingTXTRecord($0.value, prefix: "v=spf1") })?.value
+        async let remoteSPFRecord = queryMatchingTXT(subdomain: domain, prefix: "v=spf1")
 
         // DMARC, DKIM, BIMI, and MTA-STS queries in parallel.
         async let dmarcResult = queryTXT(subdomain: "_dmarc.\(domain)")
@@ -26,6 +27,13 @@ struct EmailSecurityService {
         let dkimValue = await dkimResult
         let bimiValue = await bimiResult
         let mtaSts = await mtaStsResult
+        let fetchedSPFRecord = await remoteSPFRecord
+        let spfValue = localSPFRecord ?? fetchedSPFRecord
+
+        let spf = EmailSecurityRecord(
+            found: spfValue != nil,
+            value: spfValue
+        )
 
         let dmarc = EmailSecurityRecord(
             found: dmarcValue != nil,
@@ -63,7 +71,7 @@ struct EmailSecurityService {
     private static func queryMatchingTXT(subdomain: String, prefix: String) async -> String? {
         do {
             let records = try await DNSLookupService.lookup(domain: subdomain, recordType: .TXT)
-            return records.first(where: { $0.value.hasPrefix(prefix) })?.value
+            return records.first(where: { isMatchingTXTRecord($0.value, prefix: prefix) })?.value
         } catch {
             return nil
         }
@@ -130,5 +138,13 @@ struct EmailSecurityService {
         }
 
         return nil
+    }
+
+    private static func isMatchingTXTRecord(_ value: String, prefix: String) -> Bool {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+            .lowercased()
+            .hasPrefix(prefix.lowercased())
     }
 }

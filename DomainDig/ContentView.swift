@@ -4,6 +4,8 @@ import MapKit
 struct ContentView: View {
     @State private var viewModel = DomainViewModel()
     @FocusState private var domainFieldFocused: Bool
+    @State private var customPortInput = ""
+    @State private var customPortsExpanded = false
 
     var body: some View {
         NavigationStack {
@@ -490,11 +492,10 @@ struct ContentView: View {
             certRow("Valid From", formatter.string(from: info.validFrom))
             certRow("Valid Until", formatter.string(from: info.validUntil))
 
-            HStack {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Days Until Expiry")
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(.secondary)
-                Spacer()
                 Text("\(info.daysUntilExpiry)")
                     .font(.system(.caption, design: .monospaced))
                     .fontWeight(.bold)
@@ -674,26 +675,51 @@ struct ContentView: View {
             } else if let error = viewModel.portScanError {
                 errorLabel(error)
             } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(viewModel.portScanResults) { result in
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(result.open ? Color.green : Color(.systemGray4))
-                                .frame(width: 8, height: 8)
-                            Text("\(result.port)")
+                VStack(alignment: .leading, spacing: 12) {
+                    if viewModel.isCloudflareProxied {
+                        Text("Domain is behind Cloudflare's proxy. Results reflect what CF's edge exposes, not the origin. CF only proxies ports: 80, 443, 2052–2053, 2082–2083, 2086–2087, 2095–2096, 8080, 8443, 8880.")
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.orange)
+                            .padding(8)
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+                    portScanResultsCard(viewModel.portScanResults)
+
+                    DisclosureGroup("Custom Ports", isExpanded: $customPortsExpanded) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            TextField("8888, 9000, 27017", text: $customPortInput)
                                 .font(.system(.caption, design: .monospaced))
-                                .frame(width: 44, alignment: .leading)
-                            Text(result.service)
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(result.open ? .primary : .secondary)
-                            Spacer()
-                            if result.open {
-                                Text("Open")
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundStyle(.green)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .keyboardType(.numberPad)
+                                .padding(10)
+                                .background(Color(.systemGray6).opacity(0.5))
+                                .cornerRadius(6)
+
+                            Button("Scan") {
+                                let ports = parsedCustomPorts(from: customPortInput)
+                                Task {
+                                    await viewModel.runCustomPortScan(ports: ports)
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.blue)
+                            .disabled(viewModel.customPortScanLoading)
+
+                            if viewModel.customPortScanLoading {
+                                ProgressView("Scanning custom ports…")
+                                    .font(.system(.caption, design: .monospaced))
+                            } else if let error = viewModel.customPortScanError {
+                                errorLabel(error)
+                            } else if !viewModel.customPortResults.isEmpty {
+                                portScanResultsCard(viewModel.customPortResults)
                             }
                         }
+                        .padding(.top, 8)
                     }
+                    .font(.system(.caption, design: .monospaced))
+                    .tint(.secondary)
                 }
                 .padding(10)
                 .background(Color(.systemGray6).opacity(0.5))
@@ -727,22 +753,20 @@ struct ContentView: View {
     }
 
     private var hstsLoadingRow: some View {
-        HStack {
+        VStack(alignment: .leading, spacing: 2) {
             Text("HSTS Preload")
                 .font(.system(.caption2, design: .monospaced))
                 .foregroundStyle(.secondary)
-            Spacer()
             ProgressView()
                 .controlSize(.small)
         }
     }
 
     private func hstsStatusRow(_ isPreloaded: Bool) -> some View {
-        HStack {
+        VStack(alignment: .leading, spacing: 2) {
             Text("HSTS Preload")
                 .font(.system(.caption2, design: .monospaced))
                 .foregroundStyle(.secondary)
-            Spacer()
             Text(isPreloaded ? "Preloaded" : "Not preloaded")
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(isPreloaded ? .green : .secondary)
@@ -780,6 +804,60 @@ struct ContentView: View {
             .font(.system(.caption, design: .monospaced))
             .foregroundStyle(.red)
             .padding(8)
+    }
+
+    private func portScanResultsCard(_ results: [PortScanResult]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(results) { result in
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(result.open ? Color.green : Color(.systemGray4))
+                            .frame(width: 8, height: 8)
+                        Text("\(result.port)")
+                            .font(.system(.caption, design: .monospaced))
+                            .lineLimit(1)
+                            .frame(width: 52, alignment: .leading)
+                        Text(result.service)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(result.open ? .primary : .secondary)
+                        Spacer()
+                        if result.open {
+                            Text("Open")
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(.green)
+                        }
+                    }
+
+                    if let banner = result.banner {
+                        Text(banner)
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .padding(.leading, 16)
+                    }
+                }
+            }
+        }
+    }
+
+    private func parsedCustomPorts(from input: String) -> [UInt16] {
+        let parts = input.split(separator: ",", omittingEmptySubsequences: true)
+        var seen = Set<UInt16>()
+        var ports: [UInt16] = []
+
+        for part in parts {
+            let trimmed = part.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let value = UInt16(trimmed), seen.insert(value).inserted else {
+                continue
+            }
+            ports.append(value)
+            if ports.count == 20 {
+                break
+            }
+        }
+
+        return ports
     }
 
     private var httpStatusSummaryParts: [(text: String, color: Color)] {

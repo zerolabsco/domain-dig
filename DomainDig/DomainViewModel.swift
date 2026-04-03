@@ -57,6 +57,9 @@ final class DomainViewModel {
     var portScanResults: [PortScanResult] = []
     var portScanLoading = false
     var portScanError: String?
+    var customPortResults: [PortScanResult] = []
+    var customPortScanLoading = false
+    var customPortScanError: String?
 
     var hasRun = false
     private(set) var searchedDomain: String = ""
@@ -159,6 +162,13 @@ final class DomainViewModel {
             && !redirectChainLoading && !portScanLoading
     }
 
+    /// True when response headers indicate the domain is behind Cloudflare's proxy.
+    /// Cloudflare injects cf-ray on all proxied (orange-cloud) responses. Grey-cloud
+    /// (DNS-only) domains won't have this header because traffic doesn't pass through CF's edge.
+    var isCloudflareProxied: Bool {
+        httpHeaders.contains { $0.name.lowercased() == "cf-ray" }
+    }
+
     // MARK: - Reset
 
     func reset() {
@@ -198,6 +208,9 @@ final class DomainViewModel {
         portScanResults = []
         portScanError = nil
         portScanLoading = false
+        customPortResults = []
+        customPortScanError = nil
+        customPortScanLoading = false
     }
 
     // MARK: - Run
@@ -245,6 +258,9 @@ final class DomainViewModel {
         portScanResults = []
         portScanError = nil
         portScanLoading = true
+        customPortResults = []
+        customPortScanError = nil
+        customPortScanLoading = false
 
         Task {
             await withTaskGroup(of: Void.self) { group in
@@ -386,8 +402,55 @@ final class DomainViewModel {
 
     private func runPortScan(domain: String) async {
         let results = await PortScanService.scanAll(domain: domain)
-        portScanResults = results
+        let enrichedResults = await enrichOpenPortBanners(in: results, domain: domain)
+        portScanResults = enrichedResults
         portScanLoading = false
+    }
+
+    func runCustomPortScan(ports: [UInt16]) async {
+        guard !searchedDomain.isEmpty else {
+            customPortScanError = "Run a domain lookup first"
+            return
+        }
+
+        guard !ports.isEmpty else {
+            customPortScanError = "Enter at least one valid port"
+            customPortResults = []
+            return
+        }
+
+        customPortScanLoading = true
+        customPortScanError = nil
+        customPortResults = []
+
+        let results = await PortScanService.scanPorts(domain: searchedDomain, ports: ports, timeout: 3.0)
+        customPortResults = results
+        customPortScanLoading = false
+    }
+
+    private func enrichOpenPortBanners(in results: [PortScanResult], domain: String) async -> [PortScanResult] {
+        let banners = await withTaskGroup(of: (UInt16, String?).self, returning: [UInt16: String].self) { group in
+            for result in results where result.open {
+                group.addTask {
+                    let banner = await PortScanService.grabBanner(host: domain, port: result.port)
+                    return (result.port, banner)
+                }
+            }
+
+            var collected: [UInt16: String] = [:]
+            for await (port, banner) in group {
+                if let banner {
+                    collected[port] = banner
+                }
+            }
+            return collected
+        }
+
+        return results.map { result in
+            var updated = result
+            updated.banner = banners[result.port]
+            return updated
+        }
     }
 
     // MARK: - Export
@@ -629,7 +692,8 @@ final class DomainViewModel {
                 lines.append("  No open ports detected")
             } else {
                 for port in openPorts {
-                    lines.append("  \(port.port)  \(port.service)")
+                    let bannerSuffix = port.banner.map { "  \($0)" } ?? ""
+                    lines.append("  \(port.port)  \(port.service)\(bannerSuffix)")
                 }
             }
             let closedPorts = portScanResults.filter { !$0.open }
