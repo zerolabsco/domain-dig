@@ -1,5 +1,8 @@
 # domain-dig
 
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
+
 Domain Dig is a minimal iOS to perform DNS lookups.
 
 ## Features
