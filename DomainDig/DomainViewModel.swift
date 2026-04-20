@@ -163,6 +163,7 @@ extension HistoryEntry {
 @Observable
 final class DomainViewModel {
     var domain: String = ""
+    var bulkInput: String = ""
 
     var dnsSections: [DNSSection] = []
     var dnsLoading = false
@@ -221,6 +222,12 @@ final class DomainViewModel {
     private(set) var currentChangeSummary: DomainChangeSummary?
     private(set) var refreshingTrackedDomainID: UUID?
     private(set) var rerunNavigationToken = UUID()
+    private(set) var batchResults: [BatchLookupResult] = []
+    private(set) var batchLookupSource: BatchLookupSource = .manual
+    private(set) var batchCurrentDomain: String?
+    private(set) var batchCompletedCount = 0
+    private(set) var batchTotalCount = 0
+    private(set) var batchLookupRunning = false
 
     private var lookupTask: Task<Void, Never>?
     private var customPortScanTask: Task<Void, Never>?
@@ -239,7 +246,7 @@ final class DomainViewModel {
     var trackedDomains: [TrackedDomain] = DomainViewModel.loadTrackedDomains()
 
     private static let historyKey = "lookupHistory"
-    private static let maxHistory = 50
+    private static let maxHistory = 250
     var history: [HistoryEntry] = {
         guard let data = UserDefaults.standard.data(forKey: historyKey),
               let entries = try? JSONDecoder().decode([HistoryEntry].self, from: data) else {
@@ -247,6 +254,13 @@ final class DomainViewModel {
         }
         return entries
     }()
+    var historySearchText = ""
+    var historyDateFilter: HistoryDateFilter = .all
+    var historyChangeFilter: ChangeFilterOption = .all
+    var historySortOption: HistorySortOption = .newest
+    var watchlistSearchText = ""
+    var watchlistFilter: WatchlistFilterOption = .all
+    var watchlistSortOption: WatchlistSortOption = .pinned
 
     var trimmedDomain: String {
         domain
@@ -282,14 +296,73 @@ final class DomainViewModel {
     }
 
     var sortedTrackedDomains: [TrackedDomain] {
-        trackedDomains.sorted {
-            if $0.isPinned != $1.isPinned {
-                return $0.isPinned && !$1.isPinned
+        sortedTrackedDomains(from: trackedDomains, using: .pinned)
+    }
+
+    var filteredHistory: [HistoryEntry] {
+        let calendar = Calendar.current
+        let now = Date()
+        let query = historySearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return history
+            .lazy
+            .filter { entry in
+                query.isEmpty || entry.domain.localizedCaseInsensitiveContains(query)
             }
-            if $0.updatedAt != $1.updatedAt {
-                return $0.updatedAt > $1.updatedAt
+            .filter { entry in
+                switch self.historyDateFilter {
+                case .today:
+                    return calendar.isDate(entry.timestamp, inSameDayAs: now)
+                case .last7Days:
+                    guard let startDate = calendar.date(byAdding: .day, value: -7, to: now) else { return true }
+                    return entry.timestamp >= startDate
+                case .all:
+                    return true
+                }
             }
-            return $0.domain.localizedCaseInsensitiveCompare($1.domain) == .orderedAscending
+            .filter { entry in
+                switch self.historyChangeFilter {
+                case .all:
+                    return true
+                case .changed:
+                    return entry.changeSummary?.hasChanges == true
+                case .unchanged:
+                    return entry.changeSummary?.hasChanges != true
+                }
+            }
+            .sorted(by: historySortPredicate)
+    }
+
+    var filteredTrackedDomains: [TrackedDomain] {
+        let query = watchlistSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let filtered = trackedDomains.filter { trackedDomain in
+            if !query.isEmpty, !trackedDomain.domain.localizedCaseInsensitiveContains(query) {
+                return false
+            }
+
+            switch watchlistFilter {
+            case .all:
+                return true
+            case .pinnedOnly:
+                return trackedDomain.isPinned
+            case .changedOnly:
+                return trackedDomain.lastChangeSummary?.hasChanges == true
+            }
+        }
+
+        return sortedTrackedDomains(from: filtered, using: watchlistSortOption)
+    }
+
+    var batchProgressLabel: String {
+        guard batchTotalCount > 0 else { return "No active batch" }
+        let domainLabel = batchCurrentDomain ?? "Preparing"
+        return "\(batchCompletedCount + (batchLookupRunning ? 1 : 0))/\(batchTotalCount) • \(domainLabel)"
+    }
+
+    var currentBatchResultEntries: [HistoryEntry] {
+        batchResults.compactMap { result in
+            guard let historyEntryID = result.historyEntryID else { return nil }
+            return history.first(where: { $0.id == historyEntryID })
         }
     }
 
@@ -303,13 +376,11 @@ final class DomainViewModel {
     }
 
     var trackingLimitMessage: String? {
-        guard currentTrackedDomain == nil else { return nil }
-        guard !PremiumAccessService.canAddTrackedDomain(currentCount: trackedDomains.count) else { return nil }
-        return "Free version supports up to 3 tracked domains. More tracked domains will be available in a future Pro upgrade."
+        nil
     }
 
     var canTrackCurrentDomain: Bool {
-        currentTrackedDomain != nil || PremiumAccessService.canAddTrackedDomain(currentCount: trackedDomains.count)
+        true
     }
 
     var resolverDisplayName: String {
@@ -528,6 +599,11 @@ final class DomainViewModel {
         persistHistory()
     }
 
+    func removeHistoryEntries(withIDs ids: [UUID]) {
+        history.removeAll { ids.contains($0.id) }
+        persistHistory()
+    }
+
     func clearHistory() {
         history.removeAll()
         persistHistory()
@@ -554,32 +630,77 @@ final class DomainViewModel {
         currentDiffSections = []
         currentChangeSummary = nil
         refreshingTrackedDomainID = nil
+        clearBatchState()
         clearLookupState()
     }
 
     func run() {
         let target = trimmedDomain
         guard !target.isEmpty else { return }
+        clearBatchState()
+        let lookupID = beginLookup(for: target)
+
+        lookupTask = Task { [weak self] in
+            guard let self else { return }
+            _ = await self.performLookup(domain: target, lookupID: lookupID)
+        }
+    }
+
+    func runBulkLookup() {
+        let domains = parsedDomains(from: bulkInput)
+        guard !domains.isEmpty else { return }
+
+        clearBatchState()
+        batchLookupSource = .manual
+        batchTotalCount = domains.count
+        batchLookupRunning = true
+        batchResults = domains.map {
+            BatchLookupResult(
+                domain: $0,
+                historyEntryID: nil,
+                availability: nil,
+                primaryIP: nil,
+                quickStatus: "Pending",
+                timestamp: Date(),
+                status: .pending
+            )
+        }
 
         lookupTask?.cancel()
         customPortScanTask?.cancel()
 
-        let lookupID = UUID()
-        activeLookupID = lookupID
-        lookupStartedAt = Date()
-        lastLookupDurationMs = nil
-        addRecentSearch(target)
-        searchedDomain = target
-        hasRun = true
-        currentDiffSections = []
-        currentChangeSummary = nil
-        clearLookupState()
-        setAllLoadingStates(true)
-        customPortScanLoading = false
+        lookupTask = Task { [weak self] in
+            guard let self else { return }
+            await self.runBatchLookup(domains: domains, source: .manual)
+        }
+    }
+
+    func refreshAllTrackedDomains() {
+        let domains = sortedTrackedDomains.map(\.domain)
+        guard !domains.isEmpty else { return }
+
+        clearBatchState()
+        batchLookupSource = .watchlistRefresh
+        batchTotalCount = domains.count
+        batchLookupRunning = true
+        batchResults = domains.map {
+            BatchLookupResult(
+                domain: $0,
+                historyEntryID: nil,
+                availability: nil,
+                primaryIP: nil,
+                quickStatus: "Pending",
+                timestamp: Date(),
+                status: .pending
+            )
+        }
+
+        lookupTask?.cancel()
+        customPortScanTask?.cancel()
 
         lookupTask = Task { [weak self] in
             guard let self else { return }
-            await self.performLookup(domain: target, lookupID: lookupID)
+            await self.runBatchLookup(domains: domains, source: .watchlistRefresh)
         }
     }
 
@@ -620,19 +741,75 @@ final class DomainViewModel {
         )
     }
 
-    private func performLookup(domain: String, lookupID: UUID) async {
+    func exportCSV() -> String {
+        Self.formatCSV(from: [currentSnapshot])
+    }
+
+    func exportBatchText() -> String {
+        Self.formatBatchExportText(
+            title: batchLookupSource == .watchlistRefresh ? "Tracked Domains Export" : "Batch Results Export",
+            entries: currentBatchResultEntries.map { entry in
+                (
+                    snapshot: entry.snapshot,
+                    trackedDomain: trackedDomains.first(where: { tracked in
+                        tracked.id == entry.trackedDomainID ||
+                        tracked.domain.caseInsensitiveCompare(entry.domain) == .orderedSame
+                    }),
+                    changeSummary: entry.changeSummary,
+                    diffSections: comparisonSnapshot(for: entry).map { DomainDiffService.diff(from: $0, to: entry.snapshot) } ?? []
+                )
+            }
+        )
+    }
+
+    func exportBatchCSV() -> String {
+        Self.formatCSV(from: currentBatchResultEntries.map(\.snapshot))
+    }
+
+    func exportTrackedDomainsCSV(domains: [TrackedDomain]) -> String {
+        Self.formatCSV(from: exportSnapshots(for: domains))
+    }
+
+    func exportTrackedDomainsText(domains: [TrackedDomain]) -> String {
+        let latestEntries = latestSnapshots(for: domains)
+        return Self.formatBatchExportText(
+            title: "Tracked Domains Export",
+            entries: domains.map { trackedDomain in
+                if let entry = latestEntries.first(where: { $0.trackedDomainID == trackedDomain.id || $0.domain.caseInsensitiveCompare(trackedDomain.domain) == .orderedSame }) {
+                    return (
+                        snapshot: entry.snapshot,
+                        trackedDomain: trackedDomain,
+                        changeSummary: entry.changeSummary,
+                        diffSections: comparisonSnapshot(for: entry).map { DomainDiffService.diff(from: $0, to: entry.snapshot) } ?? []
+                    )
+                }
+
+                return (
+                    snapshot: placeholderSnapshot(for: trackedDomain),
+                    trackedDomain: trackedDomain,
+                    changeSummary: trackedDomain.lastChangeSummary,
+                    diffSections: []
+                )
+            }
+        )
+    }
+
+    private func performLookup(domain: String, lookupID: UUID) async -> HistoryEntry? {
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.runDNS(domain: domain, lookupID: lookupID) }
             group.addTask { await self.runAvailability(domain: domain, lookupID: lookupID) }
             group.addTask { await self.runSSL(domain: domain, lookupID: lookupID) }
             group.addTask { await self.runHSTSPreload(domain: domain, lookupID: lookupID) }
+        }
+
+        await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.runHTTPHeaders(domain: domain, lookupID: lookupID) }
             group.addTask { await self.runReachability(domain: domain, lookupID: lookupID) }
             group.addTask { await self.runRedirectChain(domain: domain, lookupID: lookupID) }
             group.addTask { await self.runPortScan(domain: domain, lookupID: lookupID) }
         }
 
-        guard !Task.isCancelled, isCurrentLookup(lookupID) else { return }
+        guard !Task.isCancelled, isCurrentLookup(lookupID) else { return nil }
 
         let txtRecords = dnsSections.first(where: { $0.recordType == .TXT })?.records ?? []
         let primaryIP = primaryIPAddress(from: dnsSections)
@@ -647,7 +824,7 @@ final class DomainViewModel {
             }
         }
 
-        guard !Task.isCancelled, isCurrentLookup(lookupID) else { return }
+        guard !Task.isCancelled, isCurrentLookup(lookupID) else { return nil }
 
         if availabilityResult?.status == .registered {
             await runSuggestions(domain: domain, lookupID: lookupID)
@@ -656,10 +833,11 @@ final class DomainViewModel {
             suggestionsLoading = false
         }
 
-        guard !Task.isCancelled, isCurrentLookup(lookupID) else { return }
+        guard !Task.isCancelled, isCurrentLookup(lookupID) else { return nil }
         lastLookupDurationMs = lookupStartedAt.map { Int(Date().timeIntervalSince($0) * 1000) }
-        saveHistoryEntry(replaceLatest: false)
+        let entry = saveHistoryEntry(replaceLatest: false)
         refreshingTrackedDomainID = nil
+        return entry
     }
 
     private func runDNS(domain: String, lookupID: UUID) async {
@@ -868,7 +1046,7 @@ final class DomainViewModel {
         case let .success(results):
             customPortResults = results
             customPortScanError = nil
-            saveHistoryEntry(replaceLatest: true)
+            _ = saveHistoryEntry(replaceLatest: true)
         case let .empty(message):
             customPortResults = []
             customPortScanError = message
@@ -904,8 +1082,9 @@ final class DomainViewModel {
         }
     }
 
-    private func saveHistoryEntry(replaceLatest: Bool) {
-        guard !searchedDomain.isEmpty else { return }
+    @discardableResult
+    private func saveHistoryEntry(replaceLatest: Bool) -> HistoryEntry? {
+        guard !searchedDomain.isEmpty else { return nil }
 
         let trackedDomainID = trackedDomain(for: searchedDomain)?.id
         let timestamp = Date()
@@ -969,6 +1148,7 @@ final class DomainViewModel {
             changeSummary: changeSummary
         )
         persistHistory()
+        return entry
     }
 
     private func persistHistory() {
@@ -1027,7 +1207,13 @@ final class DomainViewModel {
     }
 
     private func normalizedDomain(_ domain: String) -> String {
-        domain.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        domain
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "https://", with: "")
+            .replacingOccurrences(of: "http://", with: "")
+            .components(separatedBy: "/")
+            .first?
+            .lowercased() ?? ""
     }
 
     private func linkTrackedDomainHistory(for domain: String) {
@@ -1062,6 +1248,110 @@ final class DomainViewModel {
             recentSearches = Array(recentSearches.prefix(Self.maxRecent))
         }
         UserDefaults.standard.set(recentSearches, forKey: Self.recentSearchesKey)
+    }
+
+    private func beginLookup(for target: String, cancelExistingTask: Bool = true) -> UUID {
+        if cancelExistingTask {
+            lookupTask?.cancel()
+        }
+        customPortScanTask?.cancel()
+
+        let lookupID = UUID()
+        activeLookupID = lookupID
+        lookupStartedAt = Date()
+        lastLookupDurationMs = nil
+        addRecentSearch(target)
+        searchedDomain = target
+        hasRun = true
+        currentDiffSections = []
+        currentChangeSummary = nil
+        clearLookupState()
+        setAllLoadingStates(true)
+        customPortScanLoading = false
+        return lookupID
+    }
+
+    private func clearBatchState() {
+        batchResults = []
+        batchLookupSource = .manual
+        batchCurrentDomain = nil
+        batchCompletedCount = 0
+        batchTotalCount = 0
+        batchLookupRunning = false
+    }
+
+    private func parsedDomains(from input: String) -> [String] {
+        let separators = CharacterSet(charactersIn: ",\n")
+        var seen = Set<String>()
+
+        return input
+            .components(separatedBy: separators)
+            .map(normalizedDomain)
+            .filter { !$0.isEmpty }
+            .filter { seen.insert($0).inserted }
+    }
+
+    private func runBatchLookup(domains: [String], source: BatchLookupSource) async {
+        for (index, domain) in domains.enumerated() {
+            guard !Task.isCancelled else { break }
+
+            batchCurrentDomain = domain
+            if source == .watchlistRefresh {
+                refreshingTrackedDomainID = trackedDomain(for: domain)?.id
+            }
+            updateBatchResult(domain: domain, status: .running, quickStatus: "Running", entry: nil, errorMessage: nil)
+
+            let lookupID = beginLookup(for: domain, cancelExistingTask: false)
+            let entry = await performLookup(domain: domain, lookupID: lookupID)
+
+            if let entry {
+                updateBatchResult(
+                    domain: domain,
+                    status: .completed,
+                    quickStatus: entry.changeSummary?.hasChanges == true ? "Changed" : "Unchanged",
+                    entry: entry,
+                    errorMessage: nil
+                )
+            } else {
+                updateBatchResult(
+                    domain: domain,
+                    status: .failed,
+                    quickStatus: "Failed",
+                    entry: nil,
+                    errorMessage: "Lookup cancelled"
+                )
+            }
+
+            batchCompletedCount = index + 1
+        }
+
+        batchLookupRunning = false
+        batchCurrentDomain = nil
+        refreshingTrackedDomainID = nil
+    }
+
+    private func updateBatchResult(
+        domain: String,
+        status: BatchLookupStatus,
+        quickStatus: String,
+        entry: HistoryEntry?,
+        errorMessage: String?
+    ) {
+        guard let index = batchResults.firstIndex(where: { $0.domain.caseInsensitiveCompare(domain) == .orderedSame }) else {
+            return
+        }
+
+        batchResults[index] = BatchLookupResult(
+            id: batchResults[index].id,
+            domain: domain,
+            historyEntryID: entry?.id,
+            availability: entry?.availabilityResult?.status,
+            primaryIP: entry?.primaryIP,
+            quickStatus: quickStatus,
+            timestamp: entry?.timestamp ?? Date(),
+            status: status,
+            errorMessage: errorMessage
+        )
     }
 
     private func clearLookupState() {
@@ -1139,6 +1429,12 @@ final class DomainViewModel {
             .map { $0 }
     }
 
+    func latestSnapshots(for domains: [TrackedDomain]) -> [HistoryEntry] {
+        domains.compactMap { trackedDomain in
+            recentSnapshots(for: trackedDomain, limit: 1).first
+        }
+    }
+
     func diffSectionsForLatestSnapshots(of trackedDomain: TrackedDomain) -> [DomainDiffSection] {
         let snapshots = recentSnapshots(for: trackedDomain, limit: 2)
         guard snapshots.count == 2 else { return [] }
@@ -1159,6 +1455,62 @@ final class DomainViewModel {
         .sorted { $0.timestamp > $1.timestamp }
 
         return siblings.first?.snapshot
+    }
+
+    func historyEntry(for batchResult: BatchLookupResult) -> HistoryEntry? {
+        guard let historyEntryID = batchResult.historyEntryID else { return nil }
+        return history.first(where: { $0.id == historyEntryID })
+    }
+
+    private func exportSnapshots(for domains: [TrackedDomain]) -> [LookupSnapshot] {
+        let latestEntries = latestSnapshots(for: domains)
+
+        return domains.map { trackedDomain in
+            if let entry = latestEntries.first(where: { $0.trackedDomainID == trackedDomain.id || $0.domain.caseInsensitiveCompare(trackedDomain.domain) == .orderedSame }) {
+                return entry.snapshot
+            }
+            return placeholderSnapshot(for: trackedDomain)
+        }
+    }
+
+    private func placeholderSnapshot(for trackedDomain: TrackedDomain) -> LookupSnapshot {
+        LookupSnapshot(
+            historyEntryID: trackedDomain.lastSnapshotID,
+            domain: trackedDomain.domain,
+            timestamp: trackedDomain.updatedAt,
+            trackedDomainID: trackedDomain.id,
+            resolverDisplayName: resolverDisplayName,
+            resolverURLString: resolverURLString,
+            totalLookupDurationMs: nil,
+            dnsSections: [],
+            dnsError: nil,
+            availabilityResult: DomainAvailabilityResult(domain: trackedDomain.domain, status: trackedDomain.lastKnownAvailability ?? .unknown),
+            suggestions: [],
+            sslInfo: nil,
+            sslError: nil,
+            hstsPreloaded: nil,
+            httpHeaders: [],
+            httpSecurityGrade: nil,
+            httpStatusCode: nil,
+            httpResponseTimeMs: nil,
+            httpProtocol: nil,
+            http3Advertised: false,
+            httpHeadersError: nil,
+            reachabilityResults: [],
+            reachabilityError: nil,
+            ipGeolocation: nil,
+            ipGeolocationError: nil,
+            emailSecurity: nil,
+            emailSecurityError: nil,
+            ptrRecord: nil,
+            ptrError: nil,
+            redirectChain: [],
+            redirectChainError: nil,
+            portScanResults: [],
+            portScanError: nil,
+            changeSummary: trackedDomain.lastChangeSummary,
+            isLive: false
+        )
     }
 
     private static func loadTrackedDomains() -> [TrackedDomain] {
@@ -1193,6 +1545,47 @@ final class DomainViewModel {
         return domains.filter { domain in
             let key = domain.domain.lowercased()
             return seen.insert(key).inserted
+        }
+    }
+
+    private func historySortPredicate(lhs: HistoryEntry, rhs: HistoryEntry) -> Bool {
+        switch historySortOption {
+        case .newest:
+            return lhs.timestamp > rhs.timestamp
+        case .oldest:
+            return lhs.timestamp < rhs.timestamp
+        case .domain:
+            let domainOrder = lhs.domain.localizedCaseInsensitiveCompare(rhs.domain)
+            if domainOrder != .orderedSame {
+                return domainOrder == .orderedAscending
+            }
+            return lhs.timestamp > rhs.timestamp
+        }
+    }
+
+    private func sortedTrackedDomains(from domains: [TrackedDomain], using sortOption: WatchlistSortOption) -> [TrackedDomain] {
+        domains.sorted { lhs, rhs in
+            switch sortOption {
+            case .pinned:
+                if lhs.isPinned != rhs.isPinned {
+                    return lhs.isPinned && !rhs.isPinned
+                }
+                if lhs.updatedAt != rhs.updatedAt {
+                    return lhs.updatedAt > rhs.updatedAt
+                }
+                return lhs.domain.localizedCaseInsensitiveCompare(rhs.domain) == .orderedAscending
+            case .recentlyUpdated:
+                if lhs.updatedAt != rhs.updatedAt {
+                    return lhs.updatedAt > rhs.updatedAt
+                }
+                return lhs.domain.localizedCaseInsensitiveCompare(rhs.domain) == .orderedAscending
+            case .alphabetical:
+                let domainOrder = lhs.domain.localizedCaseInsensitiveCompare(rhs.domain)
+                if domainOrder != .orderedSame {
+                    return domainOrder == .orderedAscending
+                }
+                return lhs.updatedAt > rhs.updatedAt
+            }
         }
     }
 
@@ -1369,6 +1762,64 @@ final class DomainViewModel {
             }
     }
 
+    static func formatBatchExportText(
+        title: String,
+        entries: [(snapshot: LookupSnapshot, trackedDomain: TrackedDomain?, changeSummary: DomainChangeSummary?, diffSections: [DomainDiffSection])]
+    ) -> String {
+        guard !entries.isEmpty else {
+            return "\(title)\nNo results available."
+        }
+
+        var lines = [title, String(repeating: "=", count: title.count), ""]
+        for (index, entry) in entries.enumerated() {
+            if index > 0 {
+                lines.append("")
+                lines.append(String(repeating: "=", count: 48))
+                lines.append("")
+            }
+
+            lines.append(
+                formatExportText(
+                    from: entry.snapshot,
+                    trackedDomain: entry.trackedDomain,
+                    changeSummary: entry.changeSummary,
+                    diffSections: entry.diffSections
+                )
+            )
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    static func formatCSV(from snapshots: [LookupSnapshot]) -> String {
+        let headers = [
+            "domain",
+            "availability",
+            "primary_ip",
+            "redirect_target",
+            "tls_status",
+            "http_status_grade",
+            "email_security_summary",
+            "last_updated"
+        ]
+
+        let rows = snapshots.map { snapshot in
+            [
+                snapshot.domain,
+                availabilityLabel(snapshot.availabilityResult?.status),
+                primaryIPAddress(from: snapshot) ?? "",
+                finalRedirectTarget(from: snapshot) ?? "",
+                httpsSummary(from: snapshot),
+                httpStatusGradeSummary(from: snapshot),
+                emailSummary(from: snapshot),
+                csvDateFormatter.string(from: snapshot.timestamp)
+            ]
+        }
+
+        return ([headers] + rows)
+            .map { row in row.map(csvEscaped).joined(separator: ",") }
+            .joined(separator: "\n")
+    }
+
     static func formatExportText(
         from snapshot: LookupSnapshot,
         trackedDomain: TrackedDomain?,
@@ -1404,8 +1855,9 @@ final class DomainViewModel {
                 lines.append("  \(item.label): \(item.value)")
             }
             if let changeSummary {
-                lines.append("  Change Status: \(changeSummary.hasChanges ? "Changed" : "Unchanged")")
+                lines.append("  Change Summary: \(changeSummary.hasChanges ? "Changed" : "Unchanged")")
                 lines.append("  Changed Sections: \(changeSummary.changedSections.isEmpty ? "None" : changeSummary.changedSections.joined(separator: ", "))")
+                lines.append("  Compared At: \(exportDateFormatter.string(from: changeSummary.generatedAt))")
             }
         }
 
@@ -1429,7 +1881,7 @@ final class DomainViewModel {
                 for section in diffSections where section.items.contains(where: { $0.changeType != .unchanged }) {
                     lines.append("  \(section.title)")
                     for item in section.items where item.changeType != .unchanged {
-                        lines.append("    \(item.label): \(item.oldValue ?? "None") -> \(item.newValue ?? "None")")
+                        lines.append("    [\(item.changeType.rawValue.capitalized)] \(item.label): \(item.oldValue ?? "None") -> \(item.newValue ?? "None")")
                     }
                 }
             }
@@ -1596,6 +2048,14 @@ final class DomainViewModel {
         snapshot.redirectChain.last?.url
     }
 
+    private static func httpStatusGradeSummary(from snapshot: LookupSnapshot) -> String {
+        let parts = [snapshot.httpStatusCode.map(String.init), snapshot.httpSecurityGrade].compactMap { $0 }
+        if !parts.isEmpty {
+            return parts.joined(separator: " / ")
+        }
+        return snapshot.httpHeadersError ?? "Unavailable"
+    }
+
     private static func httpsSummary(from snapshot: LookupSnapshot) -> String {
         if snapshot.sslInfo != nil {
             return "Valid"
@@ -1665,6 +2125,17 @@ final class DomainViewModel {
         formatter.timeStyle = .short
         return formatter
     }()
+
+    private static let csvDateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    private static func csvEscaped(_ value: String) -> String {
+        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
+        return "\"\(escaped)\""
+    }
 }
 
 private extension String {

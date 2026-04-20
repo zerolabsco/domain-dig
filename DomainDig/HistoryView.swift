@@ -14,13 +14,13 @@ struct HistoryView: View {
 
     var body: some View {
         List {
-            if viewModel.history.isEmpty {
+            if viewModel.filteredHistory.isEmpty {
                 Text("No lookup history")
                     .font(.system(.callout, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .listRowBackground(Color(.systemGray6).opacity(0.5))
             } else {
-                ForEach(viewModel.history) { entry in
+                ForEach(viewModel.filteredHistory) { entry in
                     NavigationLink {
                         HistoryDetailView(viewModel: viewModel, entry: entry)
                     } label: {
@@ -28,6 +28,11 @@ struct HistoryView: View {
                             Text(entry.domain)
                                 .font(.system(.callout, design: .monospaced))
                                 .foregroundStyle(.primary)
+                            if let summary = entry.changeSummary {
+                                Text(summary.hasChanges ? "Changed" : "Unchanged")
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(summary.hasChanges ? .yellow : .green)
+                            }
                             HStack(spacing: 8) {
                                 Text(dateFormatter.string(from: entry.timestamp))
                                 Text("Snapshot")
@@ -42,23 +47,40 @@ struct HistoryView: View {
                     }
                     .listRowBackground(Color(.systemGray6).opacity(0.5))
                 }
-                .onDelete { offsets in
-                    viewModel.removeHistoryEntries(at: offsets)
-                }
+                .onDelete(perform: deleteFilteredHistoryEntries)
             }
         }
         .scrollContentBackground(.hidden)
         .background(Color.black)
         .navigationTitle("History")
+        .searchable(text: $viewModel.historySearchText, prompt: "Search domains")
         .toolbar {
             if !viewModel.history.isEmpty {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Menu {
+                        Picker("Date Range", selection: $viewModel.historyDateFilter) {
+                            ForEach(HistoryDateFilter.allCases) { option in
+                                Text(option.title).tag(option)
+                            }
+                        }
+
+                        Picker("Change Filter", selection: $viewModel.historyChangeFilter) {
+                            ForEach(ChangeFilterOption.allCases) { option in
+                                Text(option.title).tag(option)
+                            }
+                        }
+
+                        Picker("Sort", selection: $viewModel.historySortOption) {
+                            ForEach(HistorySortOption.allCases) { option in
+                                Text(option.title).tag(option)
+                            }
+                        }
+
                         Button("Clear All", role: .destructive) {
                             showClearAllConfirmation = true
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: "line.3.horizontal.decrease.circle")
                     }
 
                     EditButton()
@@ -77,6 +99,11 @@ struct HistoryView: View {
             dismiss()
         }
         .preferredColorScheme(.dark)
+    }
+
+    private func deleteFilteredHistoryEntries(at offsets: IndexSet) {
+        let ids = offsets.map { viewModel.filteredHistory[$0].id }
+        viewModel.removeHistoryEntries(withIDs: ids)
     }
 }
 

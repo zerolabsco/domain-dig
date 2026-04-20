@@ -13,12 +13,20 @@ struct DomainDiffItem: Identifiable, Equatable {
     let changeType: DiffChangeType
     let oldValue: String?
     let newValue: String?
+
+    var hasChanges: Bool {
+        changeType != .unchanged
+    }
 }
 
 struct DomainDiffSection: Identifiable, Equatable {
     let id = UUID()
     let title: String
     let items: [DomainDiffItem]
+
+    var hasChanges: Bool {
+        items.contains(where: \.hasChanges)
+    }
 }
 
 enum DomainDiffService {
@@ -105,13 +113,15 @@ enum DomainDiffService {
     private static func compare(label: String, oldValue: String?, newValue: String?) -> DomainDiffItem? {
         let oldValue = normalized(oldValue)
         let newValue = normalized(newValue)
+        let normalizedOldValue = comparisonValue(oldValue)
+        let normalizedNewValue = comparisonValue(newValue)
 
         guard oldValue != nil || newValue != nil else {
             return nil
         }
 
         let changeType: DiffChangeType
-        switch (oldValue, newValue) {
+        switch (normalizedOldValue, normalizedNewValue) {
         case let (old?, new?) where old == new:
             changeType = .unchanged
         case (nil, _?):
@@ -129,7 +139,11 @@ enum DomainDiffService {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
             return nil
         }
-        return value.lowercased()
+        return value
+    }
+
+    private static func comparisonValue(_ value: String?) -> String? {
+        value?.lowercased()
     }
 
     private static func availabilityLabel(_ status: DomainAvailabilityStatus?) -> String? {

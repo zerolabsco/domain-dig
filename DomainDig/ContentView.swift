@@ -1,6 +1,13 @@
 import MapKit
 import SwiftUI
 
+enum LookupInputMode: String, CaseIterable, Identifiable {
+    case single
+    case bulk
+
+    var id: String { rawValue }
+}
+
 struct ContentView: View {
     @State private var viewModel = DomainViewModel()
     @State private var navigationPath = NavigationPath()
@@ -10,12 +17,17 @@ struct ContentView: View {
     @State private var trackingNoteDraft = ""
     @State private var editingTrackedDomain: TrackedDomain?
     @State private var showTrackLimitAlert = false
+    @State private var inputMode: LookupInputMode = .single
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ScrollView(.vertical) {
                 VStack(spacing: 0) {
                     inputSection
+                    if !viewModel.batchResults.isEmpty || viewModel.batchLookupRunning {
+                        batchSection
+                            .padding(.top, 8)
+                    }
                     if viewModel.hasRun {
                         actionButtons
                         SummaryView(fields: viewModel.summaryFields)
@@ -199,28 +211,68 @@ struct ContentView: View {
 
     private var inputSection: some View {
         VStack(spacing: 12) {
-            TextField("e.g. cleberg.net", text: $viewModel.domain)
-                .font(.system(.title3, design: .monospaced))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(.URL)
-                .padding(12)
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
-                .focused($domainFieldFocused)
-                .onSubmit { viewModel.run() }
-
-            Button {
-                domainFieldFocused = false
-                viewModel.run()
-            } label: {
-                Text("Run")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+            Picker("Mode", selection: $inputMode) {
+                Text("Single").tag(LookupInputMode.single)
+                Text("Bulk").tag(LookupInputMode.bulk)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(viewModel.trimmedDomain.isEmpty)
+            .pickerStyle(.segmented)
+
+            if inputMode == .single {
+                TextField("e.g. cleberg.net", text: $viewModel.domain)
+                    .font(.system(.title3, design: .monospaced))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                    .padding(12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                    .focused($domainFieldFocused)
+                    .onSubmit { viewModel.run() }
+
+                Button {
+                    domainFieldFocused = false
+                    viewModel.run()
+                } label: {
+                    Text("Run")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.trimmedDomain.isEmpty)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Paste domains separated by new lines or commas.")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+
+                    TextField(
+                        "example.com\napple.com, openai.com",
+                        text: $viewModel.bulkInput,
+                        axis: .vertical
+                    )
+                    .font(.system(.body, design: .monospaced))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                    .lineLimit(4...10)
+                    .padding(12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+
+                    Button {
+                        domainFieldFocused = false
+                        viewModel.runBulkLookup()
+                    } label: {
+                        Text(viewModel.batchLookupRunning ? "Running Batch…" : "Run Batch")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.bulkInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.batchLookupRunning)
+                }
+            }
         }
         .padding(.vertical, 16)
     }
@@ -236,14 +288,46 @@ struct ContentView: View {
                         .font(.system(.body))
                         .foregroundStyle(viewModel.isCurrentDomainSaved ? .yellow : .secondary)
                 }
-                Button {
-                    shareResults()
+                Menu {
+                    Button("Export TXT") {
+                        shareSingleResults(asCSV: false)
+                    }
+                    Button("Export CSV") {
+                        shareSingleResults(asCSV: true)
+                    }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(.body))
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    private var batchSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Spacer()
+                if !viewModel.currentBatchResultEntries.isEmpty {
+                    Menu {
+                        Button("Export Batch TXT") {
+                            shareBatchResults(asCSV: false)
+                        }
+                        Button("Export Batch CSV") {
+                            shareBatchResults(asCSV: true)
+                        }
+                    } label: {
+                        Label("Export", systemImage: "square.and.arrow.up")
+                            .font(.system(.caption, design: .monospaced))
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            BatchResultsView(
+                viewModel: viewModel,
+                title: viewModel.batchLookupSource == .watchlistRefresh ? "Tracked Domain Refresh" : "Batch Results"
+            )
         }
     }
 
@@ -307,29 +391,33 @@ struct ContentView: View {
         return ports
     }
 
-    private func shareResults() {
-        let text = viewModel.exportText()
-        let dateFmt = DateFormatter()
-        dateFmt.dateFormat = "yyyyMMdd_HHmmss"
-        let timestamp = dateFmt.string(from: Date())
-        let filename = "\(timestamp)_domaindigresults.txt"
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+    private func shareSingleResults(asCSV: Bool) {
+        let (filename, contents) = exportPayload(
+            prefix: "domaindig_single",
+            text: viewModel.exportText(),
+            csv: viewModel.exportCSV(),
+            asCSV: asCSV
+        )
+        ExportPresenter.share(filename: filename, contents: contents)
+    }
 
-        do {
-            try text.write(to: tempURL, atomically: true, encoding: .utf8)
-        } catch {
-            return
-        }
+    private func shareBatchResults(asCSV: Bool) {
+        let (filename, contents) = exportPayload(
+            prefix: "domaindig_batch",
+            text: viewModel.exportBatchText(),
+            csv: viewModel.exportBatchCSV(),
+            asCSV: asCSV
+        )
+        ExportPresenter.share(filename: filename, contents: contents)
+    }
 
-        let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootVC = windowScene.keyWindow?.rootViewController else { return }
-        var presenter = rootVC
-        while let presented = presenter.presentedViewController {
-            presenter = presented
-        }
-        activityVC.popoverPresentationController?.sourceView = presenter.view
-        presenter.present(activityVC, animated: true)
+    private func exportPayload(prefix: String, text: String, csv: String, asCSV: Bool) -> (String, String) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let timestamp = formatter.string(from: Date())
+        let fileExtension = asCSV ? "csv" : "txt"
+        let filename = "\(timestamp)_\(prefix).\(fileExtension)"
+        return (filename, asCSV ? csv : text)
     }
 }
 
@@ -387,17 +475,20 @@ struct DomainDiffView: View {
     let title: String
     let sections: [DomainDiffSection]
     let showsUnchanged: Bool
+    @State private var collapsedSections = Set<UUID>()
 
     private var filteredSections: [DomainDiffSection] {
-        guard !showsUnchanged else { return sections }
+        guard showsUnchanged else {
+            return sections
+                .map { section in
+                    DomainDiffSection(
+                        title: section.title,
+                        items: section.items.filter(\.hasChanges)
+                    )
+                }
+                .filter { !$0.items.isEmpty }
+        }
         return sections
-            .map { section in
-                DomainDiffSection(
-                    title: section.title,
-                    items: section.items.filter { $0.changeType != .unchanged }
-                )
-            }
-            .filter { !$0.items.isEmpty }
     }
 
     var body: some View {
@@ -408,34 +499,63 @@ struct DomainDiffView: View {
             } else {
                 ForEach(filteredSections) { section in
                     CardView(allowsHorizontalScroll: false) {
-                        Text(section.title)
-                            .font(.system(.subheadline, design: .monospaced))
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.cyan)
+                        DisclosureGroup(isExpanded: binding(for: section)) {
+                            let visibleItems = showsUnchanged ? section.items : section.items.filter(\.hasChanges)
 
-                        ForEach(section.items) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(item.label)
-                                        .font(.system(.caption, design: .monospaced))
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(changeLabel(for: item.changeType))
-                                        .font(.system(.caption2, design: .monospaced))
-                                        .foregroundStyle(changeColor(for: item.changeType))
+                            ForEach(visibleItems) { item in
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text(item.label)
+                                            .font(.system(.caption, design: .monospaced))
+                                            .foregroundStyle(.secondary)
+                                        Spacer()
+                                        Text(changeLabel(for: item.changeType))
+                                            .font(.system(.caption2, design: .monospaced))
+                                            .foregroundStyle(changeColor(for: item.changeType))
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(changeColor(for: item.changeType).opacity(0.16))
+                                            .clipShape(Capsule())
+                                    }
+
+                                    if let oldValue = item.oldValue {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Old")
+                                                .font(.system(.caption2, design: .monospaced))
+                                                .foregroundStyle(.secondary)
+                                            Text(oldValue)
+                                                .font(.system(.caption2, design: .monospaced))
+                                                .foregroundStyle(.secondary)
+                                                .textSelection(.enabled)
+                                        }
+                                    }
+
+                                    if let newValue = item.newValue {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("New")
+                                                .font(.system(.caption2, design: .monospaced))
+                                                .foregroundStyle(.secondary)
+                                            Text(newValue)
+                                                .font(.system(.caption, design: .monospaced))
+                                                .foregroundStyle(item.hasChanges ? .primary : .secondary)
+                                                .textSelection(.enabled)
+                                        }
+                                    }
                                 }
-                                if let oldValue = item.oldValue {
-                                    Text("Old: \(oldValue)")
-                                        .font(.system(.caption2, design: .monospaced))
-                                        .foregroundStyle(.secondary)
-                                        .textSelection(.enabled)
-                                }
-                                if let newValue = item.newValue {
-                                    Text("New: \(newValue)")
-                                        .font(.system(.caption, design: .monospaced))
-                                        .foregroundStyle(.primary)
-                                        .textSelection(.enabled)
-                                }
+                                .padding(10)
+                                .background(item.hasChanges ? changeColor(for: item.changeType).opacity(0.08) : Color(.systemGray6).opacity(0.25))
+                                .cornerRadius(8)
+                            }
+                        } label: {
+                            HStack {
+                                Text(section.title)
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.cyan)
+                                Spacer()
+                                Text(section.hasChanges ? "Changed" : "Unchanged")
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(section.hasChanges ? .yellow : .secondary)
                             }
                         }
                     }
@@ -468,6 +588,19 @@ struct DomainDiffView: View {
         case .unchanged:
             return .secondary
         }
+    }
+
+    private func binding(for section: DomainDiffSection) -> Binding<Bool> {
+        Binding(
+            get: { !collapsedSections.contains(section.id) },
+            set: { isExpanded in
+                if isExpanded {
+                    collapsedSections.remove(section.id)
+                } else {
+                    collapsedSections.insert(section.id)
+                }
+            }
+        )
     }
 }
 

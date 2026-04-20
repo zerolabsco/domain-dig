@@ -6,7 +6,27 @@ struct WatchlistView: View {
 
     var body: some View {
         List {
-            if viewModel.sortedTrackedDomains.isEmpty {
+            if viewModel.batchLookupSource == .watchlistRefresh, (!viewModel.batchResults.isEmpty || viewModel.batchLookupRunning) {
+                Section("Refresh Progress") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if viewModel.batchLookupRunning {
+                            ProgressView(value: Double(viewModel.batchCompletedCount), total: Double(max(viewModel.batchTotalCount, 1)))
+                                .tint(.cyan)
+                            Text(viewModel.batchProgressLabel)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        ForEach(viewModel.batchResults.prefix(5)) { result in
+                            BatchResultRowView(result: result)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listRowBackground(Color(.systemGray6).opacity(0.5))
+            }
+
+            if viewModel.filteredTrackedDomains.isEmpty {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("No tracked domains yet")
@@ -30,7 +50,7 @@ struct WatchlistView: View {
                 }
 
                 Section {
-                    ForEach(viewModel.sortedTrackedDomains) { trackedDomain in
+                    ForEach(viewModel.filteredTrackedDomains) { trackedDomain in
                         NavigationLink {
                             TrackedDomainDetailView(viewModel: viewModel, trackedDomain: trackedDomain)
                         } label: {
@@ -83,7 +103,7 @@ struct WatchlistView: View {
                         }
                         .listRowBackground(Color(.systemGray6).opacity(0.5))
                     }
-                    .onDelete(perform: viewModel.deleteTrackedDomains)
+                    .onDelete(perform: deleteFilteredTrackedDomains)
                 } header: {
                     Text("Tracked Domains")
                 }
@@ -92,15 +112,63 @@ struct WatchlistView: View {
         .scrollContentBackground(.hidden)
         .background(Color.black)
         .navigationTitle("Watchlist")
+        .searchable(text: $viewModel.watchlistSearchText, prompt: "Search tracked domains")
         .toolbar {
-            if !viewModel.sortedTrackedDomains.isEmpty {
-                EditButton()
+            if !viewModel.filteredTrackedDomains.isEmpty {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("Filter", selection: $viewModel.watchlistFilter) {
+                            ForEach(WatchlistFilterOption.allCases) { option in
+                                Text(option.title).tag(option)
+                            }
+                        }
+
+                        Picker("Sort", selection: $viewModel.watchlistSortOption) {
+                            ForEach(WatchlistSortOption.allCases) { option in
+                                Text(option.title).tag(option)
+                            }
+                        }
+
+                        Button("Refresh All") {
+                            viewModel.refreshAllTrackedDomains()
+                        }
+
+                        Button("Export TXT") {
+                            shareTrackedDomains(asCSV: false)
+                        }
+
+                        Button("Export CSV") {
+                            shareTrackedDomains(asCSV: true)
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                    }
+
+                    EditButton()
+                }
             }
         }
         .onChange(of: viewModel.rerunNavigationToken) { _, _ in
             dismiss()
         }
         .preferredColorScheme(.dark)
+    }
+
+    private func deleteFilteredTrackedDomains(at offsets: IndexSet) {
+        let domains = offsets.map { viewModel.filteredTrackedDomains[$0] }
+        domains.forEach(viewModel.deleteTrackedDomain)
+    }
+
+    private func shareTrackedDomains(asCSV: Bool) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let timestamp = formatter.string(from: Date())
+        let fileExtension = asCSV ? "csv" : "txt"
+        let filename = "\(timestamp)_domaindig_watchlist.\(fileExtension)"
+        let contents = asCSV
+            ? viewModel.exportTrackedDomainsCSV(domains: viewModel.filteredTrackedDomains)
+            : viewModel.exportTrackedDomainsText(domains: viewModel.filteredTrackedDomains)
+        ExportPresenter.share(filename: filename, contents: contents)
     }
 }
 

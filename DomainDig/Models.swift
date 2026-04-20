@@ -54,6 +54,147 @@ struct DomainChangeSummary: Codable, Equatable {
     let generatedAt: Date
 }
 
+enum BatchLookupSource: String, Codable {
+    case manual
+    case watchlistRefresh
+}
+
+enum BatchLookupStatus: String, Codable {
+    case pending
+    case running
+    case completed
+    case failed
+}
+
+struct BatchLookupResult: Identifiable, Codable, Equatable {
+    let id: UUID
+    let domain: String
+    let historyEntryID: UUID?
+    let availability: DomainAvailabilityStatus?
+    let primaryIP: String?
+    let quickStatus: String
+    let timestamp: Date
+    let status: BatchLookupStatus
+    let errorMessage: String?
+
+    init(
+        id: UUID = UUID(),
+        domain: String,
+        historyEntryID: UUID?,
+        availability: DomainAvailabilityStatus?,
+        primaryIP: String?,
+        quickStatus: String,
+        timestamp: Date,
+        status: BatchLookupStatus,
+        errorMessage: String? = nil
+    ) {
+        self.id = id
+        self.domain = domain
+        self.historyEntryID = historyEntryID
+        self.availability = availability
+        self.primaryIP = primaryIP
+        self.quickStatus = quickStatus
+        self.timestamp = timestamp
+        self.status = status
+        self.errorMessage = errorMessage
+    }
+}
+
+enum HistoryDateFilter: String, CaseIterable, Identifiable {
+    case today
+    case last7Days
+    case all
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .today:
+            return "Today"
+        case .last7Days:
+            return "Last 7 Days"
+        case .all:
+            return "All"
+        }
+    }
+}
+
+enum ChangeFilterOption: String, CaseIterable, Identifiable {
+    case all
+    case changed
+    case unchanged
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all:
+            return "All"
+        case .changed:
+            return "Changed"
+        case .unchanged:
+            return "Unchanged"
+        }
+    }
+}
+
+enum HistorySortOption: String, CaseIterable, Identifiable {
+    case newest
+    case oldest
+    case domain
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .newest:
+            return "Newest"
+        case .oldest:
+            return "Oldest"
+        case .domain:
+            return "Domain A-Z"
+        }
+    }
+}
+
+enum WatchlistFilterOption: String, CaseIterable, Identifiable {
+    case all
+    case pinnedOnly
+    case changedOnly
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all:
+            return "All"
+        case .pinnedOnly:
+            return "Pinned Only"
+        case .changedOnly:
+            return "Changed Only"
+        }
+    }
+}
+
+enum WatchlistSortOption: String, CaseIterable, Identifiable {
+    case pinned
+    case recentlyUpdated
+    case alphabetical
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .pinned:
+            return "Pinned"
+        case .recentlyUpdated:
+            return "Recently Updated"
+        case .alphabetical:
+            return "Alphabetical"
+        }
+    }
+}
+
 enum PremiumCapability: String, Codable {
     case unlimitedTrackedDomains
     case automatedMonitoring
