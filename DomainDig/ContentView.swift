@@ -304,10 +304,13 @@ struct ContentView: View {
                 }
                 Menu {
                     Button("Export TXT") {
-                        shareSingleResults(asCSV: false)
+                        shareSingleResults(format: .text)
                     }
                     Button("Export CSV") {
-                        shareSingleResults(asCSV: true)
+                        shareSingleResults(format: .csv)
+                    }
+                    Button("Export JSON") {
+                        shareSingleResults(format: .json)
                     }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
@@ -332,10 +335,13 @@ struct ContentView: View {
                 if !viewModel.currentBatchResultEntries.isEmpty {
                     Menu {
                         Button("Export Batch TXT") {
-                            shareBatchResults(asCSV: false)
+                            shareBatchResults(format: .text)
                         }
                         Button("Export Batch CSV") {
-                            shareBatchResults(asCSV: true)
+                            shareBatchResults(format: .csv)
+                        }
+                        Button("Export Batch JSON") {
+                            shareBatchResults(format: .json)
                         }
                     } label: {
                         Label("Export", systemImage: "square.and.arrow.up")
@@ -412,33 +418,51 @@ struct ContentView: View {
         return ports
     }
 
-    private func shareSingleResults(asCSV: Bool) {
-        let (filename, contents) = exportPayload(
+    private func shareSingleResults(format: DomainExportFormat) {
+        let (filename, data) = exportPayload(
             prefix: "domaindig_single",
+            format: format,
             text: viewModel.exportText(),
             csv: viewModel.exportCSV(),
-            asCSV: asCSV
+            json: viewModel.exportJSONData()
         )
-        ExportPresenter.share(filename: filename, contents: contents)
+        ExportPresenter.share(filename: filename, data: data)
     }
 
-    private func shareBatchResults(asCSV: Bool) {
-        let (filename, contents) = exportPayload(
+    private func shareBatchResults(format: DomainExportFormat) {
+        let (filename, data) = exportPayload(
             prefix: "domaindig_batch",
+            format: format,
             text: viewModel.exportBatchText(),
             csv: viewModel.exportBatchCSV(),
-            asCSV: asCSV
+            json: viewModel.exportBatchJSONData()
         )
-        ExportPresenter.share(filename: filename, contents: contents)
+        ExportPresenter.share(filename: filename, data: data)
     }
 
-    private func exportPayload(prefix: String, text: String, csv: String, asCSV: Bool) -> (String, String) {
+    private func exportPayload(
+        prefix: String,
+        format: DomainExportFormat,
+        text: String,
+        csv: String,
+        json: Data?
+    ) -> (String, Data) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd_HHmmss"
         let timestamp = formatter.string(from: Date())
-        let fileExtension = asCSV ? "csv" : "txt"
-        let filename = "\(timestamp)_\(prefix).\(fileExtension)"
-        return (filename, asCSV ? csv : text)
+        let filename = "\(timestamp)_\(prefix).\(format.fileExtension)"
+        let data: Data
+
+        switch format {
+        case .text:
+            data = Data(text.utf8)
+        case .csv:
+            data = Data(csv.utf8)
+        case .json:
+            data = json ?? Data("[]".utf8)
+        }
+
+        return (filename, data)
     }
 }
 

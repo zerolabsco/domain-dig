@@ -91,94 +91,6 @@ struct DomainSuggestionViewData: Identifiable {
     let tone: ResultTone
 }
 
-struct LookupSnapshot {
-    let historyEntryID: UUID?
-    let domain: String
-    let timestamp: Date
-    let trackedDomainID: UUID?
-    let resolverDisplayName: String
-    let resolverURLString: String
-    let totalLookupDurationMs: Int?
-    let dnsSections: [DNSSection]
-    let dnsError: String?
-    let availabilityResult: DomainAvailabilityResult?
-    let suggestions: [DomainSuggestionResult]
-    let sslInfo: SSLCertificateInfo?
-    let sslError: String?
-    let hstsPreloaded: Bool?
-    let httpHeaders: [HTTPHeader]
-    let httpSecurityGrade: String?
-    let httpStatusCode: Int?
-    let httpResponseTimeMs: Int?
-    let httpProtocol: String?
-    let http3Advertised: Bool
-    let httpHeadersError: String?
-    let reachabilityResults: [PortReachability]
-    let reachabilityError: String?
-    let ipGeolocation: IPGeolocation?
-    let ipGeolocationError: String?
-    let emailSecurity: EmailSecurityResult?
-    let emailSecurityError: String?
-    let ownership: DomainOwnership?
-    let ownershipError: String?
-    let ptrRecord: String?
-    let ptrError: String?
-    let redirectChain: [RedirectHop]
-    let redirectChainError: String?
-    let subdomains: [DiscoveredSubdomain]
-    let subdomainsError: String?
-    let portScanResults: [PortScanResult]
-    let portScanError: String?
-    let changeSummary: DomainChangeSummary?
-    let isLive: Bool
-}
-
-extension HistoryEntry {
-    var snapshot: LookupSnapshot {
-        LookupSnapshot(
-            historyEntryID: id,
-            domain: domain,
-            timestamp: timestamp,
-            trackedDomainID: trackedDomainID,
-            resolverDisplayName: resolverDisplayName,
-            resolverURLString: resolverURLString,
-            totalLookupDurationMs: totalLookupDurationMs,
-            dnsSections: dnsSections,
-            dnsError: nil,
-            availabilityResult: availabilityResult,
-            suggestions: suggestions,
-            sslInfo: sslInfo,
-            sslError: sslError,
-            hstsPreloaded: hstsPreloaded,
-            httpHeaders: httpHeaders,
-            httpSecurityGrade: HTTPSecurityGrade.grade(for: httpHeaders).rawValue,
-            httpStatusCode: nil,
-            httpResponseTimeMs: nil,
-            httpProtocol: nil,
-            http3Advertised: false,
-            httpHeadersError: httpHeadersError,
-            reachabilityResults: reachabilityResults,
-            reachabilityError: reachabilityError,
-            ipGeolocation: ipGeolocation,
-            ipGeolocationError: ipGeolocationError,
-            emailSecurity: emailSecurity,
-            emailSecurityError: emailSecurityError,
-            ownership: ownership,
-            ownershipError: ownershipError,
-            ptrRecord: ptrRecord,
-            ptrError: ptrError,
-            redirectChain: redirectChain,
-            redirectChainError: redirectChainError,
-            subdomains: subdomains,
-            subdomainsError: subdomainsError,
-            portScanResults: portScanResults,
-            portScanError: portScanError,
-            changeSummary: changeSummary,
-            isLive: false
-        )
-    }
-}
-
 private struct BatchLookupPayload {
     let snapshot: LookupSnapshot
 }
@@ -271,6 +183,7 @@ final class DomainViewModel {
     private var lookupStartedAt: Date?
     private var activeBatchDomains: [String] = []
     private var lastBatchStartedAt: Date?
+    private let reportBuilder = DomainReportBuilder()
 
     private static let recentSearchesKey = "recentSearches"
     private static let maxRecent = 20
@@ -481,6 +394,18 @@ final class DomainViewModel {
             portScanError: combinedPortScanError,
             changeSummary: currentChangeSummary,
             isLive: true
+        )
+    }
+
+    var currentReport: DomainReport? {
+        guard !searchedDomain.isEmpty else { return nil }
+        return reportBuilder.build(
+            from: currentSnapshot,
+            previousSnapshot: previousSnapshot(
+                for: searchedDomain,
+                trackedDomainID: currentTrackedDomain?.id,
+                replacingLatest: false
+            )
         )
     }
 
@@ -768,64 +693,55 @@ final class DomainViewModel {
     }
 
     func exportText() -> String {
-        Self.formatExportText(
-            from: currentSnapshot,
-            trackedDomain: currentTrackedDomain,
-            changeSummary: currentChangeSummary,
-            diffSections: currentDiffSections
-        )
+        guard let currentReport else { return "No results available." }
+        return DomainReportExporter.text(for: currentReport)
     }
 
     func exportCSV() -> String {
-        Self.formatCSV(from: [currentSnapshot])
+        guard let currentReport else { return DomainReportExporter.csv(for: []) }
+        return DomainReportExporter.csv(for: [currentReport])
+    }
+
+    func exportJSONData() -> Data? {
+        guard let currentReport else { return nil }
+        return try? DomainReportExporter.data(for: currentReport, format: .json)
     }
 
     func exportBatchText() -> String {
-        Self.formatBatchExportText(
-            title: batchLookupSource == .watchlistRefresh ? "Tracked Domains Export" : "Batch Results Export",
-            entries: currentBatchResultEntries.map { entry in
-                (
-                    snapshot: entry.snapshot,
-                    trackedDomain: trackedDomains.first(where: { tracked in
-                        tracked.id == entry.trackedDomainID ||
-                        tracked.domain.caseInsensitiveCompare(entry.domain) == .orderedSame
-                    }),
-                    changeSummary: entry.changeSummary,
-                    diffSections: comparisonSnapshot(for: entry).map { DomainDiffService.diff(from: $0, to: entry.snapshot) } ?? []
-                )
-            }
+        DomainReportExporter.batchText(
+            for: currentBatchReports(),
+            title: batchLookupSource == .watchlistRefresh ? "Tracked Domains Export" : "Batch Results Export"
         )
     }
 
     func exportBatchCSV() -> String {
-        Self.formatCSV(from: currentBatchResultEntries.map(\.snapshot))
+        DomainReportExporter.csv(for: currentBatchReports())
+    }
+
+    func exportBatchJSONData() -> Data? {
+        try? DomainReportExporter.data(
+            for: currentBatchReports(),
+            format: .json,
+            title: batchLookupSource == .watchlistRefresh ? "Tracked Domains Export" : "Batch Results Export"
+        )
     }
 
     func exportTrackedDomainsCSV(domains: [TrackedDomain]) -> String {
-        Self.formatCSV(from: exportSnapshots(for: domains))
+        DomainReportExporter.csv(for: reports(for: domains))
     }
 
     func exportTrackedDomainsText(domains: [TrackedDomain]) -> String {
-        let latestEntries = latestSnapshots(for: domains)
-        return Self.formatBatchExportText(
-            title: "Tracked Domains Export",
-            entries: domains.map { trackedDomain in
-                if let entry = latestEntries.first(where: { $0.trackedDomainID == trackedDomain.id || $0.domain.caseInsensitiveCompare(trackedDomain.domain) == .orderedSame }) {
-                    return (
-                        snapshot: entry.snapshot,
-                        trackedDomain: trackedDomain,
-                        changeSummary: entry.changeSummary,
-                        diffSections: comparisonSnapshot(for: entry).map { DomainDiffService.diff(from: $0, to: entry.snapshot) } ?? []
-                    )
-                }
+        DomainReportExporter.batchText(
+            for: reports(for: domains),
+            title: "Tracked Domains Export"
+        )
+    }
 
-                return (
-                    snapshot: placeholderSnapshot(for: trackedDomain),
-                    trackedDomain: trackedDomain,
-                    changeSummary: trackedDomain.lastChangeSummary,
-                    diffSections: []
-                )
-            }
+    func exportTrackedDomainsJSONData(domains: [TrackedDomain]) -> Data? {
+        try? DomainReportExporter.data(
+            for: reports(for: domains),
+            format: .json,
+            title: "Tracked Domains Export"
         )
     }
 
@@ -1130,239 +1046,8 @@ final class DomainViewModel {
 
     private static func performBatchLookup(domain: String) async -> BatchLookupPayload? {
         guard !Task.isCancelled else { return nil }
-
-        let startedAt = Date()
-        let resolverDisplayName = DNSLookupService.currentResolverDisplayName()
-        let resolverURLString = DNSLookupService.currentResolverURLString()
-
-        async let dnsResult = DNSLookupService.lookupAll(domain: domain)
-        async let availabilityResult = DomainAvailabilityService.check(domain: domain)
-        async let sslResult = SSLCheckService.check(domain: domain)
-        async let hstsResult = SSLCheckService.checkHSTSPreload(domain: domain)
-        async let httpResult = HTTPHeadersService.fetch(domain: domain)
-        async let reachabilityResult = ReachabilityService.checkAll(domain: domain)
-        async let ownershipResult = DomainOwnershipService.lookup(domain: domain)
-        async let redirectResult = RedirectChainService.trace(domain: domain)
-        async let subdomainResult = SubdomainDiscoveryService.discover(for: domain)
-        async let portScanResult = PortScanService.scanAll(domain: domain)
-
-        let resolvedDNS = await dnsResult
-        let availability = await availabilityResult
-        let resolvedSSL = await sslResult
-        let hsts = await hstsResult
-        let http = await httpResult
-        let reachability = await reachabilityResult
-        let resolvedOwnership = await ownershipResult
-        let redirects = await redirectResult
-        let resolvedSubdomains = await subdomainResult
-        let ports = await portScanResult
-
+        let snapshot = await DomainInspectionService().inspectSnapshot(domain: domain)
         guard !Task.isCancelled else { return nil }
-
-        let dnsSections: [DNSSection]
-        let dnsError: String?
-        switch resolvedDNS {
-        case let .success(sections):
-            dnsSections = sections
-            dnsError = nil
-        case let .empty(message), let .error(message):
-            dnsSections = []
-            dnsError = message
-        }
-
-        let sslInfo: SSLCertificateInfo?
-        let sslError: String?
-        switch resolvedSSL {
-        case let .success(info):
-            sslInfo = info
-            sslError = nil
-        case let .empty(message), let .error(message):
-            sslInfo = nil
-            sslError = message
-        }
-
-        let httpHeaders: [HTTPHeader]
-        let httpSecurityGrade: String?
-        let httpStatusCode: Int?
-        let httpResponseTimeMs: Int?
-        let httpProtocol: String?
-        let http3Advertised: Bool
-        let httpHeadersError: String?
-        switch http {
-        case let .success(result):
-            httpHeaders = result.headers
-            httpSecurityGrade = HTTPSecurityGrade.grade(for: result.headers).rawValue
-            httpStatusCode = result.statusCode
-            httpResponseTimeMs = result.responseTimeMs
-            httpProtocol = result.httpProtocol
-            http3Advertised = result.http3Advertised
-            httpHeadersError = nil
-        case let .empty(message), let .error(message):
-            httpHeaders = []
-            httpSecurityGrade = nil
-            httpStatusCode = nil
-            httpResponseTimeMs = nil
-            httpProtocol = nil
-            http3Advertised = false
-            httpHeadersError = message
-        }
-
-        let reachabilityResults: [PortReachability]
-        let reachabilityError: String?
-        switch reachability {
-        case let .success(results):
-            reachabilityResults = results
-            reachabilityError = nil
-        case let .empty(message), let .error(message):
-            reachabilityResults = []
-            reachabilityError = message
-        }
-
-        let redirectChain: [RedirectHop]
-        let redirectChainError: String?
-        switch redirects {
-        case let .success(hops):
-            redirectChain = hops
-            redirectChainError = nil
-        case let .empty(message), let .error(message):
-            redirectChain = []
-            redirectChainError = message
-        }
-
-        let portScanResults: [PortScanResult]
-        let portScanError: String?
-        switch ports {
-        case let .success(results):
-            portScanResults = await enrichOpenPortBanners(results, domain: domain)
-            portScanError = nil
-        case let .empty(message), let .error(message):
-            portScanResults = []
-            portScanError = message
-        }
-
-        let txtRecords = dnsSections.first(where: { $0.recordType == .TXT })?.records ?? []
-        let primaryIP = dnsSections.first(where: { $0.recordType == .A })?.records.first?.value
-
-        async let emailResult = EmailSecurityService.analyze(domain: domain, txtRecords: txtRecords)
-        async let suggestions = availability.status == .registered ? DomainAvailabilityService.suggestions(for: domain) : []
-
-        let resolvedEmail = await emailResult
-        let resolvedSuggestions = await suggestions
-        let resolvedPTR: ServiceResult<String>?
-        let resolvedGeo: ServiceResult<IPGeolocation>?
-        if let primaryIP {
-            resolvedPTR = await ReverseDNSService.lookup(ip: primaryIP, resolverURLString: resolverURLString)
-            resolvedGeo = await IPGeolocationService.lookup(ip: primaryIP)
-        } else {
-            resolvedPTR = nil
-            resolvedGeo = nil
-        }
-
-        guard !Task.isCancelled else { return nil }
-
-        let emailSecurity: EmailSecurityResult?
-        let emailSecurityError: String?
-        switch resolvedEmail {
-        case let .success(result):
-            emailSecurity = result
-            emailSecurityError = nil
-        case let .empty(message), let .error(message):
-            emailSecurity = nil
-            emailSecurityError = message
-        }
-
-        let ownership: DomainOwnership?
-        let ownershipError: String?
-        switch resolvedOwnership {
-        case let .success(result):
-            ownership = result
-            ownershipError = nil
-        case let .empty(message), let .error(message):
-            ownership = nil
-            ownershipError = message
-        }
-
-        let ptrRecord: String?
-        let ptrError: String?
-        switch resolvedPTR {
-        case let .success(record):
-            ptrRecord = record
-            ptrError = nil
-        case let .empty(message), let .error(message):
-            ptrRecord = nil
-            ptrError = message
-        case .none:
-            ptrRecord = nil
-            ptrError = "No A record available"
-        }
-
-        let ipGeolocation: IPGeolocation?
-        let ipGeolocationError: String?
-        switch resolvedGeo {
-        case let .success(result):
-            ipGeolocation = result
-            ipGeolocationError = nil
-        case let .empty(message), let .error(message):
-            ipGeolocation = nil
-            ipGeolocationError = message
-        case .none:
-            ipGeolocation = nil
-            ipGeolocationError = "No A record available"
-        }
-
-        let subdomains: [DiscoveredSubdomain]
-        let subdomainsError: String?
-        switch resolvedSubdomains {
-        case let .success(result):
-            subdomains = result
-            subdomainsError = nil
-        case let .empty(message), let .error(message):
-            subdomains = []
-            subdomainsError = message
-        }
-
-        let snapshot = LookupSnapshot(
-            historyEntryID: nil,
-            domain: domain,
-            timestamp: Date(),
-            trackedDomainID: nil,
-            resolverDisplayName: resolverDisplayName,
-            resolverURLString: resolverURLString,
-            totalLookupDurationMs: Int(Date().timeIntervalSince(startedAt) * 1000),
-            dnsSections: dnsSections,
-            dnsError: dnsError,
-            availabilityResult: availability,
-            suggestions: resolvedSuggestions,
-            sslInfo: sslInfo,
-            sslError: sslError,
-            hstsPreloaded: hsts,
-            httpHeaders: httpHeaders,
-            httpSecurityGrade: httpSecurityGrade,
-            httpStatusCode: httpStatusCode,
-            httpResponseTimeMs: httpResponseTimeMs,
-            httpProtocol: httpProtocol,
-            http3Advertised: http3Advertised,
-            httpHeadersError: httpHeadersError,
-            reachabilityResults: reachabilityResults,
-            reachabilityError: reachabilityError,
-            ipGeolocation: ipGeolocation,
-            ipGeolocationError: ipGeolocationError,
-            emailSecurity: emailSecurity,
-            emailSecurityError: emailSecurityError,
-            ownership: ownership,
-            ownershipError: ownershipError,
-            ptrRecord: ptrRecord,
-            ptrError: ptrError,
-            redirectChain: redirectChain,
-            redirectChainError: redirectChainError,
-            subdomains: subdomains,
-            subdomainsError: subdomainsError,
-            portScanResults: portScanResults,
-            portScanError: portScanError,
-            changeSummary: nil,
-            isLive: false
-        )
-
         return BatchLookupPayload(snapshot: snapshot)
     }
 
@@ -1965,6 +1650,29 @@ final class DomainViewModel {
             }
             return placeholderSnapshot(for: trackedDomain)
         }
+    }
+
+    private func currentBatchReports() -> [DomainReport] {
+        currentBatchResultEntries.map(report(for:))
+    }
+
+    private func reports(for domains: [TrackedDomain]) -> [DomainReport] {
+        let latestEntries = latestSnapshots(for: domains)
+
+        return domains.map { trackedDomain in
+            if let entry = latestEntries.first(where: {
+                $0.trackedDomainID == trackedDomain.id ||
+                $0.domain.caseInsensitiveCompare(trackedDomain.domain) == .orderedSame
+            }) {
+                return report(for: entry)
+            }
+
+            return reportBuilder.build(from: placeholderSnapshot(for: trackedDomain))
+        }
+    }
+
+    private func report(for entry: HistoryEntry) -> DomainReport {
+        reportBuilder.build(from: entry, previousSnapshot: comparisonSnapshot(for: entry))
     }
 
     private func placeholderSnapshot(for trackedDomain: TrackedDomain) -> LookupSnapshot {

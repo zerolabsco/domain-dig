@@ -3,10 +3,14 @@ import UIKit
 
 enum ExportPresenter {
     static func share(filename: String, contents: String) {
+        share(filename: filename, data: Data(contents.utf8))
+    }
+
+    static func share(filename: String, data: Data) {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
 
         do {
-            try contents.write(to: url, atomically: true, encoding: .utf8)
+            try data.write(to: url, options: .atomic)
         } catch {
             return
         }

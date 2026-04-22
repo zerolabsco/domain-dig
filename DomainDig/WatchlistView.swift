@@ -143,11 +143,15 @@ struct WatchlistView: View {
                         .disabled(viewModel.batchLookupRunning)
 
                         Button("Export TXT") {
-                            shareTrackedDomains(asCSV: false)
+                            shareTrackedDomains(format: .text)
                         }
 
                         Button("Export CSV") {
-                            shareTrackedDomains(asCSV: true)
+                            shareTrackedDomains(format: .csv)
+                        }
+
+                        Button("Export JSON") {
+                            shareTrackedDomains(format: .json)
                         }
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease.circle")
@@ -178,16 +182,23 @@ struct WatchlistView: View {
         domains.forEach(viewModel.deleteTrackedDomain)
     }
 
-    private func shareTrackedDomains(asCSV: Bool) {
+    private func shareTrackedDomains(format: DomainExportFormat) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd_HHmmss"
         let timestamp = formatter.string(from: Date())
-        let fileExtension = asCSV ? "csv" : "txt"
-        let filename = "\(timestamp)_domaindig_watchlist.\(fileExtension)"
-        let contents = asCSV
-            ? viewModel.exportTrackedDomainsCSV(domains: viewModel.filteredTrackedDomains)
-            : viewModel.exportTrackedDomainsText(domains: viewModel.filteredTrackedDomains)
-        ExportPresenter.share(filename: filename, contents: contents)
+        let filename = "\(timestamp)_domaindig_watchlist.\(format.fileExtension)"
+        let data: Data
+
+        switch format {
+        case .text:
+            data = Data(viewModel.exportTrackedDomainsText(domains: viewModel.filteredTrackedDomains).utf8)
+        case .csv:
+            data = Data(viewModel.exportTrackedDomainsCSV(domains: viewModel.filteredTrackedDomains).utf8)
+        case .json:
+            data = viewModel.exportTrackedDomainsJSONData(domains: viewModel.filteredTrackedDomains) ?? Data("[]".utf8)
+        }
+
+        ExportPresenter.share(filename: filename, data: data)
     }
 }
 
