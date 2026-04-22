@@ -175,6 +175,7 @@ final class DomainViewModel {
     private(set) var batchTotalCount = 0
     private(set) var batchLookupRunning = false
     var latestBatchSweepSummary: BatchSweepSummary?
+    var latestWorkflowRunSummary: WorkflowRunSummary?
     private(set) var notificationsAuthorized = false
 
     private var lookupTask: Task<Void, Never>?
@@ -184,6 +185,8 @@ final class DomainViewModel {
     private var lookupStartedAt: Date?
     private var activeBatchDomains: [String] = []
     private var lastBatchStartedAt: Date?
+    private var activeWorkflowRunID: UUID?
+    private var activeWorkflowRunName: String?
     private let reportBuilder = DomainReportBuilder()
     private let inspectionService = DomainInspectionService()
     private(set) var currentResultSource: LookupResultSource = .live
@@ -206,6 +209,8 @@ final class DomainViewModel {
     private static let historyKey = "lookupHistory"
     private static let maxHistory = 250
     var history: [HistoryEntry] = DomainViewModel.loadHistoryEntries()
+    private static let workflowsKey = "domainWorkflows"
+    var workflows: [DomainWorkflow] = DomainViewModel.loadWorkflows()
     var historySearchText = ""
     var historyDateFilter: HistoryDateFilter = .all
     var historyChangeFilter: ChangeFilterOption = .all
@@ -327,6 +332,9 @@ final class DomainViewModel {
 
     var batchProgressLabel: String {
         guard batchTotalCount > 0 else { return "No active batch" }
+        if !batchLookupRunning, batchCompletedCount >= batchTotalCount {
+            return "\(batchCompletedCount)/\(batchTotalCount) • Complete"
+        }
         let domainLabel = activeBatchDomains.first ?? batchCurrentDomain ?? "Preparing"
         return "\(batchCompletedCount)/\(batchTotalCount) • \(domainLabel)"
     }
@@ -341,6 +349,11 @@ final class DomainViewModel {
     var currentTrackedDomain: TrackedDomain? {
         guard !searchedDomain.isEmpty else { return nil }
         return trackedDomain(for: searchedDomain)
+    }
+
+    var currentDomainWorkflows: [DomainWorkflow] {
+        guard !searchedDomain.isEmpty else { return [] }
+        return workflowsContaining(domain: searchedDomain)
     }
 
     var isCurrentDomainTracked: Bool {
@@ -655,6 +668,12 @@ final class DomainViewModel {
         rerunNavigationToken = UUID()
     }
 
+    func openInspection(for domain: String) {
+        self.domain = normalizedDomain(domain)
+        run()
+        rerunNavigationToken = UUID()
+    }
+
     func reset() {
         lookupTask?.cancel()
         customPortScanTask?.cancel()
@@ -717,6 +736,101 @@ final class DomainViewModel {
         }
     }
 
+    func workflow(withID id: UUID) -> DomainWorkflow? {
+        workflows.first(where: { $0.id == id })
+    }
+
+    func workflowsContaining(domain: String) -> [DomainWorkflow] {
+        let normalized = normalizedDomain(domain)
+        guard !normalized.isEmpty else { return [] }
+        return workflows.filter { workflow in
+            workflow.domains.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame })
+        }
+    }
+
+    @discardableResult
+    func createWorkflow(name: String, domains: [String], notes: String? = nil) -> DomainWorkflow? {
+        let normalizedDomains = normalizedDomains(domains)
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty, !normalizedDomains.isEmpty else { return nil }
+
+        let workflow = DomainWorkflow(
+            name: trimmedName,
+            domains: normalizedDomains,
+            createdAt: Date(),
+            updatedAt: Date(),
+            notes: notes?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        )
+        workflows.insert(workflow, at: 0)
+        persistWorkflows()
+        return workflow
+    }
+
+    func updateWorkflow(_ workflow: DomainWorkflow, name: String, domains: [String], notes: String?) {
+        guard let index = workflows.firstIndex(where: { $0.id == workflow.id }) else { return }
+        let normalizedDomains = normalizedDomains(domains)
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty, !normalizedDomains.isEmpty else { return }
+
+        workflows[index].name = trimmedName
+        workflows[index].domains = normalizedDomains
+        workflows[index].notes = notes?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        workflows[index].updatedAt = Date()
+        persistWorkflows()
+    }
+
+    func deleteWorkflow(_ workflow: DomainWorkflow) {
+        workflows.removeAll { $0.id == workflow.id }
+        if latestWorkflowRunSummary?.workflowID == workflow.id {
+            latestWorkflowRunSummary = nil
+        }
+        if activeWorkflowRunID == workflow.id {
+            activeWorkflowRunID = nil
+            activeWorkflowRunName = nil
+        }
+        persistWorkflows()
+    }
+
+    func addDomains(_ domains: [String], to workflow: DomainWorkflow) {
+        guard let index = workflows.firstIndex(where: { $0.id == workflow.id }) else { return }
+        let mergedDomains = normalizedDomains(workflows[index].domains + domains)
+        guard mergedDomains != workflows[index].domains else { return }
+        workflows[index].domains = mergedDomains
+        workflows[index].updatedAt = Date()
+        persistWorkflows()
+    }
+
+    func removeWorkflowDomains(at offsets: IndexSet, from workflow: DomainWorkflow) {
+        guard let index = workflows.firstIndex(where: { $0.id == workflow.id }) else { return }
+        workflows[index].domains.remove(atOffsets: offsets)
+        workflows[index].updatedAt = Date()
+        persistWorkflows()
+    }
+
+    func moveWorkflowDomains(from offsets: IndexSet, to destination: Int, in workflow: DomainWorkflow) {
+        guard let index = workflows.firstIndex(where: { $0.id == workflow.id }) else { return }
+        workflows[index].domains.move(fromOffsets: offsets, toOffset: destination)
+        workflows[index].updatedAt = Date()
+        persistWorkflows()
+    }
+
+    func runWorkflow(_ workflow: DomainWorkflow) {
+        guard !workflow.domains.isEmpty else { return }
+        startBatchLookup(domains: workflow.domains, source: .workflow, workflow: workflow)
+    }
+
+    func rerunCurrentDomain(in workflow: DomainWorkflow) {
+        guard workflow.domains.contains(where: { $0.caseInsensitiveCompare(searchedDomain) == .orderedSame }) else {
+            return
+        }
+        runWorkflow(workflow)
+    }
+
+    func refreshWorkflowList() async {
+        workflows = Self.loadWorkflows()
+        await Task.yield()
+    }
+
     func runCustomPortScan(ports: [UInt16]) async {
         guard !searchedDomain.isEmpty else {
             customPortScanError = "Run a domain lookup first"
@@ -760,6 +874,11 @@ final class DomainViewModel {
         return try? DomainReportExporter.data(for: currentReport, format: .json)
     }
 
+    func exportJSONString() -> String? {
+        guard let data = exportJSONData() else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
     func exportBatchText() -> String {
         DomainReportExporter.batchText(
             for: currentBatchReports(),
@@ -795,6 +914,25 @@ final class DomainViewModel {
             for: reports(for: domains),
             format: .json,
             title: "Tracked Domains Export"
+        )
+    }
+
+    func exportWorkflowText(summary: WorkflowRunSummary, changedOnly: Bool) -> String {
+        DomainReportExporter.batchText(
+            for: workflowReports(from: summary, changedOnly: changedOnly),
+            title: "\(summary.workflowName) Workflow Export"
+        )
+    }
+
+    func exportWorkflowCSV(summary: WorkflowRunSummary, changedOnly: Bool) -> String {
+        DomainReportExporter.csv(for: workflowReports(from: summary, changedOnly: changedOnly))
+    }
+
+    func exportWorkflowJSONData(summary: WorkflowRunSummary, changedOnly: Bool) -> Data? {
+        try? DomainReportExporter.data(
+            for: workflowReports(from: summary, changedOnly: changedOnly),
+            format: .json,
+            title: "\(summary.workflowName) Workflow Export"
         )
     }
 
@@ -1533,7 +1671,7 @@ final class DomainViewModel {
         return lookupID
     }
 
-    private func startBatchLookup(domains: [String], source: BatchLookupSource) {
+    private func startBatchLookup(domains: [String], source: BatchLookupSource, workflow: DomainWorkflow? = nil) {
         guard !domains.isEmpty else { return }
         guard !batchLookupRunning else { return }
 
@@ -1545,6 +1683,8 @@ final class DomainViewModel {
         lastBatchStartedAt = now
         clearBatchState()
         batchLookupSource = source
+        activeWorkflowRunID = workflow?.id
+        activeWorkflowRunName = workflow?.name
         batchTotalCount = domains.count
         batchLookupRunning = true
         batchResults = domains.map {
@@ -1578,7 +1718,10 @@ final class DomainViewModel {
         batchTotalCount = 0
         batchLookupRunning = false
         latestBatchSweepSummary = nil
+        latestWorkflowRunSummary = nil
         activeBatchDomains = []
+        activeWorkflowRunID = nil
+        activeWorkflowRunName = nil
         batchTask = nil
     }
 
@@ -1691,12 +1834,16 @@ final class DomainViewModel {
         refreshingTrackedDomainID = nil
         batchTask = nil
 
+        let changedCount = batchResults.filter { $0.quickStatus == "Changed" || $0.quickStatus == "High" }.count
+        let unchangedCount = batchResults.filter { $0.quickStatus == "Unchanged" && $0.status == .completed }.count
+        let warningCount = batchResults.filter { $0.certificateWarningLevel != .none }.count
+
         let summary = BatchSweepSummary(
             source: source,
             totalDomains: batchResults.count,
-            changedDomains: batchResults.filter { $0.quickStatus == "Changed" || $0.quickStatus == "High" }.count,
-            unchangedDomains: batchResults.filter { $0.quickStatus == "Unchanged" && $0.status == .completed }.count,
-            warningDomains: batchResults.filter { $0.certificateWarningLevel != .none }.count,
+            changedDomains: changedCount,
+            unchangedDomains: unchangedCount,
+            warningDomains: warningCount,
             results: batchResults.sorted { lhs, rhs in
                 if lhs.status != rhs.status {
                     return lhs.status.rawValue < rhs.status.rawValue
@@ -1707,7 +1854,20 @@ final class DomainViewModel {
         )
         latestBatchSweepSummary = summary
 
-        if notificationsAuthorized {
+        if source == .workflow, let activeWorkflowRunID, let activeWorkflowRunName {
+            latestWorkflowRunSummary = WorkflowRunSummary(
+                workflowID: activeWorkflowRunID,
+                workflowName: activeWorkflowRunName,
+                totalDomains: batchResults.count,
+                changedDomains: changedCount,
+                unchangedDomains: unchangedCount,
+                warningDomains: warningCount,
+                results: summary.results,
+                generatedAt: summary.generatedAt
+            )
+        }
+
+        if notificationsAuthorized, source != .workflow {
             Task {
                 await LocalNotificationService.shared.notifySweepComplete(summary: summary)
             }
@@ -1895,6 +2055,14 @@ final class DomainViewModel {
         currentBatchResultEntries.map(report(for:))
     }
 
+    private func workflowReports(from summary: WorkflowRunSummary, changedOnly: Bool) -> [DomainReport] {
+        let filteredResults = changedOnly ? summary.results.filter(\.hasMeaningfulChange) : summary.results
+        return filteredResults.compactMap { result in
+            guard let entry = historyEntry(for: result) else { return nil }
+            return report(for: entry)
+        }
+    }
+
     private func reports(for domains: [TrackedDomain]) -> [DomainReport] {
         let latestEntries = latestSnapshots(for: domains)
 
@@ -2024,12 +2192,41 @@ final class DomainViewModel {
         return []
     }
 
+    private func persistWorkflows() {
+        if let data = try? JSONEncoder().encode(workflows) {
+            UserDefaults.standard.set(data, forKey: Self.workflowsKey)
+        }
+    }
+
+    private static func loadWorkflows() -> [DomainWorkflow] {
+        let defaults = UserDefaults.standard
+        guard let data = defaults.data(forKey: workflowsKey),
+              let workflows = try? JSONDecoder().decode([DomainWorkflow].self, from: data) else {
+            return []
+        }
+
+        return workflows.sorted { lhs, rhs in
+            if lhs.updatedAt != rhs.updatedAt {
+                return lhs.updatedAt > rhs.updatedAt
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
     private static func deduplicatedTrackedDomains(_ domains: [TrackedDomain]) -> [TrackedDomain] {
         var seen = Set<String>()
         return domains.filter { domain in
             let key = domain.domain.lowercased()
             return seen.insert(key).inserted
         }
+    }
+
+    private func normalizedDomains(_ domains: [String]) -> [String] {
+        var seen = Set<String>()
+        return domains
+            .map(normalizedDomain)
+            .filter { !$0.isEmpty }
+            .filter { seen.insert($0).inserted }
     }
 
     private func historySortPredicate(lhs: HistoryEntry, rhs: HistoryEntry) -> Bool {

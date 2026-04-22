@@ -4,6 +4,7 @@ struct WatchlistView: View {
     @Environment(\.appDensity) private var appDensity
     @Bindable var viewModel: DomainViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showWorkflowAddSheet = false
 
     private var pinnedDomains: [TrackedDomain] {
         viewModel.filteredTrackedDomains.filter(\.isPinned)
@@ -99,6 +100,10 @@ struct WatchlistView: View {
                         }
                         .disabled(viewModel.batchLookupRunning)
 
+                        Button("Add to Workflow") {
+                            showWorkflowAddSheet = true
+                        }
+
                         Button("Export TXT") {
                             shareTrackedDomains(format: .text)
                         }
@@ -123,6 +128,13 @@ struct WatchlistView: View {
         }
         .sheet(item: batchSummaryBinding) { summary in
             BatchSweepSummaryView(viewModel: viewModel, summary: summary)
+        }
+        .sheet(isPresented: $showWorkflowAddSheet) {
+            WorkflowBulkAddSheet(
+                viewModel: viewModel,
+                title: "Add Watchlist Domains",
+                availableDomains: viewModel.filteredTrackedDomains.map(\.domain)
+            )
         }
         .preferredColorScheme(.dark)
     }

@@ -223,6 +223,7 @@ struct DomainChangeSummary: Codable, Equatable {
 enum BatchLookupSource: String, Codable {
     case manual
     case watchlistRefresh
+    case workflow
 }
 
 enum BatchLookupStatus: String, Codable {
@@ -276,11 +277,55 @@ struct BatchLookupResult: Identifiable, Codable, Equatable {
         self.status = status
         self.errorMessage = errorMessage
     }
+
+    var hasMeaningfulChange: Bool {
+        quickStatus == "Changed"
+            || quickStatus == "High"
+            || certificateWarningLevel != .none
+            || status == .failed
+    }
 }
 
 struct BatchSweepSummary: Identifiable, Equatable {
     let id = UUID()
     let source: BatchLookupSource
+    let totalDomains: Int
+    let changedDomains: Int
+    let unchangedDomains: Int
+    let warningDomains: Int
+    let results: [BatchLookupResult]
+    let generatedAt: Date
+}
+
+struct DomainWorkflow: Codable, Identifiable, Equatable {
+    let id: UUID
+    var name: String
+    var domains: [String]
+    var createdAt: Date
+    var updatedAt: Date
+    var notes: String?
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        domains: [String],
+        createdAt: Date = Date(),
+        updatedAt: Date = Date(),
+        notes: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.domains = domains
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.notes = notes
+    }
+}
+
+struct WorkflowRunSummary: Identifiable, Equatable {
+    let id = UUID()
+    let workflowID: UUID
+    let workflowName: String
     let totalDomains: Int
     let changedDomains: Int
     let unchangedDomains: Int

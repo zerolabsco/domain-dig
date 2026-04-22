@@ -18,6 +18,10 @@ enum ResultSection: String, Hashable {
     case subdomains
 }
 
+private struct WorkflowNavigationTarget: Hashable {
+    let workflowID: UUID
+}
+
 struct ContentView: View {
     @Environment(\.appDensity) private var appDensity
     @State private var viewModel = DomainViewModel()
@@ -30,6 +34,8 @@ struct ContentView: View {
     @State private var showTrackLimitAlert = false
     @State private var inputMode: LookupInputMode = .single
     @State private var collapsedSections: Set<ResultSection> = [.network]
+    @State private var showingCurrentDomainWorkflowSheet = false
+    @State private var showingBatchWorkflowSheet = false
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -68,6 +74,7 @@ struct ContentView: View {
                             confidence: viewModel.currentSnapshot.availabilityConfidence,
                             snapshotNote: viewModel.currentSnapshot.note,
                             trackedDomain: viewModel.currentTrackedDomain,
+                            workflows: viewModel.currentDomainWorkflows,
                             trackingLimitMessage: viewModel.trackingLimitMessage,
                             onTrack: {
                                 if !viewModel.trackCurrentDomain() {
@@ -82,6 +89,15 @@ struct ContentView: View {
                                 guard let trackedDomain = viewModel.currentTrackedDomain else { return }
                                 trackingNoteDraft = trackedDomain.note ?? ""
                                 editingTrackedDomain = trackedDomain
+                            },
+                            onAddToWorkflow: {
+                                showingCurrentDomainWorkflowSheet = true
+                            },
+                            onOpenWorkflow: { workflow in
+                                navigationPath.append(WorkflowNavigationTarget(workflowID: workflow.id))
+                            },
+                            onRunWorkflow: { workflow in
+                                viewModel.rerunCurrentDomain(in: workflow)
                             }
                         )
                             .padding(.top, appDensity.metrics.sectionSpacing)
@@ -225,6 +241,12 @@ struct ContentView: View {
                         }
 
                         NavigationLink {
+                            WorkflowsView(viewModel: viewModel)
+                        } label: {
+                            Label("Workflows", systemImage: "square.stack.3d.down.right")
+                        }
+
+                        NavigationLink {
                             SettingsView(viewModel: viewModel)
                         } label: {
                             Label("Settings", systemImage: "gearshape")
@@ -234,6 +256,9 @@ struct ContentView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+            .navigationDestination(for: WorkflowNavigationTarget.self) { target in
+                WorkflowDetailView(viewModel: viewModel, workflowID: target.workflowID)
             }
         }
         .onAppear {
@@ -276,6 +301,20 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showingCurrentDomainWorkflowSheet) {
+            WorkflowBulkAddSheet(
+                viewModel: viewModel,
+                title: "Add Domain to Workflow",
+                availableDomains: [viewModel.searchedDomain]
+            )
+        }
+        .sheet(isPresented: $showingBatchWorkflowSheet) {
+            WorkflowBulkAddSheet(
+                viewModel: viewModel,
+                title: "Add Batch Domains",
+                availableDomains: viewModel.batchResults.map(\.domain)
+            )
         }
     }
 
@@ -353,6 +392,30 @@ struct ContentView: View {
         HStack {
             Spacer()
             if viewModel.resultsLoaded {
+                Menu {
+                    if !viewModel.isCurrentDomainTracked {
+                        Button("Track this domain") {
+                            if !viewModel.trackCurrentDomain() {
+                                showTrackLimitAlert = true
+                            }
+                        }
+                    }
+                    Button("Add to workflow") {
+                        showingCurrentDomainWorkflowSheet = true
+                    }
+                    Button("Copy report JSON") {
+                        guard let json = viewModel.exportJSONString() else { return }
+                        AppClipboard.copy(json)
+                        AppHaptics.copy()
+                    }
+                    Button("Export report") {
+                        shareSingleResults(format: .json)
+                    }
+                } label: {
+                    Image(systemName: "bolt.circle")
+                        .font(appDensity.font(.body, design: .default))
+                        .foregroundStyle(.secondary)
+                }
                 Button {
                     viewModel.toggleSavedDomain()
                 } label: {
@@ -392,6 +455,10 @@ struct ContentView: View {
                 }
                 if !viewModel.currentBatchResultEntries.isEmpty {
                     Menu {
+                        Button("Add to Workflow") {
+                            showingBatchWorkflowSheet = true
+                        }
+                        Divider()
                         Button("Export Batch TXT") {
                             shareBatchResults(format: .text)
                         }
@@ -982,10 +1049,14 @@ struct DomainSectionView: View {
     let confidence: ConfidenceLevel?
     let snapshotNote: String?
     let trackedDomain: TrackedDomain?
+    let workflows: [DomainWorkflow]
     let trackingLimitMessage: String?
     let onTrack: () -> Void
     let onTogglePinned: () -> Void
     let onEditNote: (() -> Void)?
+    let onAddToWorkflow: (() -> Void)?
+    let onOpenWorkflow: ((DomainWorkflow) -> Void)?
+    let onRunWorkflow: ((DomainWorkflow) -> Void)?
 
     var body: some View {
         CollapsibleSectionView(title: "Domain", isCollapsed: $isCollapsed) {
@@ -1031,6 +1102,47 @@ struct DomainSectionView: View {
                 } else if let trackingLimitMessage {
                     MessageRowView(text: trackingLimitMessage, isError: false)
                         .padding(.top, 4)
+                }
+                if let onAddToWorkflow {
+                    Button {
+                        onAddToWorkflow()
+                    } label: {
+                        Label("Add to workflow", systemImage: "plus.rectangle.on.folder")
+                            .font(appDensity.font(.caption))
+                    }
+                    .buttonStyle(.bordered)
+                    .padding(.top, 4)
+                }
+                if !workflows.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Part of workflow")
+                            .font(appDensity.font(.caption))
+                            .foregroundStyle(.secondary)
+
+                        ForEach(workflows) { workflow in
+                            HStack {
+                                Text(workflow.name)
+                                    .font(appDensity.font(.caption))
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if let onOpenWorkflow {
+                                    Button("Open") {
+                                        onOpenWorkflow(workflow)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .font(appDensity.font(.caption2))
+                                }
+                                if let onRunWorkflow {
+                                    Button("Run") {
+                                        onRunWorkflow(workflow)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .font(appDensity.font(.caption2))
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 4)
                 }
                 if availabilityLoading {
                     ProgressView("Checking availability…")

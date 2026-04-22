@@ -1,0 +1,634 @@
+import SwiftUI
+
+private enum WorkflowDestinationMode: String, CaseIterable, Identifiable {
+    case existing
+    case new
+
+    var id: String { rawValue }
+}
+
+struct WorkflowsView: View {
+    @Environment(\.appDensity) private var appDensity
+    @Bindable var viewModel: DomainViewModel
+
+    @State private var showingCreateWorkflow = false
+
+    var body: some View {
+        List {
+            if viewModel.batchLookupSource == .workflow, (!viewModel.batchResults.isEmpty || viewModel.batchLookupRunning) {
+                Section("Workflow Run") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ProgressView(
+                            value: Double(viewModel.batchCompletedCount),
+                            total: Double(max(viewModel.batchTotalCount, 1))
+                        )
+                        .tint(.cyan)
+
+                        HStack {
+                            Text(viewModel.batchProgressLabel)
+                                .font(appDensity.font(.caption))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            if viewModel.batchLookupRunning {
+                                Button("Cancel") {
+                                    viewModel.cancelBatchLookup()
+                                }
+                                .buttonStyle(.bordered)
+                                .font(appDensity.font(.caption2))
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listRowBackground(Color(.systemGray6).opacity(0.5))
+            }
+
+            if viewModel.workflows.isEmpty {
+                Section {
+                    EmptyStateCardView(
+                        title: "No Workflows Yet",
+                        message: "Workflows save a reusable set of domains so repeat inspections take one tap instead of rebuilding the same batch each time.",
+                        suggestion: "Create a workflow for a weekly audit set, customer domains, or a monitoring group.",
+                        systemImage: "square.stack.3d.down.right"
+                    )
+                }
+                .listRowBackground(Color(.systemGray6).opacity(0.5))
+            } else {
+                ForEach(viewModel.workflows) { workflow in
+                    NavigationLink {
+                        WorkflowDetailView(viewModel: viewModel, workflowID: workflow.id)
+                    } label: {
+                        WorkflowRowView(workflow: workflow)
+                    }
+                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                }
+                .onDelete { offsets in
+                    let workflows = offsets.map { viewModel.workflows[$0] }
+                    workflows.forEach(viewModel.deleteWorkflow)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Color.black)
+        .refreshable {
+            await viewModel.refreshWorkflowList()
+        }
+        .navigationTitle("Workflows")
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    showingCreateWorkflow = true
+                } label: {
+                    Image(systemName: "plus.circle")
+                }
+
+                if !viewModel.workflows.isEmpty {
+                    EditButton()
+                }
+            }
+        }
+        .sheet(isPresented: $showingCreateWorkflow) {
+            WorkflowComposerView(viewModel: viewModel)
+        }
+        .sheet(item: workflowSummaryBinding) { summary in
+            WorkflowRunSummaryView(viewModel: viewModel, summary: summary)
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var workflowSummaryBinding: Binding<WorkflowRunSummary?> {
+        Binding(
+            get: { viewModel.latestWorkflowRunSummary },
+            set: { viewModel.latestWorkflowRunSummary = $0 }
+        )
+    }
+}
+
+private struct WorkflowRowView: View {
+    @Environment(\.appDensity) private var appDensity
+
+    let workflow: DomainWorkflow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing + 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(workflow.name)
+                    .font(appDensity.font(.callout, design: .default, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                Spacer(minLength: 8)
+                Text("\(workflow.domains.count) domains")
+                    .font(appDensity.font(.caption2))
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("Updated \(workflow.updatedAt.formatted(date: .abbreviated, time: .shortened))")
+                .font(appDensity.font(.caption2))
+                .foregroundStyle(.secondary)
+
+            if let notes = workflow.notes, !notes.isEmpty {
+                Text(notes)
+                    .font(appDensity.font(.caption))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+    }
+}
+
+struct WorkflowDetailView: View {
+    @Environment(\.appDensity) private var appDensity
+    @Bindable var viewModel: DomainViewModel
+    let workflowID: UUID
+
+    @State private var showingEditor = false
+    @State private var draftDomain = ""
+    @State private var includeAllExports = false
+
+    private var workflow: DomainWorkflow? {
+        viewModel.workflow(withID: workflowID)
+    }
+
+    private var latestSummary: WorkflowRunSummary? {
+        guard viewModel.latestWorkflowRunSummary?.workflowID == workflowID else { return nil }
+        return viewModel.latestWorkflowRunSummary
+    }
+
+    var body: some View {
+        Group {
+            if let workflow {
+                List {
+                    Section("Overview") {
+                        statRow(label: "Domains", value: "\(workflow.domains.count)")
+                        statRow(label: "Created", value: workflow.createdAt.formatted(date: .abbreviated, time: .shortened))
+                        statRow(label: "Updated", value: workflow.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                        if let notes = workflow.notes, !notes.isEmpty {
+                            Text(notes)
+                                .font(appDensity.font(.caption))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Section("Actions") {
+                        Button {
+                            viewModel.runWorkflow(workflow)
+                        } label: {
+                            Label("Run Workflow", systemImage: "play.fill")
+                        }
+                        .disabled(workflow.domains.isEmpty || viewModel.batchLookupRunning)
+
+                        if viewModel.batchLookupRunning, viewModel.batchLookupSource == .workflow {
+                            Button("Cancel Workflow Run", role: .destructive) {
+                                viewModel.cancelBatchLookup()
+                            }
+                        }
+
+                        Button {
+                            showingEditor = true
+                        } label: {
+                            Label("Edit Workflow", systemImage: "pencil")
+                        }
+
+                        if latestSummary != nil {
+                            Toggle("Export all domains", isOn: $includeAllExports)
+                            Menu {
+                                Button("Export TXT") {
+                                    shareWorkflowResults(format: .text)
+                                }
+                                Button("Export CSV") {
+                                    shareWorkflowResults(format: .csv)
+                                }
+                                Button("Export JSON") {
+                                    shareWorkflowResults(format: .json)
+                                }
+                            } label: {
+                                Label("Export Results", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                    }
+
+                    if let latestSummary {
+                        Section("Latest Run") {
+                            statRow(label: "Processed", value: "\(latestSummary.totalDomains)")
+                            statRow(label: "Changed", value: "\(latestSummary.changedDomains)")
+                            statRow(label: "Warnings", value: "\(latestSummary.warningDomains)")
+                            statRow(label: "Unchanged", value: "\(latestSummary.unchangedDomains)")
+
+                            Button {
+                                viewModel.latestWorkflowRunSummary = latestSummary
+                            } label: {
+                                Label("View Run Summary", systemImage: "list.bullet.rectangle")
+                            }
+                        }
+                    }
+
+                    Section("Add Domain") {
+                        HStack {
+                            TextField("example.com", text: $draftDomain)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            Button("Add") {
+                                guard !draftDomain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                                viewModel.addDomains([draftDomain], to: workflow)
+                                draftDomain = ""
+                            }
+                        }
+                    }
+
+                    Section("Domains") {
+                        if workflow.domains.isEmpty {
+                            Text("No domains in this workflow")
+                                .font(appDensity.font(.caption))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(workflow.domains, id: \.self) { domain in
+                                Button {
+                                    viewModel.openInspection(for: domain)
+                                } label: {
+                                    HStack {
+                                        Text(domain)
+                                            .font(appDensity.font(.callout))
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        Image(systemName: "arrow.up.right.circle")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .onDelete { offsets in
+                                viewModel.removeWorkflowDomains(at: offsets, from: workflow)
+                            }
+                            .onMove { offsets, destination in
+                                viewModel.moveWorkflowDomains(from: offsets, to: destination, in: workflow)
+                            }
+                        }
+                    }
+                }
+                .scrollContentBackground(.hidden)
+                .background(Color.black)
+                .navigationTitle(workflow.name)
+                .toolbar {
+                    if !workflow.domains.isEmpty {
+                        EditButton()
+                    }
+                }
+                .sheet(isPresented: $showingEditor) {
+                    WorkflowComposerView(viewModel: viewModel, workflow: workflow)
+                }
+                .sheet(item: workflowSummaryBinding) { summary in
+                    WorkflowRunSummaryView(viewModel: viewModel, summary: summary)
+                }
+            } else {
+                Text("Workflow not found")
+                    .font(appDensity.font(.callout))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func statRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(appDensity.font(.caption))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(appDensity.font(.callout))
+                .foregroundStyle(.primary)
+        }
+    }
+
+    private var workflowSummaryBinding: Binding<WorkflowRunSummary?> {
+        Binding(
+            get: {
+                guard viewModel.latestWorkflowRunSummary?.workflowID == workflowID else { return nil }
+                return viewModel.latestWorkflowRunSummary
+            },
+            set: { _ in
+                viewModel.latestWorkflowRunSummary = nil
+            }
+        )
+    }
+
+    private func shareWorkflowResults(format: DomainExportFormat) {
+        guard let latestSummary else { return }
+
+        let changedOnly = !includeAllExports
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let timestamp = formatter.string(from: Date())
+        let filename = "\(timestamp)_workflow_\(latestSummary.workflowName.replacingOccurrences(of: " ", with: "_").lowercased()).\(format.fileExtension)"
+        let data: Data
+
+        switch format {
+        case .text:
+            data = Data(viewModel.exportWorkflowText(summary: latestSummary, changedOnly: changedOnly).utf8)
+        case .csv:
+            data = Data(viewModel.exportWorkflowCSV(summary: latestSummary, changedOnly: changedOnly).utf8)
+        case .json:
+            data = viewModel.exportWorkflowJSONData(summary: latestSummary, changedOnly: changedOnly) ?? Data("[]".utf8)
+        }
+
+        ExportPresenter.share(filename: filename, data: data)
+    }
+}
+
+struct WorkflowComposerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var viewModel: DomainViewModel
+    let workflow: DomainWorkflow?
+
+    @State private var name = ""
+    @State private var domainsText = ""
+    @State private var notes = ""
+
+    init(viewModel: DomainViewModel, workflow: DomainWorkflow? = nil) {
+        self.viewModel = viewModel
+        self.workflow = workflow
+        _name = State(initialValue: workflow?.name ?? "")
+        _domainsText = State(initialValue: workflow?.domains.joined(separator: "\n") ?? "")
+        _notes = State(initialValue: workflow?.notes ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Workflow") {
+                    TextField("Name", text: $name)
+                    TextField("Notes", text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+
+                Section("Domains") {
+                    TextField("example.com\napple.com", text: $domainsText, axis: .vertical)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .lineLimit(6...14)
+                }
+            }
+            .navigationTitle(workflow == nil ? "New Workflow" : "Edit Workflow")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveWorkflow()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || parsedDomains.isEmpty)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var parsedDomains: [String] {
+        domainsText
+            .components(separatedBy: CharacterSet(charactersIn: ",\n"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func saveWorkflow() {
+        if let workflow {
+            viewModel.updateWorkflow(workflow, name: name, domains: parsedDomains, notes: notes)
+        } else {
+            _ = viewModel.createWorkflow(name: name, domains: parsedDomains, notes: notes)
+        }
+        dismiss()
+    }
+}
+
+struct WorkflowRunSummaryView: View {
+    @Bindable var viewModel: DomainViewModel
+    let summary: WorkflowRunSummary
+
+    @State private var showAllResults = false
+
+    private var visibleResults: [BatchLookupResult] {
+        showAllResults ? summary.results : summary.results.filter(\.hasMeaningfulChange)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Overview") {
+                    statRow(label: "Workflow", value: summary.workflowName)
+                    statRow(label: "Processed", value: "\(summary.totalDomains)")
+                    statRow(label: "Changed", value: "\(summary.changedDomains)")
+                    statRow(label: "Warnings", value: "\(summary.warningDomains)")
+                    statRow(label: "Unchanged", value: "\(summary.unchangedDomains)")
+                    statRow(label: "Finished", value: summary.generatedAt.formatted(date: .abbreviated, time: .shortened))
+                }
+
+                Section {
+                    Toggle("Show unchanged domains", isOn: $showAllResults)
+                }
+
+                Section(visibleResults.isEmpty ? "Meaningful Changes" : "Results") {
+                    if visibleResults.isEmpty {
+                        Text("No domains with meaningful changes or warnings")
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(visibleResults) { result in
+                            if let entry = viewModel.historyEntry(for: result) {
+                                NavigationLink {
+                                    HistoryDetailView(viewModel: viewModel, entry: entry)
+                                } label: {
+                                    BatchResultRowView(result: result)
+                                }
+                            } else {
+                                BatchResultRowView(result: result)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Workflow Summary")
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Export TXT") {
+                            share(format: .text)
+                        }
+                        Button("Export CSV") {
+                            share(format: .csv)
+                        }
+                        Button("Export JSON") {
+                            share(format: .json)
+                        }
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+
+                    if let workflow = viewModel.workflow(withID: summary.workflowID) {
+                        Button {
+                            viewModel.runWorkflow(workflow)
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .disabled(viewModel.batchLookupRunning)
+                    }
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func statRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.system(.callout, design: .monospaced))
+                .foregroundStyle(.primary)
+        }
+    }
+
+    private func share(format: DomainExportFormat) {
+        let changedOnly = !showAllResults
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let timestamp = formatter.string(from: Date())
+        let filename = "\(timestamp)_workflow_summary.\(format.fileExtension)"
+        let data: Data
+
+        switch format {
+        case .text:
+            data = Data(viewModel.exportWorkflowText(summary: summary, changedOnly: changedOnly).utf8)
+        case .csv:
+            data = Data(viewModel.exportWorkflowCSV(summary: summary, changedOnly: changedOnly).utf8)
+        case .json:
+            data = viewModel.exportWorkflowJSONData(summary: summary, changedOnly: changedOnly) ?? Data("[]".utf8)
+        }
+
+        ExportPresenter.share(filename: filename, data: data)
+    }
+}
+
+struct WorkflowBulkAddSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var viewModel: DomainViewModel
+    let title: String
+    let availableDomains: [String]
+
+    @State private var mode: WorkflowDestinationMode = .existing
+    @State private var selectedDomains: Set<String>
+    @State private var selectedWorkflowID: UUID?
+    @State private var newWorkflowName = ""
+    @State private var newWorkflowNotes = ""
+
+    init(viewModel: DomainViewModel, title: String, availableDomains: [String]) {
+        self.viewModel = viewModel
+        self.title = title
+        self.availableDomains = Array(Set(availableDomains)).sorted()
+        _selectedDomains = State(initialValue: Set(availableDomains))
+        _selectedWorkflowID = State(initialValue: viewModel.workflows.first?.id)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Selection") {
+                    ForEach(availableDomains, id: \.self) { domain in
+                        Button {
+                            toggle(domain)
+                        } label: {
+                            HStack {
+                                Text(domain)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: selectedDomains.contains(domain) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selectedDomains.contains(domain) ? .cyan : .secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Section("Destination") {
+                    Picker("Destination", selection: $mode) {
+                        Text("Existing").tag(WorkflowDestinationMode.existing)
+                        Text("New").tag(WorkflowDestinationMode.new)
+                    }
+                    .pickerStyle(.segmented)
+
+                    if mode == .existing, !viewModel.workflows.isEmpty {
+                        Picker("Workflow", selection: $selectedWorkflowID) {
+                            ForEach(viewModel.workflows) { workflow in
+                                Text(workflow.name).tag(Optional(workflow.id))
+                            }
+                        }
+                    } else {
+                        TextField("Workflow name", text: $newWorkflowName)
+                        TextField("Notes", text: $newWorkflowNotes, axis: .vertical)
+                            .lineLimit(2...5)
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save()
+                    }
+                    .disabled(!canSave)
+                }
+            }
+            .onAppear {
+                if viewModel.workflows.isEmpty {
+                    mode = .new
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var selectedDomainList: [String] {
+        availableDomains.filter { selectedDomains.contains($0) }
+    }
+
+    private var canSave: Bool {
+        guard !selectedDomainList.isEmpty else { return false }
+        switch mode {
+        case .existing:
+            return selectedWorkflowID != nil
+        case .new:
+            return !newWorkflowName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    private func toggle(_ domain: String) {
+        if selectedDomains.contains(domain) {
+            selectedDomains.remove(domain)
+        } else {
+            selectedDomains.insert(domain)
+        }
+    }
+
+    private func save() {
+        switch mode {
+        case .existing:
+            guard let selectedWorkflowID, let workflow = viewModel.workflow(withID: selectedWorkflowID) else { return }
+            viewModel.addDomains(selectedDomainList, to: workflow)
+        case .new:
+            _ = viewModel.createWorkflow(name: newWorkflowName, domains: selectedDomainList, notes: newWorkflowNotes)
+        }
+
+        dismiss()
+    }
+}

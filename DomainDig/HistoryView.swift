@@ -5,6 +5,7 @@ struct HistoryView: View {
     @Bindable var viewModel: DomainViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showClearAllConfirmation = false
+    @State private var showWorkflowAddSheet = false
 
     private var groupedHistory: [HistoryGroup] {
         HistoryGroup.groups(for: viewModel.filteredHistory)
@@ -105,6 +106,12 @@ struct HistoryView: View {
                         Button("Clear All", role: .destructive) {
                             showClearAllConfirmation = true
                         }
+
+                        if !viewModel.filteredHistory.isEmpty {
+                            Button("Add to Workflow") {
+                                showWorkflowAddSheet = true
+                            }
+                        }
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease.circle")
                     }
@@ -120,6 +127,13 @@ struct HistoryView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will delete all saved history entries. This cannot be undone.")
+        }
+        .sheet(isPresented: $showWorkflowAddSheet) {
+            WorkflowBulkAddSheet(
+                viewModel: viewModel,
+                title: "Add History Domains",
+                availableDomains: Array(Set(viewModel.filteredHistory.map(\.domain))).sorted()
+            )
         }
         .onChange(of: viewModel.rerunNavigationToken) { _, _ in
             dismiss()
@@ -170,6 +184,7 @@ struct HistoryDetailView: View {
                     confidence: snapshot.availabilityConfidence,
                     snapshotNote: entry.note,
                     trackedDomain: viewModel.trackedDomains.first(where: { $0.domain.lowercased() == entry.domain.lowercased() }),
+                    workflows: viewModel.workflowsContaining(domain: entry.domain),
                     trackingLimitMessage: nil,
                     onTrack: {
                         _ = viewModel.trackDomain(domain: entry.domain, availabilityStatus: entry.availabilityResult?.status)
@@ -178,7 +193,10 @@ struct HistoryDetailView: View {
                         guard let trackedDomain = viewModel.trackedDomains.first(where: { $0.domain.lowercased() == entry.domain.lowercased() }) else { return }
                         viewModel.togglePinned(for: trackedDomain)
                     },
-                    onEditNote: nil
+                    onEditNote: nil,
+                    onAddToWorkflow: nil,
+                    onOpenWorkflow: nil,
+                    onRunWorkflow: nil
                 )
                     .padding(.top, appDensity.metrics.sectionSpacing)
                 OwnershipSectionView(
