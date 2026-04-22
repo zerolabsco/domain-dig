@@ -39,7 +39,13 @@ struct LookupSnapshot {
     let portScanResults: [PortScanResult]
     let portScanError: String?
     let changeSummary: DomainChangeSummary?
-    let isLive: Bool
+    let resultSource: LookupResultSource
+    let cachedSections: [LookupSectionKind]
+    let statusMessage: String?
+
+    var isLive: Bool {
+        resultSource == .live
+    }
 }
 
 extension HistoryEntry {
@@ -83,7 +89,9 @@ extension HistoryEntry {
             portScanResults: portScanResults,
             portScanError: portScanError,
             changeSummary: changeSummary,
-            isLive: false
+            resultSource: .snapshot,
+            cachedSections: [],
+            statusMessage: nil
         )
     }
 }

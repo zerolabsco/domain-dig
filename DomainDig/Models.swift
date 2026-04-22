@@ -6,6 +6,43 @@ enum ServiceResult<Value> {
     case error(String)
 }
 
+enum LookupResultSource: String, Codable {
+    case live
+    case cached
+    case mixed
+    case snapshot
+
+    var label: String {
+        switch self {
+        case .live:
+            return "Live"
+        case .cached:
+            return "Cached"
+        case .mixed:
+            return "Mixed"
+        case .snapshot:
+            return "Snapshot"
+        }
+    }
+}
+
+enum LookupSectionKind: String, Codable, CaseIterable {
+    case dns
+    case availability
+    case ssl
+    case hsts
+    case httpHeaders
+    case reachability
+    case ipGeolocation
+    case emailSecurity
+    case ownership
+    case ptr
+    case redirectChain
+    case subdomains
+    case portScan
+    case suggestions
+}
+
 enum DomainAvailabilityStatus: String, Codable {
     case available
     case registered
@@ -134,6 +171,7 @@ struct BatchLookupResult: Identifiable, Codable, Equatable {
     let id: UUID
     let domain: String
     let historyEntryID: UUID?
+    let resultSource: LookupResultSource
     let availability: DomainAvailabilityStatus?
     let primaryIP: String?
     let quickStatus: String
@@ -148,6 +186,7 @@ struct BatchLookupResult: Identifiable, Codable, Equatable {
         id: UUID = UUID(),
         domain: String,
         historyEntryID: UUID?,
+        resultSource: LookupResultSource = .live,
         availability: DomainAvailabilityStatus?,
         primaryIP: String?,
         quickStatus: String,
@@ -161,6 +200,7 @@ struct BatchLookupResult: Identifiable, Codable, Equatable {
         self.id = id
         self.domain = domain
         self.historyEntryID = historyEntryID
+        self.resultSource = resultSource
         self.availability = availability
         self.primaryIP = primaryIP
         self.quickStatus = quickStatus

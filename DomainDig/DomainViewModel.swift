@@ -184,6 +184,12 @@ final class DomainViewModel {
     private var activeBatchDomains: [String] = []
     private var lastBatchStartedAt: Date?
     private let reportBuilder = DomainReportBuilder()
+    private let inspectionService = DomainInspectionService()
+    private(set) var currentResultSource: LookupResultSource = .live
+    private(set) var currentCachedSections: [LookupSectionKind] = []
+    private(set) var currentStatusMessage: String?
+    private(set) var currentSnapshotTimestamp = Date()
+    private(set) var currentHistoryEntryID: UUID?
 
     private static let recentSearchesKey = "recentSearches"
     private static let maxRecent = 20
@@ -355,9 +361,9 @@ final class DomainViewModel {
 
     var currentSnapshot: LookupSnapshot {
         LookupSnapshot(
-            historyEntryID: nil,
+            historyEntryID: currentHistoryEntryID,
             domain: searchedDomain,
-            timestamp: Date(),
+            timestamp: currentSnapshotTimestamp,
             trackedDomainID: currentTrackedDomain?.id,
             resolverDisplayName: resolverDisplayName,
             resolverURLString: resolverURLString,
@@ -393,7 +399,9 @@ final class DomainViewModel {
             portScanResults: allPortScanResults,
             portScanError: combinedPortScanError,
             changeSummary: currentChangeSummary,
-            isLive: true
+            resultSource: currentResultSource,
+            cachedSections: currentCachedSections,
+            statusMessage: currentStatusMessage
         )
     }
 
@@ -746,51 +754,163 @@ final class DomainViewModel {
     }
 
     private func performLookup(domain: String, lookupID: UUID) async -> HistoryEntry? {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.runDNS(domain: domain, lookupID: lookupID) }
-            group.addTask { await self.runAvailability(domain: domain, lookupID: lookupID) }
-            group.addTask { await self.runSSL(domain: domain, lookupID: lookupID) }
-            group.addTask { await self.runHSTSPreload(domain: domain, lookupID: lookupID) }
-            group.addTask { await self.runOwnership(domain: domain, lookupID: lookupID) }
-            group.addTask { await self.runSubdomains(domain: domain, lookupID: lookupID) }
-        }
-
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.runHTTPHeaders(domain: domain, lookupID: lookupID) }
-            group.addTask { await self.runReachability(domain: domain, lookupID: lookupID) }
-            group.addTask { await self.runRedirectChain(domain: domain, lookupID: lookupID) }
-            group.addTask { await self.runPortScan(domain: domain, lookupID: lookupID) }
-        }
-
+        let previous = previousSnapshot(
+            for: domain,
+            trackedDomainID: currentTrackedDomain?.id,
+            replacingLatest: false
+        )
+        let inspectedSnapshot = await inspectionService.inspectSnapshot(domain: domain, previousSnapshot: previous)
         guard !Task.isCancelled, isCurrentLookup(lookupID) else { return nil }
 
-        let txtRecords = dnsSections.first(where: { $0.recordType == .TXT })?.records ?? []
-        let primaryIP = primaryIPAddress(from: dnsSections)
-
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.runEmailSecurity(domain: domain, txtRecords: txtRecords, lookupID: lookupID) }
-            if let primaryIP {
-                group.addTask { await self.runReverseDNS(ip: primaryIP, lookupID: lookupID) }
-                group.addTask { await self.runIPGeolocation(ip: primaryIP, lookupID: lookupID) }
-            } else {
-                group.addTask { await self.finishDependentWithoutPrimaryIP(lookupID: lookupID) }
-            }
-        }
-
-        guard !Task.isCancelled, isCurrentLookup(lookupID) else { return nil }
-
-        if availabilityResult?.status == .registered {
-            await runSuggestions(domain: domain, lookupID: lookupID)
-        } else {
-            suggestions = []
-            suggestionsLoading = false
-        }
-
-        guard !Task.isCancelled, isCurrentLookup(lookupID) else { return nil }
-        lastLookupDurationMs = lookupStartedAt.map { Int(Date().timeIntervalSince($0) * 1000) }
-        let entry = saveHistoryEntry(replaceLatest: false)
+        let snapshot = Self.resolvedSnapshotAfterFallback(inspectedSnapshot, previousSnapshot: previous)
+        applySnapshot(snapshot)
+        lastLookupDurationMs = snapshot.totalLookupDurationMs
         refreshingTrackedDomainID = nil
-        return entry
+
+        guard snapshot.statusMessage == nil else {
+            return history.first(where: { $0.id == snapshot.historyEntryID })
+        }
+
+        return saveHistoryEntry(replaceLatest: false)
+    }
+
+    private func applySnapshot(_ snapshot: LookupSnapshot) {
+        currentHistoryEntryID = snapshot.historyEntryID
+        currentSnapshotTimestamp = snapshot.timestamp
+        currentResultSource = snapshot.resultSource
+        currentCachedSections = snapshot.cachedSections
+        currentStatusMessage = snapshot.statusMessage
+        currentChangeSummary = snapshot.changeSummary
+        currentDiffSections = []
+        ownershipDiff = []
+
+        dnsSections = snapshot.dnsSections
+        dnsError = snapshot.dnsError
+        availabilityResult = snapshot.availabilityResult
+        suggestions = snapshot.suggestions
+        sslInfo = snapshot.sslInfo
+        sslError = snapshot.sslError
+        hstsPreloaded = snapshot.hstsPreloaded
+        httpHeaders = snapshot.httpHeaders
+        httpSecurityGrade = snapshot.httpSecurityGrade
+        httpStatusCode = snapshot.httpStatusCode
+        httpResponseTimeMs = snapshot.httpResponseTimeMs
+        httpProtocol = snapshot.httpProtocol
+        http3Advertised = snapshot.http3Advertised
+        httpHeadersError = snapshot.httpHeadersError
+        reachabilityResults = snapshot.reachabilityResults
+        reachabilityError = snapshot.reachabilityError
+        ipGeolocation = snapshot.ipGeolocation
+        ipGeolocationError = snapshot.ipGeolocationError
+        emailSecurity = snapshot.emailSecurity
+        emailSecurityError = snapshot.emailSecurityError
+        ownershipResult = snapshot.ownership
+        ownershipError = snapshot.ownershipError
+        ptrRecord = snapshot.ptrRecord
+        ptrError = snapshot.ptrError
+        redirectChain = snapshot.redirectChain
+        redirectChainError = snapshot.redirectChainError
+        subdomains = snapshot.subdomains
+        subdomainsError = snapshot.subdomainsError
+        portScanResults = snapshot.portScanResults.filter { $0.kind == .standard }
+        customPortResults = snapshot.portScanResults.filter { $0.kind == .custom }
+        portScanError = snapshot.portScanError
+        customPortScanError = nil
+
+        dnsLoading = false
+        availabilityLoading = false
+        suggestionsLoading = false
+        sslLoading = false
+        hstsLoading = false
+        httpHeadersLoading = false
+        reachabilityLoading = false
+        ipGeolocationLoading = false
+        emailSecurityLoading = false
+        ownershipLoading = false
+        ptrLoading = false
+        redirectChainLoading = false
+        subdomainsLoading = false
+        portScanLoading = false
+        customPortScanLoading = false
+    }
+
+    private static func resolvedSnapshotAfterFallback(
+        _ snapshot: LookupSnapshot,
+        previousSnapshot: LookupSnapshot?
+    ) -> LookupSnapshot {
+        guard shouldFallbackToSnapshot(snapshot), let previousSnapshot else {
+            return snapshot
+        }
+
+        return LookupSnapshot(
+            historyEntryID: previousSnapshot.historyEntryID,
+            domain: previousSnapshot.domain,
+            timestamp: previousSnapshot.timestamp,
+            trackedDomainID: previousSnapshot.trackedDomainID,
+            resolverDisplayName: previousSnapshot.resolverDisplayName,
+            resolverURLString: previousSnapshot.resolverURLString,
+            totalLookupDurationMs: previousSnapshot.totalLookupDurationMs,
+            dnsSections: previousSnapshot.dnsSections,
+            dnsError: previousSnapshot.dnsError,
+            availabilityResult: previousSnapshot.availabilityResult,
+            suggestions: previousSnapshot.suggestions,
+            sslInfo: previousSnapshot.sslInfo,
+            sslError: previousSnapshot.sslError,
+            hstsPreloaded: previousSnapshot.hstsPreloaded,
+            httpHeaders: previousSnapshot.httpHeaders,
+            httpSecurityGrade: previousSnapshot.httpSecurityGrade,
+            httpStatusCode: previousSnapshot.httpStatusCode,
+            httpResponseTimeMs: previousSnapshot.httpResponseTimeMs,
+            httpProtocol: previousSnapshot.httpProtocol,
+            http3Advertised: previousSnapshot.http3Advertised,
+            httpHeadersError: previousSnapshot.httpHeadersError,
+            reachabilityResults: previousSnapshot.reachabilityResults,
+            reachabilityError: previousSnapshot.reachabilityError,
+            ipGeolocation: previousSnapshot.ipGeolocation,
+            ipGeolocationError: previousSnapshot.ipGeolocationError,
+            emailSecurity: previousSnapshot.emailSecurity,
+            emailSecurityError: previousSnapshot.emailSecurityError,
+            ownership: previousSnapshot.ownership,
+            ownershipError: previousSnapshot.ownershipError,
+            ptrRecord: previousSnapshot.ptrRecord,
+            ptrError: previousSnapshot.ptrError,
+            redirectChain: previousSnapshot.redirectChain,
+            redirectChainError: previousSnapshot.redirectChainError,
+            subdomains: previousSnapshot.subdomains,
+            subdomainsError: previousSnapshot.subdomainsError,
+            portScanResults: previousSnapshot.portScanResults,
+            portScanError: previousSnapshot.portScanError,
+            changeSummary: previousSnapshot.changeSummary,
+            resultSource: .snapshot,
+            cachedSections: [],
+            statusMessage: "Last known result • \(previousSnapshot.timestamp.formatted(date: .abbreviated, time: .shortened))"
+        )
+    }
+
+    private static func shouldFallbackToSnapshot(_ snapshot: LookupSnapshot) -> Bool {
+        let candidateMessages = [
+            snapshot.dnsError,
+            snapshot.httpHeadersError,
+            snapshot.sslError,
+            snapshot.ownershipError,
+            snapshot.subdomainsError,
+            snapshot.redirectChainError,
+            snapshot.ipGeolocationError
+        ]
+        .compactMap { $0?.lowercased() }
+
+        guard !candidateMessages.isEmpty else { return false }
+        let failedDueToConnectivity = candidateMessages.allSatisfy { message in
+            message.hasPrefix("network error:") || message.hasPrefix("timeout:") || message.hasPrefix("rate limit:")
+        }
+
+        let hasMaterialData = !snapshot.dnsSections.isEmpty
+            || !snapshot.httpHeaders.isEmpty
+            || snapshot.sslInfo != nil
+            || snapshot.ownership != nil
+            || !snapshot.subdomains.isEmpty
+
+        return failedDueToConnectivity && !hasMaterialData
     }
 
     private func runDNS(domain: String, lookupID: UUID) async {
@@ -1044,11 +1164,12 @@ final class DomainViewModel {
         customPortScanLoading = false
     }
 
-    private static func performBatchLookup(domain: String) async -> BatchLookupPayload? {
+    private static func performBatchLookup(domain: String, previousSnapshot: LookupSnapshot?) async -> BatchLookupPayload? {
         guard !Task.isCancelled else { return nil }
-        let snapshot = await DomainInspectionService().inspectSnapshot(domain: domain)
+        let inspectionService = DomainInspectionService()
+        let snapshot = await inspectionService.inspectSnapshot(domain: domain, previousSnapshot: previousSnapshot)
         guard !Task.isCancelled else { return nil }
-        return BatchLookupPayload(snapshot: snapshot)
+        return BatchLookupPayload(snapshot: resolvedSnapshotAfterFallback(snapshot, previousSnapshot: previousSnapshot))
     }
 
     private static func enrichOpenPortBanners(_ results: [PortScanResult], domain: String) async -> [PortScanResult] {
@@ -1140,6 +1261,10 @@ final class DomainViewModel {
             subdomainsError: snapshot.subdomainsError,
             portScanError: snapshot.portScanError
         )
+
+        if updateCurrentState {
+            currentHistoryEntryID = entry.id
+        }
 
         if replaceLatest, !history.isEmpty, history[0].domain.caseInsensitiveCompare(snapshot.domain) == .orderedSame {
             history[0] = entry
@@ -1318,6 +1443,11 @@ final class DomainViewModel {
         addRecentSearch(target)
         searchedDomain = target
         hasRun = true
+        currentHistoryEntryID = nil
+        currentSnapshotTimestamp = Date()
+        currentResultSource = .live
+        currentCachedSections = []
+        currentStatusMessage = nil
         currentDiffSections = []
         currentChangeSummary = nil
         ownershipDiff = []
@@ -1424,9 +1554,10 @@ final class DomainViewModel {
             refreshingTrackedDomainID = trackedDomain(for: domain)?.id
         }
         updateBatchResult(domain: domain, status: .running, quickStatus: "Running", entry: nil, errorMessage: nil)
+        let previousSnapshot = previousSnapshot(for: domain, trackedDomainID: trackedDomain(for: domain)?.id, replacingLatest: false)
 
-        group.addTask { [domain] in
-            let payload = await Self.performBatchLookup(domain: domain)
+        group.addTask { [domain, previousSnapshot] in
+            let payload = await Self.performBatchLookup(domain: domain, previousSnapshot: previousSnapshot)
             return (domain, payload)
         }
     }
@@ -1441,13 +1572,21 @@ final class DomainViewModel {
                 status: .failed,
                 quickStatus: "Failed",
                 entry: nil,
+                resultSource: .live,
                 errorMessage: "Lookup cancelled"
             )
             batchCompletedCount += 1
             return
         }
 
-        let entry = saveHistoryEntry(from: payload.snapshot, replaceLatest: false, updateCurrentState: false)
+        let entry: HistoryEntry?
+        if payload.snapshot.statusMessage == nil {
+            entry = saveHistoryEntry(from: payload.snapshot, replaceLatest: false, updateCurrentState: false)
+        } else {
+            entry = payload.snapshot.historyEntryID.flatMap { id in
+                history.first(where: { $0.id == id })
+            }
+        }
         let certificateWarningLevel = DomainDiffService.certificateWarningLevel(for: payload.snapshot)
         let quickStatus: String
         if entry?.changeSummary?.hasChanges == true {
@@ -1463,7 +1602,8 @@ final class DomainViewModel {
             status: .completed,
             quickStatus: quickStatus,
             entry: entry,
-            errorMessage: nil
+            resultSource: payload.snapshot.resultSource,
+            errorMessage: payload.snapshot.statusMessage
         )
         batchCompletedCount += 1
     }
@@ -1503,6 +1643,7 @@ final class DomainViewModel {
         status: BatchLookupStatus,
         quickStatus: String,
         entry: HistoryEntry?,
+        resultSource: LookupResultSource = .live,
         errorMessage: String?
     ) {
         guard let index = batchResults.firstIndex(where: { $0.domain.caseInsensitiveCompare(domain) == .orderedSame }) else {
@@ -1513,6 +1654,7 @@ final class DomainViewModel {
             id: batchResults[index].id,
             domain: domain,
             historyEntryID: entry?.id,
+            resultSource: resultSource,
             availability: entry?.availabilityResult?.status,
             primaryIP: entry?.primaryIP,
             quickStatus: quickStatus,
@@ -1573,6 +1715,11 @@ final class DomainViewModel {
         customPortResults = []
         customPortScanError = nil
         customPortScanLoading = false
+        currentHistoryEntryID = nil
+        currentSnapshotTimestamp = Date()
+        currentResultSource = .live
+        currentCachedSections = []
+        currentStatusMessage = nil
     }
 
     private func setAllLoadingStates(_ loading: Bool) {
@@ -1715,7 +1862,9 @@ final class DomainViewModel {
             portScanResults: [],
             portScanError: nil,
             changeSummary: trackedDomain.lastChangeSummary,
-            isLive: false
+            resultSource: .snapshot,
+            cachedSections: [],
+            statusMessage: nil
         )
     }
 
@@ -1801,7 +1950,8 @@ final class DomainViewModel {
             SummaryFieldViewData(label: "Primary IP", value: primaryIPAddress(from: snapshot) ?? "Unavailable", tone: .primary),
             SummaryFieldViewData(label: "HTTPS", value: httpsSummary(from: snapshot), tone: httpsSummaryTone(from: snapshot)),
             SummaryFieldViewData(label: "Certificate", value: certificateStatusLabel(from: snapshot), tone: certificateStatusTone(from: snapshot)),
-            SummaryFieldViewData(label: "Redirect", value: finalRedirectTarget(from: snapshot) ?? "Unavailable", tone: .secondary)
+            SummaryFieldViewData(label: "Redirect", value: finalRedirectTarget(from: snapshot) ?? "Unavailable", tone: .secondary),
+            SummaryFieldViewData(label: "Source", value: snapshot.statusMessage ?? snapshot.resultSource.label, tone: sourceTone(for: snapshot))
         ]
     }
 
@@ -1809,7 +1959,7 @@ final class DomainViewModel {
         var rows = [
             InfoRowViewData(label: "Domain", value: snapshot.domain, tone: .primary),
             InfoRowViewData(label: "Resolver", value: snapshot.resolverDisplayName, tone: .secondary),
-            InfoRowViewData(label: snapshot.isLive ? "Result" : "Snapshot", value: snapshot.isLive ? "Live" : "Snapshot", tone: snapshot.isLive ? .success : .warning),
+            InfoRowViewData(label: snapshot.statusMessage == nil ? "Result" : "Snapshot", value: snapshot.statusMessage ?? snapshot.resultSource.label, tone: sourceTone(for: snapshot)),
             InfoRowViewData(label: "Lookup Duration", value: durationLabel(snapshot.totalLookupDurationMs), tone: .secondary)
         ]
         rows.insert(
@@ -2083,7 +2233,7 @@ final class DomainViewModel {
             "DomainDig Export",
             "Domain: \(snapshot.domain)",
             "Date: \(exportDateFormatter.string(from: snapshot.timestamp))",
-            "Mode: \(snapshot.isLive ? "Live" : "Snapshot")",
+            "Mode: \(snapshot.statusMessage ?? snapshot.resultSource.label)",
             "Resolver: \(snapshot.resolverDisplayName)",
             "Lookup Duration: \(durationLabel(snapshot.totalLookupDurationMs))",
             "Tracked: \(trackedDomain == nil ? "No" : "Yes")"
@@ -2414,6 +2564,23 @@ final class DomainViewModel {
             return .warning
         case .unknown, .none:
             return .secondary
+        }
+    }
+
+    private static func sourceTone(for snapshot: LookupSnapshot) -> ResultTone {
+        if snapshot.statusMessage != nil {
+            return .warning
+        }
+
+        switch snapshot.resultSource {
+        case .live:
+            return .success
+        case .cached:
+            return .secondary
+        case .mixed:
+            return .warning
+        case .snapshot:
+            return .warning
         }
     }
 

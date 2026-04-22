@@ -12,16 +12,20 @@
 		8BBFEF0A2F9874AE00E8E144 /* DomainReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */; };
 		8BBFEF0B2F9874AE00E8E144 /* DomainReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */; };
 		8BBFEF0C2F9874AE00E8E144 /* LookupSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */; };
+		8BBFEFCA2F987E8700E8E144 /* DomainInspectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */; };
+		8BBFEFCB2F987E8700E8E144 /* DomainReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */; };
+		8BBFEFCC2F987E8700E8E144 /* DomainReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */; };
+		8BBFEFCD2F987E8700E8E144 /* LookupSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		8B7800692F6090E300933221 /* DomainDig.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DomainDig.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		8BF124F92F70000100933221 /* domaindig */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = domaindig; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BBFEF022F9874AE00E8E144 /* DomainDigCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDigCLI.swift; sourceTree = "<group>"; };
 		8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainInspectionService.swift; sourceTree = "<group>"; };
 		8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainReportBuilder.swift; sourceTree = "<group>"; };
 		8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainReportExporter.swift; sourceTree = "<group>"; };
 		8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LookupSnapshot.swift; sourceTree = "<group>"; };
+		8BF124F92F70000100933221 /* domaindig */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = domaindig; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -33,11 +37,9 @@
 			);
 			target = 8B7800682F6090E300933221 /* DomainDig */;
 		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		8BF124FA2F70000100933221 /* Exceptions for "DomainDig" folder in "DomainDigCLI" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Assets.xcassets,
 				BatchResultsView.swift,
 				BatchSweepSummaryView.swift,
 				ContentView.swift,
@@ -45,13 +47,13 @@
 				DomainViewModel.swift,
 				ExportPresenter.swift,
 				HistoryView.swift,
-				Info.plist,
 				LocalNotificationService.swift,
 				SavedDomainsView.swift,
 				WatchlistView.swift,
 			);
 			target = 8BF124FB2F70000100933221 /* DomainDigCLI */;
 		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8B78006B2F6090E300933221 /* DomainDig */ = {
@@ -132,7 +134,7 @@
 		};
 		8BF124FB2F70000100933221 /* DomainDigCLI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8BF125042F70000100933221 /* Build configuration list for PBXNativeTarget "DomainDigCLI" */;
+			buildConfigurationList = 8BBFF0292F987EF700E8E144 /* Build configuration list */;
 			buildPhases = (
 				8BF124FC2F70000100933221 /* Sources */,
 				8BF124FD2F70000100933221 /* Frameworks */,
@@ -201,11 +203,22 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8BBFEF082F9874AE00E8E144 /* DomainDigCLI.swift in Sources */,
 				8BBFEF092F9874AE00E8E144 /* DomainInspectionService.swift in Sources */,
 				8BBFEF0A2F9874AE00E8E144 /* DomainReportBuilder.swift in Sources */,
 				8BBFEF0B2F9874AE00E8E144 /* DomainReportExporter.swift in Sources */,
 				8BBFEF0C2F9874AE00E8E144 /* LookupSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BF124FC2F70000100933221 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8BBFEF082F9874AE00E8E144 /* DomainDigCLI.swift in Sources */,
+				8BBFEFCA2F987E8700E8E144 /* DomainInspectionService.swift in Sources */,
+				8BBFEFCB2F987E8700E8E144 /* DomainReportBuilder.swift in Sources */,
+				8BBFEFCC2F987E8700E8E144 /* DomainReportExporter.swift in Sources */,
+				8BBFEFCD2F987E8700E8E144 /* LookupSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,7 +354,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -358,7 +371,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.4.0;
+				MARKETING_VERSION = 2.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -377,7 +390,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -394,7 +407,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.4.0;
+				MARKETING_VERSION = 2.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -407,44 +420,22 @@
 			};
 			name = Release;
 		};
-		8BF125002F70000100933221 /* Debug */ = {
+		8BBFF0272F987E8700E8E144 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGNING_ALLOWED = NO;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
-				DEVELOPMENT_TEAM = ZCNAX3VL9D;
-				ENABLE_TESTABILITY = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.4.0;
-				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDigCLI;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				PRODUCT_NAME = domaindig;
-				SDKROOT = macosx;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
-		8BF125012F70000100933221 /* Release */ = {
+		8BBFF0282F987E8700E8E144 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGNING_ALLOWED = NO;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 17;
-				DEVELOPMENT_TEAM = ZCNAX3VL9D;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.4.0;
-				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDigCLI;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				PRODUCT_NAME = domaindig;
-				SDKROOT = macosx;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -465,6 +456,15 @@
 			buildConfigurations = (
 				8B7800752F6090E400933221 /* Debug */,
 				8B7800762F6090E400933221 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8BBFF0292F987EF700E8E144 /* Build configuration list */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8BBFF0272F987E8700E8E144 /* Debug */,
+				8BBFF0282F987E8700E8E144 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

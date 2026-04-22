@@ -3,6 +3,7 @@ import Foundation
 struct DomainReport: Codable {
     let domain: String
     let timestamp: Date
+    let resultSource: LookupResultSource
     let availability: DomainAvailabilityStatus
     let ownership: DomainOwnership?
     let dns: DNSResultSummary
@@ -70,6 +71,7 @@ struct DomainReportBuilder {
         return DomainReport(
             domain: snapshot.domain,
             timestamp: snapshot.timestamp,
+            resultSource: snapshot.resultSource,
             availability: snapshot.availabilityResult?.status ?? .unknown,
             ownership: snapshot.ownership,
             dns: DNSResultSummary(

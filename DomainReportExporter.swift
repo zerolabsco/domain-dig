@@ -36,6 +36,7 @@ enum DomainReportExporter {
             "DomainDig Report",
             "Domain: \(report.domain)",
             "Timestamp: \(textDateFormatter.string(from: report.timestamp))",
+            "Source: \(report.resultSource.label)",
             "Availability: \(availabilityLabel(report.availability))"
         ]
 
@@ -212,6 +213,7 @@ enum DomainReportExporter {
         let headers = [
             "domain",
             "timestamp",
+            "result_source",
             "availability",
             "registrar",
             "ownership_expires",
@@ -247,6 +249,7 @@ enum DomainReportExporter {
             return [
                 report.domain,
                 csvDateFormatter.string(from: report.timestamp),
+                report.resultSource.rawValue,
                 availabilityLabel(report.availability),
                 report.ownership?.registrar ?? "",
                 expirationDate,

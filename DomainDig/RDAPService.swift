@@ -5,7 +5,7 @@ enum RDAPService {
         let normalizedDomain = normalize(domain)
         guard !normalizedDomain.isEmpty else { return nil }
 
-        switch await cache.response(for: normalizedDomain) {
+        switch await fetchRDAPResponse(for: normalizedDomain) {
         case let .success(response):
             return response.isDomainRecord ? .registered : nil
         case .empty:
@@ -21,7 +21,7 @@ enum RDAPService {
             return .empty("Unavailable")
         }
 
-        switch await cache.response(for: normalizedDomain) {
+        switch await fetchRDAPResponse(for: normalizedDomain) {
         case let .success(response):
             let ownership = DomainOwnership(
                 registrar: response.registrarName,
@@ -39,37 +39,10 @@ enum RDAPService {
         }
     }
 
-    private static let cache = RDAPCache()
-
     private static func normalize(_ domain: String) -> String {
         domain
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-    }
-}
-
-private actor RDAPCache {
-    private var cachedResponses: [String: ServiceResult<RDAPDomainResponse>] = [:]
-    private var inFlightTasks: [String: Task<ServiceResult<RDAPDomainResponse>, Never>] = [:]
-
-    func response(for domain: String) async -> ServiceResult<RDAPDomainResponse> {
-        if let cachedResponse = cachedResponses[domain] {
-            return cachedResponse
-        }
-
-        if let inFlightTask = inFlightTasks[domain] {
-            return await inFlightTask.value
-        }
-
-        let task = Task<ServiceResult<RDAPDomainResponse>, Never> {
-            await fetchRDAPResponse(for: domain)
-        }
-        inFlightTasks[domain] = task
-
-        let result = await task.value
-        cachedResponses[domain] = result
-        inFlightTasks[domain] = nil
-        return result
     }
 }
 

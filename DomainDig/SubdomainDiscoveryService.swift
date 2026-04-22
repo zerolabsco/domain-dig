@@ -7,55 +7,16 @@ enum SubdomainDiscoveryService {
             return .empty("No passive subdomains found")
         }
 
-        return await cache.subdomains(for: normalizedDomain, limit: limit)
+        return await fetchSubdomains(for: normalizedDomain, limit: limit)
     }
-
-    private static let cache = SubdomainDiscoveryCache()
 
     private static func normalize(_ domain: String) -> String {
         domain
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
     }
-}
 
-private actor SubdomainDiscoveryCache {
-    private var cachedResults: [String: ServiceResult<[DiscoveredSubdomain]>] = [:]
-    private var inFlightTasks: [String: Task<ServiceResult<[DiscoveredSubdomain]>, Never>] = [:]
-    private var lastRequestAt: Date?
-
-    func subdomains(for domain: String, limit: Int) async -> ServiceResult<[DiscoveredSubdomain]> {
-        if let cachedResult = cachedResults[domain] {
-            return cachedResult
-        }
-
-        if let inFlightTask = inFlightTasks[domain] {
-            return await inFlightTask.value
-        }
-
-        let task = Task<ServiceResult<[DiscoveredSubdomain]>, Never> {
-            await enforceRateLimit()
-            return await fetchSubdomains(for: domain, limit: limit)
-        }
-        inFlightTasks[domain] = task
-
-        let result = await task.value
-        cachedResults[domain] = result
-        inFlightTasks[domain] = nil
-        return result
-    }
-
-    private func enforceRateLimit() async {
-        if let lastRequestAt {
-            let delay = max(0, 0.75 - Date().timeIntervalSince(lastRequestAt))
-            if delay > 0 {
-                try? await Task.sleep(for: .seconds(delay))
-            }
-        }
-        lastRequestAt = Date()
-    }
-
-    private func fetchSubdomains(for domain: String, limit: Int) async -> ServiceResult<[DiscoveredSubdomain]> {
+    private static func fetchSubdomains(for domain: String, limit: Int) async -> ServiceResult<[DiscoveredSubdomain]> {
         var components = URLComponents(string: "https://crt.sh/")!
         components.queryItems = [
             URLQueryItem(name: "q", value: "%.\(domain)"),
@@ -81,7 +42,7 @@ private actor SubdomainDiscoveryCache {
         }
     }
 
-    private func parseSubdomains(from entries: [CRTShEntry], domain: String, limit: Int) -> [DiscoveredSubdomain] {
+    private static func parseSubdomains(from entries: [CRTShEntry], domain: String, limit: Int) -> [DiscoveredSubdomain] {
         var seen = Set<String>()
         var results: [DiscoveredSubdomain] = []
 

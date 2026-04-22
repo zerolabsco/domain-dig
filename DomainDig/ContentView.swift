@@ -30,6 +30,10 @@ struct ContentView: View {
                     }
                     if viewModel.hasRun {
                         actionButtons
+                        if let statusMessage = viewModel.currentStatusMessage ?? (viewModel.currentResultSource != .live ? viewModel.currentResultSource.label : nil) {
+                            LookupStatusBannerView(message: statusMessage, resultSource: viewModel.currentResultSource)
+                                .padding(.top, 8)
+                        }
                         SummaryView(fields: viewModel.summaryFields)
                             .padding(.top, 8)
                         if let changeSummary = viewModel.currentChangeSummary {
@@ -490,6 +494,52 @@ struct SummaryView: View {
                     .cornerRadius(6)
                 }
             }
+        }
+    }
+}
+
+struct LookupStatusBannerView: View {
+    let message: String
+    let resultSource: LookupResultSource
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: iconName)
+                .font(.caption)
+            Text(message)
+                .font(.system(.caption, design: .monospaced))
+            Spacer()
+        }
+        .foregroundStyle(color)
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var color: Color {
+        switch resultSource {
+        case .live:
+            return .green
+        case .cached:
+            return .secondary
+        case .mixed:
+            return .yellow
+        case .snapshot:
+            return .orange
+        }
+    }
+
+    private var iconName: String {
+        switch resultSource {
+        case .live:
+            return "bolt.horizontal"
+        case .cached:
+            return "clock.arrow.trianglehead.counterclockwise.rotate.90"
+        case .mixed:
+            return "arrow.triangle.branch"
+        case .snapshot:
+            return "archivebox"
         }
     }
 }

@@ -58,6 +58,9 @@ struct BatchResultRowView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer(minLength: 8)
+                Text(result.resultSource.label.lowercased())
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(.secondary)
                 Text(result.quickStatus)
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(quickStatusColor)
@@ -84,7 +87,7 @@ struct BatchResultRowView: View {
             if let errorMessage = result.errorMessage {
                 Text(errorMessage)
                     .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.red)
+                    .foregroundStyle(result.status == .failed ? .red : .secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
