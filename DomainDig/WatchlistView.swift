@@ -1,8 +1,17 @@
 import SwiftUI
 
 struct WatchlistView: View {
+    @Environment(\.appDensity) private var appDensity
     @Bindable var viewModel: DomainViewModel
     @Environment(\.dismiss) private var dismiss
+
+    private var pinnedDomains: [TrackedDomain] {
+        viewModel.filteredTrackedDomains.filter(\.isPinned)
+    }
+
+    private var otherDomains: [TrackedDomain] {
+        viewModel.filteredTrackedDomains.filter { !$0.isPinned }
+    }
 
     var body: some View {
         List {
@@ -13,7 +22,7 @@ struct WatchlistView: View {
                             .tint(.cyan)
                         HStack {
                             Text(viewModel.batchProgressLabel)
-                                .font(.system(.caption, design: .monospaced))
+                                .font(appDensity.font(.caption))
                                 .foregroundStyle(.secondary)
                             Spacer()
                             if viewModel.batchLookupRunning {
@@ -21,7 +30,7 @@ struct WatchlistView: View {
                                     viewModel.cancelBatchLookup()
                                 }
                                 .buttonStyle(.bordered)
-                                .font(.system(.caption2, design: .monospaced))
+                                .font(appDensity.font(.caption2))
                             }
                         }
 
@@ -36,87 +45,34 @@ struct WatchlistView: View {
 
             if viewModel.filteredTrackedDomains.isEmpty {
                 Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("No tracked domains yet")
-                            .font(.system(.callout, design: .monospaced))
-                            .foregroundStyle(.primary)
-                        Text("Tracked domains appear here. Tracking is local and manual for now.")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 8)
+                    EmptyStateCardView(
+                        title: "No Tracked Domains",
+                        message: "Track important domains locally so you can refresh them quickly and see status changes at a glance.",
+                        suggestion: "Run an inspection and use the Track action on a domain you care about.",
+                        systemImage: "eye"
+                    )
                 }
                 .listRowBackground(Color(.systemGray6).opacity(0.5))
             } else {
                 if let limitMessage = PremiumAccessService.trackedDomainLimitMessage(currentCount: viewModel.trackedDomains.count) {
                     Section {
                         Text(limitMessage)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(appDensity.font(.caption))
                             .foregroundStyle(.secondary)
                     }
                     .listRowBackground(Color(.systemGray6).opacity(0.5))
                 }
 
-                Section {
-                    ForEach(viewModel.filteredTrackedDomains) { trackedDomain in
-                        NavigationLink {
-                            TrackedDomainDetailView(viewModel: viewModel, trackedDomain: trackedDomain)
-                        } label: {
-                            WatchlistRowView(
-                                trackedDomain: trackedDomain,
-                                isRefreshing: viewModel.refreshingTrackedDomainID == trackedDomain.id
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                            Button {
-                                viewModel.togglePinned(for: trackedDomain)
-                            } label: {
-                                Label(trackedDomain.isPinned ? "Unpin" : "Pin", systemImage: trackedDomain.isPinned ? "pin.slash" : "pin")
-                            }
-                            .tint(.yellow)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                viewModel.deleteTrackedDomain(trackedDomain)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .contextMenu {
-                            Button {
-                                viewModel.refreshTrackedDomain(trackedDomain)
-                            } label: {
-                                Label("Refresh", systemImage: "arrow.clockwise")
-                            }
+                if !pinnedDomains.isEmpty {
+                    trackedSection(title: "Pinned", domains: pinnedDomains)
+                }
 
-                            Button {
-                                dismiss()
-                                viewModel.rerunInspection(for: trackedDomain)
-                            } label: {
-                                Label("Open Inspection", systemImage: "magnifyingglass")
-                            }
-
-                            Button {
-                                viewModel.togglePinned(for: trackedDomain)
-                            } label: {
-                                Label(trackedDomain.isPinned ? "Unpin" : "Pin", systemImage: trackedDomain.isPinned ? "pin.slash" : "pin")
-                            }
-
-                            Button(role: .destructive) {
-                                viewModel.deleteTrackedDomain(trackedDomain)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .listRowBackground(Color(.systemGray6).opacity(0.5))
-                    }
-                    .onDelete(perform: deleteFilteredTrackedDomains)
-                } header: {
-                    Text("Tracked Domains")
+                if !otherDomains.isEmpty {
+                    trackedSection(title: pinnedDomains.isEmpty ? "Tracked Domains" : "Others", domains: otherDomains)
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.filteredTrackedDomains.map(\.id))
         .scrollContentBackground(.hidden)
         .background(Color.black)
         .navigationTitle("Watchlist")
@@ -138,6 +94,7 @@ struct WatchlistView: View {
                         }
 
                         Button(viewModel.batchLookupRunning ? "Check All Running" : "Check All") {
+                            AppHaptics.refresh()
                             viewModel.refreshAllTrackedDomains()
                         }
                         .disabled(viewModel.batchLookupRunning)
@@ -168,6 +125,86 @@ struct WatchlistView: View {
             BatchSweepSummaryView(viewModel: viewModel, summary: summary)
         }
         .preferredColorScheme(.dark)
+    }
+
+    @ViewBuilder
+    private func trackedSection(title: String, domains: [TrackedDomain]) -> some View {
+        Section(title) {
+            ForEach(domains) { trackedDomain in
+                trackedDomainRow(trackedDomain)
+            }
+        }
+    }
+
+    private func trackedDomainRow(_ trackedDomain: TrackedDomain) -> some View {
+        NavigationLink {
+            TrackedDomainDetailView(viewModel: viewModel, trackedDomain: trackedDomain)
+        } label: {
+            WatchlistRowView(
+                trackedDomain: trackedDomain,
+                isRefreshing: viewModel.refreshingTrackedDomainID == trackedDomain.id
+            )
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button {
+                AppHaptics.refresh()
+                viewModel.refreshTrackedDomain(trackedDomain)
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+            .tint(.cyan)
+
+            Button {
+                viewModel.togglePinned(for: trackedDomain)
+            } label: {
+                Label(trackedDomain.isPinned ? "Unpin" : "Pin", systemImage: trackedDomain.isPinned ? "pin.slash" : "pin")
+            }
+            .tint(.yellow)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button {
+                AppHaptics.refresh()
+                viewModel.refreshTrackedDomain(trackedDomain)
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+            .tint(.cyan)
+
+            Button(role: .destructive) {
+                viewModel.deleteTrackedDomain(trackedDomain)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .contextMenu {
+            Button {
+                AppHaptics.refresh()
+                viewModel.refreshTrackedDomain(trackedDomain)
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+
+            Button {
+                dismiss()
+                viewModel.rerunInspection(for: trackedDomain)
+            } label: {
+                Label("Open Inspection", systemImage: "magnifyingglass")
+            }
+
+            Button {
+                viewModel.togglePinned(for: trackedDomain)
+            } label: {
+                Label(trackedDomain.isPinned ? "Unpin" : "Pin", systemImage: trackedDomain.isPinned ? "pin.slash" : "pin")
+            }
+
+            Button(role: .destructive) {
+                viewModel.deleteTrackedDomain(trackedDomain)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .listRowBackground(Color(.systemGray6).opacity(0.5))
     }
 
     private var batchSummaryBinding: Binding<BatchSweepSummary?> {
@@ -203,11 +240,12 @@ struct WatchlistView: View {
 }
 
 struct WatchlistRowView: View {
+    @Environment(\.appDensity) private var appDensity
     let trackedDomain: TrackedDomain
     let isRefreshing: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing + 1) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 if trackedDomain.isPinned {
                     Image(systemName: "pin.fill")
@@ -215,7 +253,7 @@ struct WatchlistRowView: View {
                         .foregroundStyle(.yellow)
                 }
                 Text(trackedDomain.domain)
-                    .font(.system(.callout, design: .monospaced))
+                    .font(appDensity.font(.callout))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -224,19 +262,19 @@ struct WatchlistRowView: View {
             }
 
             Text("Updated \(trackedDomain.updatedAt.formatted(date: .abbreviated, time: .shortened))")
-                .font(.system(.caption2, design: .monospaced))
+                .font(appDensity.font(.caption2))
                 .foregroundStyle(.secondary)
 
             indicatorRow
 
             if let note = trackedDomain.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty {
                 Text(note)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(appDensity.font(.caption))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             } else if let summary = trackedDomain.lastChangeSummary {
                 Text(summary.message)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(appDensity.font(.caption))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
@@ -259,84 +297,32 @@ struct WatchlistRowView: View {
     @ViewBuilder
     private var statusBadge: some View {
         if isRefreshing {
-            HStack(spacing: 6) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Refreshing")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color(.systemGray5).opacity(0.6))
-            .clipShape(Capsule())
+            AppStatusBadgeView(model: .init(title: "Refreshing", systemImage: "arrow.clockwise", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.6)))
         } else {
-            Text(availabilityLabel(trackedDomain.lastKnownAvailability))
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(badgeColor)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(badgeBackground)
-                .clipShape(Capsule())
-        }
-    }
-
-    private var badgeColor: Color {
-        switch trackedDomain.lastKnownAvailability {
-        case .available:
-            return .green
-        case .registered:
-            return .yellow
-        case .unknown, .none:
-            return .secondary
-        }
-    }
-
-    private var badgeBackground: Color {
-        switch trackedDomain.lastKnownAvailability {
-        case .available:
-            return .green.opacity(0.16)
-        case .registered:
-            return .yellow.opacity(0.16)
-        case .unknown, .none:
-            return Color(.systemGray5).opacity(0.6)
+            AppStatusBadgeView(model: AppStatusFactory.availability(trackedDomain.lastKnownAvailability))
         }
     }
 
     @ViewBuilder
     private var indicatorRow: some View {
         HStack(spacing: 8) {
-            if let severity = trackedDomain.lastChangeSeverity, severity >= .medium {
-                Label(severity.title, systemImage: severity == .high ? "exclamationmark.circle.fill" : "circle.fill")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(severity == .high ? .red : .yellow)
-            } else {
-                Label("Stable", systemImage: "circle.fill")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
+            AppStatusBadgeView(model: AppStatusFactory.change(trackedDomain.lastChangeSummary))
 
             if trackedDomain.certificateWarningLevel != .none {
-                Text(certificateLabel)
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(trackedDomain.certificateWarningLevel == .critical ? .red : .yellow)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background((trackedDomain.certificateWarningLevel == .critical ? Color.red : Color.yellow).opacity(0.16))
-                    .clipShape(Capsule())
+                AppStatusBadgeView(model: certificateBadge)
             }
         }
     }
 
-    private var certificateLabel: String {
+    private var certificateBadge: AppStatusBadgeModel {
         let days = trackedDomain.certificateDaysRemaining.map { "\($0)d" } ?? "Soon"
         switch trackedDomain.certificateWarningLevel {
         case .critical:
-            return "Cert \(days)"
+            return .init(title: "Invalid \(days)", systemImage: "xmark.octagon.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
         case .warning:
-            return "Warn \(days)"
+            return .init(title: "Expiring \(days)", systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
         case .none:
-            return ""
+            return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
         }
     }
 }

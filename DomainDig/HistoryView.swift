@@ -1,53 +1,69 @@
 import SwiftUI
 
 struct HistoryView: View {
+    @Environment(\.appDensity) private var appDensity
     @Bindable var viewModel: DomainViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showClearAllConfirmation = false
 
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
-    }()
+    private var groupedHistory: [HistoryGroup] {
+        HistoryGroup.groups(for: viewModel.filteredHistory)
+    }
 
     var body: some View {
         List {
             if viewModel.filteredHistory.isEmpty {
-                Text("No lookup history")
-                    .font(.system(.callout, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                EmptyStateCardView(
+                    title: "No History Yet",
+                    message: "History stores local snapshots of previous inspections so you can revisit and compare them later.",
+                    suggestion: "Run a lookup to create your first saved snapshot.",
+                    systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90"
+                )
                     .listRowBackground(Color(.systemGray6).opacity(0.5))
             } else {
-                ForEach(viewModel.filteredHistory) { entry in
-                    NavigationLink {
-                        HistoryDetailView(viewModel: viewModel, entry: entry)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(entry.domain)
-                                .font(.system(.callout, design: .monospaced))
-                                .foregroundStyle(.primary)
-                            if let summary = entry.changeSummary {
-                                Text(summary.hasChanges ? "Changed" : "Unchanged")
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundStyle(summary.hasChanges ? .yellow : .green)
-                            }
-                            HStack(spacing: 8) {
-                                Text(dateFormatter.string(from: entry.timestamp))
-                                Text("Snapshot")
-                                Text(entry.resolverDisplayName)
-                                if let totalLookupDurationMs = entry.totalLookupDurationMs {
-                                    Text("\(totalLookupDurationMs) ms")
+                ForEach(groupedHistory) { group in
+                    Section(group.title) {
+                        ForEach(group.entries) { entry in
+                            NavigationLink {
+                                HistoryDetailView(viewModel: viewModel, entry: entry)
+                            } label: {
+                                VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing + 1) {
+                                    HStack(alignment: .center, spacing: 8) {
+                                        Text(entry.domain)
+                                            .font(appDensity.font(.callout))
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        AppStatusBadgeView(model: AppStatusFactory.change(entry.changeSummary))
+                                    }
+
+                                    HStack(spacing: 8) {
+                                        AppStatusBadgeView(model: AppStatusFactory.availability(entry.availabilityResult?.status))
+                                        AppStatusBadgeView(model: AppStatusFactory.tls(sslInfo: entry.sslInfo, error: entry.sslError))
+                                    }
+
+                                    HStack(spacing: 8) {
+                                        Text(entry.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                        Text(entry.timestamp.formatted(.relative(presentation: .named)))
+                                        Text(entry.resolverDisplayName)
+                                        if let totalLookupDurationMs = entry.totalLookupDurationMs {
+                                            Text("\(totalLookupDurationMs) ms")
+                                        }
+                                    }
+                                    .font(appDensity.font(.caption2))
+                                    .foregroundStyle(.secondary)
                                 }
                             }
-                            .font(.system(.caption2, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    viewModel.removeHistoryEntries(withIDs: [entry.id])
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
+                        .listRowBackground(Color(.systemGray6).opacity(0.5))
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
                 }
-                .onDelete(perform: deleteFilteredHistoryEntries)
             }
         }
         .scrollContentBackground(.hidden)
@@ -108,6 +124,7 @@ struct HistoryView: View {
 }
 
 struct HistoryDetailView: View {
+    @Environment(\.appDensity) private var appDensity
     @Bindable var viewModel: DomainViewModel
     let entry: HistoryEntry
     @Environment(\.dismiss) private var dismiss
@@ -130,6 +147,7 @@ struct HistoryDetailView: View {
                 SummaryView(fields: DomainViewModel.summaryFields(from: snapshot))
                     .padding(.top, 8)
                 DomainSectionView(
+                    isCollapsed: .constant(false),
                     rows: DomainViewModel.domainRows(from: snapshot),
                     suggestions: DomainViewModel.suggestionRows(from: snapshot),
                     showSuggestions: entry.availabilityResult?.status == .registered && !entry.suggestions.isEmpty,
@@ -146,42 +164,46 @@ struct HistoryDetailView: View {
                     },
                     onEditNote: nil
                 )
-                    .padding(.top, 16)
+                    .padding(.top, appDensity.metrics.sectionSpacing)
                 OwnershipSectionView(
+                    isCollapsed: .constant(false),
                     rows: DomainViewModel.ownershipRows(from: snapshot),
                     loading: false,
                     error: snapshot.ownershipError,
                     showsHistoryPlaceholder: !DataAccessService.hasAccess(to: .ownershipHistory)
                 )
-                .padding(.top, 16)
+                .padding(.top, appDensity.metrics.sectionSpacing)
                 SubdomainsSectionView(
+                    isCollapsed: .constant(false),
                     rows: DomainViewModel.subdomainRows(from: snapshot),
                     loading: false,
                     error: snapshot.subdomainsError,
                     showsExtendedPlaceholder: !DataAccessService.hasAccess(to: .extendedSubdomains)
                 )
-                .padding(.top, 16)
+                .padding(.top, appDensity.metrics.sectionSpacing)
                 if let comparisonSnapshot = viewModel.comparisonSnapshot(for: entry) {
                     if let changeSummary = entry.changeSummary {
                         DomainChangeSummaryView(summary: changeSummary)
-                            .padding(.top, 16)
+                            .padding(.top, appDensity.metrics.sectionSpacing)
                     }
                     DomainDiffView(
                         title: "Compared With Previous Snapshot",
                         sections: DomainDiffService.diff(from: comparisonSnapshot, to: snapshot),
                         showsUnchanged: false
                     )
-                    .padding(.top, 16)
+                    .padding(.top, appDensity.metrics.sectionSpacing)
                 }
                 DNSSectionView(
+                    isCollapsed: .constant(false),
                     dnssecLabel: DomainViewModel.dnssecLabel(from: snapshot),
                     sections: DomainViewModel.dnsRows(from: snapshot),
                     ptrMessage: DomainViewModel.ptrMessage(from: snapshot),
                     loading: false,
                     sectionError: snapshot.dnsError
                 )
-                .padding(.top, 16)
+                .padding(.top, appDensity.metrics.sectionSpacing)
                 WebSectionView(
+                    isCollapsed: .constant(false),
                     certificateRows: DomainViewModel.webCertificateRows(from: snapshot),
                     sslInfo: snapshot.sslInfo,
                     sslLoading: false,
@@ -195,14 +217,16 @@ struct HistoryDetailView: View {
                     redirectError: snapshot.redirectChainError,
                     finalURL: snapshot.redirectChain.last?.url
                 )
-                .padding(.top, 16)
+                .padding(.top, appDensity.metrics.sectionSpacing)
                 EmailSectionView(
+                    isCollapsed: .constant(false),
                     rows: DomainViewModel.emailRows(from: snapshot),
                     loading: false,
                     error: snapshot.emailSecurityError
                 )
-                .padding(.top, 16)
+                .padding(.top, appDensity.metrics.sectionSpacing)
                 NetworkSectionView(
+                    isCollapsed: .constant(false),
                     reachabilityRows: DomainViewModel.reachabilityRows(from: snapshot),
                     reachabilityLoading: false,
                     reachabilityError: snapshot.reachabilityError,
@@ -221,7 +245,7 @@ struct HistoryDetailView: View {
                     customPortInput: .constant(""),
                     onScanCustomPorts: {}
                 )
-                .padding(.top, 16)
+                .padding(.top, appDensity.metrics.sectionSpacing)
             }
             .padding(.horizontal)
             .padding(.bottom, 32)
@@ -244,17 +268,45 @@ struct HistoryDetailView: View {
             Image(systemName: "archivebox")
                 .font(.caption)
             Text("Snapshot from \(dateFormatter.string(from: entry.timestamp))")
-                .font(.system(.caption, design: .monospaced))
+                .font(appDensity.font(.caption))
             Spacer()
             Text("Live re-run available")
-                .font(.system(.caption2, design: .monospaced))
+                .font(appDensity.font(.caption2))
                 .foregroundStyle(.secondary)
         }
         .foregroundStyle(.secondary)
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemGray6).opacity(0.3))
-        .cornerRadius(6)
+        .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
         .padding(.vertical, 12)
+    }
+}
+
+private struct HistoryGroup: Identifiable {
+    let title: String
+    let entries: [HistoryEntry]
+
+    var id: String { title }
+
+    static func groups(for entries: [HistoryEntry]) -> [HistoryGroup] {
+        let calendar = Calendar.current
+        let today = Date()
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+
+        let grouped = Dictionary(grouping: entries) { entry -> String in
+            if calendar.isDate(entry.timestamp, inSameDayAs: today) {
+                return "Today"
+            }
+            if calendar.isDate(entry.timestamp, inSameDayAs: yesterday) {
+                return "Yesterday"
+            }
+            return "Older"
+        }
+
+        return ["Today", "Yesterday", "Older"].compactMap { title in
+            guard let entries = grouped[title], !entries.isEmpty else { return nil }
+            return HistoryGroup(title: title, entries: entries)
+        }
     }
 }

@@ -598,6 +598,12 @@ final class DomainViewModel {
         persistHistory()
     }
 
+    func clearLookupCache() {
+        Task {
+            await LookupRuntime.shared.clearCache()
+        }
+    }
+
     func clearRecentSearches() {
         recentSearches.removeAll()
         UserDefaults.standard.removeObject(forKey: Self.recentSearchesKey)

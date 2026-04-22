@@ -58,6 +58,13 @@ actor LookupRuntime {
     private var inFlight: [RequestKey: Task<CachedPayload, Never>] = [:]
     private var nextAllowedAt: [RateLimitBucket: Date] = [:]
 
+    func clearCache() {
+        cache.removeAll()
+        inFlight.values.forEach { $0.cancel() }
+        inFlight.removeAll()
+        nextAllowedAt.removeAll()
+    }
+
     func dns(domain: String) async -> CachedLookupResult<ServiceResult<[DNSSection]>> {
         await execute(
             key: .domain(domain, .dns),

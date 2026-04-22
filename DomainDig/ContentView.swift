@@ -8,7 +8,18 @@ enum LookupInputMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum ResultSection: String, Hashable {
+    case domain
+    case ownership
+    case dns
+    case web
+    case email
+    case network
+    case subdomains
+}
+
 struct ContentView: View {
+    @Environment(\.appDensity) private var appDensity
     @State private var viewModel = DomainViewModel()
     @State private var navigationPath = NavigationPath()
     @FocusState private var domainFieldFocused: Bool
@@ -18,6 +29,7 @@ struct ContentView: View {
     @State private var editingTrackedDomain: TrackedDomain?
     @State private var showTrackLimitAlert = false
     @State private var inputMode: LookupInputMode = .single
+    @State private var collapsedSections: Set<ResultSection> = [.network]
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -26,21 +38,22 @@ struct ContentView: View {
                     inputSection
                     if !viewModel.batchResults.isEmpty || viewModel.batchLookupRunning {
                         batchSection
-                            .padding(.top, 8)
+                            .padding(.top, appDensity.metrics.cardSpacing)
                     }
                     if viewModel.hasRun {
                         actionButtons
-                        if let statusMessage = viewModel.currentStatusMessage ?? (viewModel.currentResultSource != .live ? viewModel.currentResultSource.label : nil) {
+                        if let statusMessage = resultStatusMessage {
                             LookupStatusBannerView(message: statusMessage, resultSource: viewModel.currentResultSource)
-                                .padding(.top, 8)
+                                .padding(.top, appDensity.metrics.cardSpacing)
                         }
                         SummaryView(fields: viewModel.summaryFields)
-                            .padding(.top, 8)
+                            .padding(.top, appDensity.metrics.cardSpacing)
                         if let changeSummary = viewModel.currentChangeSummary {
                             DomainChangeSummaryView(summary: changeSummary)
-                                .padding(.top, 12)
+                                .padding(.top, appDensity.metrics.cardSpacing)
                         }
                         DomainSectionView(
+                            isCollapsed: sectionCollapsedBinding(.domain),
                             rows: viewModel.domainRows,
                             suggestions: viewModel.suggestionRows,
                             showSuggestions: viewModel.availabilityResult?.status == .registered || viewModel.suggestionsLoading,
@@ -63,38 +76,42 @@ struct ContentView: View {
                                 editingTrackedDomain = trackedDomain
                             }
                         )
-                            .padding(.top, 16)
+                            .padding(.top, appDensity.metrics.sectionSpacing)
                         OwnershipSectionView(
+                            isCollapsed: sectionCollapsedBinding(.ownership),
                             rows: viewModel.ownershipRows,
                             loading: viewModel.ownershipLoading,
                             error: viewModel.ownershipError,
                             showsHistoryPlaceholder: !DataAccessService.hasAccess(to: .ownershipHistory)
                         )
-                        .padding(.top, 16)
+                        .padding(.top, appDensity.metrics.sectionSpacing)
                         SubdomainsSectionView(
+                            isCollapsed: sectionCollapsedBinding(.subdomains),
                             rows: viewModel.subdomainRows,
                             loading: viewModel.subdomainsLoading,
                             error: viewModel.subdomainsError,
                             showsExtendedPlaceholder: !DataAccessService.hasAccess(to: .extendedSubdomains)
                         )
-                        .padding(.top, 16)
+                        .padding(.top, appDensity.metrics.sectionSpacing)
                         if !viewModel.currentDiffSections.isEmpty {
                             DomainDiffView(
                                 title: "Latest Changes",
                                 sections: viewModel.currentDiffSections,
                                 showsUnchanged: false
                             )
-                            .padding(.top, 16)
+                            .padding(.top, appDensity.metrics.sectionSpacing)
                         }
                         DNSSectionView(
+                            isCollapsed: sectionCollapsedBinding(.dns),
                             dnssecLabel: viewModel.dnssecLabel,
                             sections: viewModel.dnsRows,
                             ptrMessage: viewModel.ptrMessage,
                             loading: viewModel.dnsLoading || viewModel.ptrLoading,
                             sectionError: viewModel.dnsError
                         )
-                        .padding(.top, 16)
+                        .padding(.top, appDensity.metrics.sectionSpacing)
                         WebSectionView(
+                            isCollapsed: sectionCollapsedBinding(.web),
                             certificateRows: viewModel.webCertificateRows,
                             sslInfo: viewModel.sslInfo,
                             sslLoading: viewModel.sslLoading || viewModel.hstsLoading,
@@ -108,14 +125,16 @@ struct ContentView: View {
                             redirectError: viewModel.redirectChainError,
                             finalURL: viewModel.currentSnapshot.redirectChain.last?.url
                         )
-                        .padding(.top, 16)
+                        .padding(.top, appDensity.metrics.sectionSpacing)
                         EmailSectionView(
+                            isCollapsed: sectionCollapsedBinding(.email),
                             rows: viewModel.emailRows,
                             loading: viewModel.emailSecurityLoading,
                             error: viewModel.emailSecurityError
                         )
-                        .padding(.top, 16)
+                        .padding(.top, appDensity.metrics.sectionSpacing)
                         NetworkSectionView(
+                            isCollapsed: sectionCollapsedBinding(.network),
                             reachabilityRows: viewModel.reachabilityRows,
                             reachabilityLoading: viewModel.reachabilityLoading,
                             reachabilityError: viewModel.reachabilityError,
@@ -134,7 +153,7 @@ struct ContentView: View {
                             customPortInput: $customPortInput,
                             onScanCustomPorts: runCustomPortScan
                         )
-                        .padding(.top, 16)
+                        .padding(.top, appDensity.metrics.sectionSpacing)
                     } else if !viewModel.recentSearches.isEmpty {
                         recentSearchesSection
                     }
@@ -142,7 +161,34 @@ struct ContentView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 32)
             }
-            .background(Color.black)
+            .safeAreaInset(edge: .top) {
+                if viewModel.hasRun {
+                    StickyLookupSummaryView(
+                        domain: viewModel.searchedDomain,
+                        availability: viewModel.availabilityResult?.status,
+                        primaryIP: currentPrimaryIP,
+                        sslInfo: viewModel.sslInfo,
+                        sslError: viewModel.sslError,
+                        emailSecurity: viewModel.emailSecurity,
+                        emailError: viewModel.emailSecurityError,
+                        changeSummary: viewModel.currentChangeSummary
+                    )
+                    .padding(.horizontal)
+                    .padding(.top, 6)
+                    .background {
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.96)
+                    }
+                }
+            }
+            .background(
+                LinearGradient(
+                    colors: [Color.black, Color(.systemGray6).opacity(0.12)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
             .navigationTitle("DomainDig")
             .toolbarColorScheme(.dark, for: .navigationBar)
             .preferredColorScheme(.dark)
@@ -176,7 +222,7 @@ struct ContentView: View {
                         }
 
                         NavigationLink {
-                            SettingsView()
+                            SettingsView(viewModel: viewModel)
                         } label: {
                             Label("Settings", systemImage: "gearshape")
                         }
@@ -189,6 +235,9 @@ struct ContentView: View {
         }
         .onAppear {
             domainFieldFocused = true
+        }
+        .onChange(of: viewModel.searchedDomain) { _, _ in
+            collapsedSections = defaultCollapsedSections
         }
         .onChange(of: viewModel.rerunNavigationToken) { _, _ in
             navigationPath = NavigationPath()
@@ -228,7 +277,7 @@ struct ContentView: View {
     }
 
     private var inputSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: appDensity.metrics.cardSpacing + 2) {
             Picker("Mode", selection: $inputMode) {
                 Text("Single").tag(LookupInputMode.single)
                 Text("Bulk").tag(LookupInputMode.bulk)
@@ -237,13 +286,14 @@ struct ContentView: View {
 
             if inputMode == .single {
                 TextField("e.g. cleberg.net", text: $viewModel.domain)
-                    .font(.system(.title3, design: .monospaced))
+                    .font(appDensity.font(.title3, design: .monospaced))
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
-                    .padding(12)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, appDensity.metrics.controlVerticalPadding)
                     .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                    .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
                     .focused($domainFieldFocused)
                     .onSubmit { viewModel.run() }
 
@@ -252,16 +302,16 @@ struct ContentView: View {
                     viewModel.run()
                 } label: {
                     Text("Run")
-                        .font(.headline)
+                        .font(appDensity.font(.headline, design: .default, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .frame(minHeight: appDensity.metrics.controlMinHeight)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.trimmedDomain.isEmpty)
             } else {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
                     Text("Paste domains separated by new lines or commas.")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(appDensity.font(.caption))
                         .foregroundStyle(.secondary)
 
                     TextField(
@@ -269,30 +319,31 @@ struct ContentView: View {
                         text: $viewModel.bulkInput,
                         axis: .vertical
                     )
-                    .font(.system(.body, design: .monospaced))
+                    .font(appDensity.font(.body))
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
                     .lineLimit(4...10)
-                    .padding(12)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, appDensity.metrics.controlVerticalPadding)
                     .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                    .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
 
                     Button {
                         domainFieldFocused = false
                         viewModel.runBulkLookup()
                     } label: {
                         Text(viewModel.batchLookupRunning ? "Running Batch…" : "Run Batch")
-                            .font(.headline)
+                            .font(appDensity.font(.headline, design: .default, weight: .semibold))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
+                            .frame(minHeight: appDensity.metrics.controlMinHeight)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(viewModel.bulkInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.batchLookupRunning)
                 }
             }
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, appDensity.metrics.sectionSpacing)
     }
 
     private var actionButtons: some View {
@@ -303,7 +354,7 @@ struct ContentView: View {
                     viewModel.toggleSavedDomain()
                 } label: {
                     Image(systemName: viewModel.isCurrentDomainSaved ? "bookmark.fill" : "bookmark")
-                        .font(.system(.body))
+                        .font(appDensity.font(.body, design: .default))
                         .foregroundStyle(viewModel.isCurrentDomainSaved ? .yellow : .secondary)
                 }
                 Menu {
@@ -318,7 +369,7 @@ struct ContentView: View {
                     }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(.body))
+                        .font(appDensity.font(.body, design: .default))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -326,7 +377,7 @@ struct ContentView: View {
     }
 
     private var batchSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
             HStack {
                 Spacer()
                 if viewModel.batchLookupRunning {
@@ -334,7 +385,7 @@ struct ContentView: View {
                         viewModel.cancelBatchLookup()
                     }
                     .buttonStyle(.bordered)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(appDensity.font(.caption))
                 }
                 if !viewModel.currentBatchResultEntries.isEmpty {
                     Menu {
@@ -349,7 +400,7 @@ struct ContentView: View {
                         }
                     } label: {
                         Label("Export", systemImage: "square.and.arrow.up")
-                            .font(.system(.caption, design: .monospaced))
+                            .font(appDensity.font(.caption))
                     }
                     .buttonStyle(.bordered)
                 }
@@ -363,16 +414,16 @@ struct ContentView: View {
     }
 
     private var recentSearchesSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
             HStack {
                 Text("RECENT")
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(appDensity.font(.caption2))
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Clear") {
                     viewModel.clearRecentSearches()
                 }
-                .font(.system(.caption2, design: .monospaced))
+                .font(appDensity.font(.caption2))
                 .foregroundStyle(.secondary)
             }
 
@@ -383,17 +434,17 @@ struct ContentView: View {
                     viewModel.run()
                 } label: {
                     Text(domain)
-                        .font(.system(.callout, design: .monospaced))
+                        .font(appDensity.font(.callout))
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 8)
                         .padding(.horizontal, 10)
                         .background(Color(.systemGray6).opacity(0.5))
-                        .cornerRadius(6)
+                        .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
                 }
             }
         }
-        .padding(.top, 8)
+        .padding(.top, appDensity.metrics.cardSpacing)
     }
 
     private func runCustomPortScan() {
@@ -468,37 +519,125 @@ struct ContentView: View {
 
         return (filename, data)
     }
+
+    private var defaultCollapsedSections: Set<ResultSection> {
+        var sections: Set<ResultSection> = []
+        if viewModel.standardPortRows.count + viewModel.customPortRows.count > 6 || currentPrimaryIP == nil {
+            sections.insert(.network)
+        }
+        return sections
+    }
+
+    private var currentPrimaryIP: String? {
+        viewModel.currentSnapshot.dnsSections.first(where: { $0.recordType == .A })?.records.first?.value
+    }
+
+    private var resultStatusMessage: String? {
+        if let currentStatusMessage = viewModel.currentStatusMessage {
+            return currentStatusMessage
+        }
+
+        if viewModel.currentResultSource != .live {
+            return viewModel.currentResultSource.label
+        }
+
+        return nil
+    }
+
+    private func sectionCollapsedBinding(_ section: ResultSection) -> Binding<Bool> {
+        Binding(
+            get: { collapsedSections.contains(section) },
+            set: { isCollapsed in
+                if isCollapsed {
+                    collapsedSections.insert(section)
+                } else {
+                    collapsedSections.remove(section)
+                }
+            }
+        )
+    }
 }
 
 struct SummaryView: View {
+    @Environment(\.appDensity) private var appDensity
     let fields: [SummaryFieldViewData]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
             SectionTitleView(title: "Summary")
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: appDensity.metrics.cardSpacing) {
                 ForEach(fields) { field in
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing) {
                         Text(field.label)
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(appDensity.font(.caption2))
                             .foregroundStyle(.secondary)
                         Text(field.value)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(appDensity.font(.caption))
                             .foregroundStyle(ResultColors.color(for: field.tone))
                             .lineLimit(2)
                             .textSelection(.enabled)
                     }
+                    .frame(minHeight: appDensity.metrics.rowMinHeight + 12, alignment: .topLeading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(10)
+                    .padding(appDensity.metrics.cardPadding)
                     .background(Color(.systemGray6).opacity(0.5))
-                    .cornerRadius(6)
+                    .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
                 }
             }
         }
     }
 }
 
+struct StickyLookupSummaryView: View {
+    @Environment(\.appDensity) private var appDensity
+
+    let domain: String
+    let availability: DomainAvailabilityStatus?
+    let primaryIP: String?
+    let sslInfo: SSLCertificateInfo?
+    let sslError: String?
+    let emailSecurity: EmailSecurityResult?
+    let emailError: String?
+    let changeSummary: DomainChangeSummary?
+
+    var body: some View {
+        CardView(allowsHorizontalScroll: false) {
+            VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
+                HStack(alignment: .center, spacing: 10) {
+                    Text(domain)
+                        .font(appDensity.font(.headline, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Spacer(minLength: 6)
+                    AppCopyButton(value: domain, label: "Copy domain")
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        AppStatusBadgeView(model: AppStatusFactory.availability(availability))
+                        AppStatusBadgeView(model: AppStatusFactory.tls(sslInfo: sslInfo, error: sslError))
+                        AppStatusBadgeView(model: AppStatusFactory.email(emailSecurity, error: emailError))
+                        AppStatusBadgeView(model: AppStatusFactory.change(changeSummary))
+                    }
+                }
+
+                if let primaryIP {
+                    HStack(spacing: 8) {
+                        Label(primaryIP, systemImage: "network")
+                            .font(appDensity.font(.caption))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 6)
+                        AppCopyButton(value: primaryIP, label: "Copy IP")
+                    }
+                }
+            }
+        }
+        .shadow(color: .black.opacity(0.12), radius: 14, y: 6)
+    }
+}
+
 struct LookupStatusBannerView: View {
+    @Environment(\.appDensity) private var appDensity
     let message: String
     let resultSource: LookupResultSource
 
@@ -507,14 +646,14 @@ struct LookupStatusBannerView: View {
             Image(systemName: iconName)
                 .font(.caption)
             Text(message)
-                .font(.system(.caption, design: .monospaced))
+                .font(appDensity.font(.caption))
             Spacer()
         }
         .foregroundStyle(color)
-        .padding(8)
+        .padding(appDensity.metrics.cardPadding - 2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(color.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
     }
 
     private var color: Color {
@@ -545,29 +684,30 @@ struct LookupStatusBannerView: View {
 }
 
 struct DomainChangeSummaryView: View {
+    @Environment(\.appDensity) private var appDensity
     let summary: DomainChangeSummary
 
     var body: some View {
         CardView(allowsHorizontalScroll: false) {
             HStack {
                 Label(summary.hasChanges ? "Changed" : "Stable", systemImage: summary.hasChanges ? "arrow.triangle.2.circlepath" : "checkmark.circle")
-                    .font(.system(.caption, design: .monospaced))
+                    .font(appDensity.font(.caption))
                     .foregroundStyle(summary.hasChanges ? severityColor(summary.severity) : .green)
                 Spacer()
                 Text(summary.severity.title.uppercased())
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(appDensity.font(.caption2))
                     .foregroundStyle(summary.hasChanges ? severityColor(summary.severity) : .secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background((summary.hasChanges ? severityColor(summary.severity) : .secondary).opacity(0.16))
                     .clipShape(Capsule())
                 Text(summary.generatedAt, style: .time)
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(appDensity.font(.caption2))
                     .foregroundStyle(.secondary)
             }
 
             Text(summary.message)
-                .font(.system(.caption, design: .monospaced))
+                .font(appDensity.font(.caption))
                 .foregroundStyle(.primary)
         }
     }
@@ -770,6 +910,8 @@ struct TrackedDomainDetailHeaderView: View {
 }
 
 struct DomainSectionView: View {
+    @Environment(\.appDensity) private var appDensity
+    @Binding var isCollapsed: Bool
     let rows: [InfoRowViewData]
     let suggestions: [DomainSuggestionViewData]
     let showSuggestions: Bool
@@ -782,38 +924,34 @@ struct DomainSectionView: View {
     let onEditNote: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                SectionTitleView(title: "Domain")
-                Spacer()
-                if let trackedDomain {
-                    HStack(spacing: 8) {
-                        Text("Tracked")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.green)
-                        Button {
-                            onTogglePinned()
-                        } label: {
-                            Image(systemName: trackedDomain.isPinned ? "pin.fill" : "pin")
-                        }
-                        .buttonStyle(.bordered)
-                        .font(.system(.caption, design: .monospaced))
-                        if let onEditNote {
-                            Button("Note") {
-                                onEditNote()
-                            }
-                            .buttonStyle(.bordered)
-                            .font(.system(.caption, design: .monospaced))
-                        }
-                    }
-                } else {
-                    Button("Track") {
-                        onTrack()
+        CollapsibleSectionView(title: "Domain", isCollapsed: $isCollapsed) {
+            if let trackedDomain {
+                HStack(spacing: 8) {
+                    AppStatusBadgeView(model: .init(title: "Tracked", systemImage: "eye.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16)))
+                    Button {
+                        onTogglePinned()
+                    } label: {
+                        Image(systemName: trackedDomain.isPinned ? "pin.fill" : "pin")
                     }
                     .buttonStyle(.bordered)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(appDensity.font(.caption))
+                    if let onEditNote {
+                        Button("Note") {
+                            onEditNote()
+                        }
+                        .buttonStyle(.bordered)
+                        .font(appDensity.font(.caption))
+                    }
                 }
+            } else {
+                Button("Track") {
+                    AppHaptics.track()
+                    onTrack()
+                }
+                .buttonStyle(.bordered)
+                .font(appDensity.font(.caption))
             }
+        } content: {
             CardView(allowsHorizontalScroll: false) {
                 ForEach(rows) { row in
                     LabeledValueRow(row: row)
@@ -832,7 +970,7 @@ struct DomainSectionView: View {
                 }
                 if showSuggestions {
                     Text("Suggestions")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(appDensity.font(.caption))
                         .foregroundStyle(.secondary)
                         .padding(.top, 4)
                     if suggestionsLoading {
@@ -844,13 +982,11 @@ struct DomainSectionView: View {
                         ForEach(suggestions) { suggestion in
                             HStack {
                                 Text(suggestion.domain)
-                                    .font(.system(.caption, design: .monospaced))
+                                    .font(appDensity.font(.caption))
                                     .foregroundStyle(.primary)
                                     .textSelection(.enabled)
                                 Spacer()
-                                Text(suggestion.status)
-                                    .font(.system(.caption2, design: .monospaced))
-                                    .foregroundStyle(ResultColors.color(for: suggestion.tone))
+                                AppStatusBadgeView(model: AppStatusFactory.availability(suggestion.status == "Available" ? .available : .registered))
                             }
                         }
                     }
@@ -861,14 +997,14 @@ struct DomainSectionView: View {
 }
 
 struct OwnershipSectionView: View {
+    @Binding var isCollapsed: Bool
     let rows: [InfoRowViewData]
     let loading: Bool
     let error: String?
     let showsHistoryPlaceholder: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitleView(title: "Ownership")
+        CollapsibleSectionView(title: "Ownership", isCollapsed: $isCollapsed) {
             CardView(allowsHorizontalScroll: false) {
                 if loading {
                     ProgressView("Fetching RDAP ownership…")
@@ -892,21 +1028,15 @@ struct OwnershipSectionView: View {
 }
 
 struct SubdomainsSectionView: View {
+    @Environment(\.appDensity) private var appDensity
+    @Binding var isCollapsed: Bool
     let rows: [SubdomainRowViewData]
     let loading: Bool
     let error: String?
     let showsExtendedPlaceholder: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                SectionTitleView(title: "Subdomains")
-                Spacer()
-                Text("\(rows.count)")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-
+        CollapsibleSectionView(title: "Subdomains", isCollapsed: $isCollapsed, subtitle: "\(rows.count) found") {
             CardView(allowsHorizontalScroll: false) {
                 if loading {
                     ProgressView("Checking certificate transparency…")
@@ -921,7 +1051,7 @@ struct SubdomainsSectionView: View {
                     ForEach(rows) { row in
                         HStack(spacing: 8) {
                             Text(row.hostname)
-                                .font(.system(.caption, design: .monospaced))
+                                .font(appDensity.font(.caption))
                                 .foregroundStyle(.primary)
                                 .textSelection(.enabled)
                             Spacer()
@@ -947,6 +1077,7 @@ struct SubdomainsSectionView: View {
 }
 
 struct DNSSectionView: View {
+    @Binding var isCollapsed: Bool
     let dnssecLabel: String?
     let sections: [DNSRecordSectionViewData]
     let ptrMessage: SectionMessageViewData?
@@ -954,18 +1085,7 @@ struct DNSSectionView: View {
     let sectionError: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 8) {
-                SectionTitleView(title: "DNS")
-                Spacer()
-                if let dnssecLabel {
-                    Text(dnssecLabel)
-                        .font(.system(.caption2, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.trailing)
-                }
-            }
-
+        CollapsibleSectionView(title: "DNS", isCollapsed: $isCollapsed, subtitle: dnssecLabel) {
             if loading {
                 LoadingCardView(text: "Querying DNS…")
             } else if let sectionError, sections.isEmpty {
@@ -1013,6 +1133,8 @@ struct DNSSectionView: View {
 }
 
 struct WebSectionView: View {
+    @Environment(\.appDensity) private var appDensity
+    @Binding var isCollapsed: Bool
     let certificateRows: [InfoRowViewData]
     let sslInfo: SSLCertificateInfo?
     let sslLoading: Bool
@@ -1027,14 +1149,15 @@ struct WebSectionView: View {
     let finalURL: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitleView(title: "Web")
-
+        CollapsibleSectionView(title: "Web", isCollapsed: $isCollapsed) {
             CardView {
-                Text("TLS")
-                    .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.cyan)
+                HStack {
+                    Text("TLS")
+                        .font(appDensity.font(.subheadline, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                    Spacer()
+                    AppStatusBadgeView(model: AppStatusFactory.tls(sslInfo: sslInfo, error: sslError))
+                }
                 if sslLoading {
                     ProgressView("Checking certificate…")
                         .appLoadingStyle()
@@ -1046,12 +1169,16 @@ struct WebSectionView: View {
                     }
                     if let sslInfo, !sslInfo.subjectAltNames.isEmpty {
                         Text("SANs")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(appDensity.font(.caption2))
                             .foregroundStyle(.secondary)
                         ForEach(sslInfo.subjectAltNames, id: \.self) { san in
-                            Text(san)
-                                .font(.system(.caption, design: .monospaced))
-                                .textSelection(.enabled)
+                            HStack(spacing: 8) {
+                                Text(san)
+                                    .font(appDensity.font(.caption))
+                                    .textSelection(.enabled)
+                                Spacer()
+                                AppCopyButton(value: san, label: "Copy certificate SAN")
+                            }
                         }
                     }
                 }
@@ -1059,8 +1186,7 @@ struct WebSectionView: View {
 
             CardView {
                 Text("Headers")
-                    .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.semibold)
+                    .font(appDensity.font(.subheadline, weight: .semibold))
                     .foregroundStyle(.cyan)
                 if headersLoading {
                     ProgressView("Fetching headers…")
@@ -1077,10 +1203,10 @@ struct WebSectionView: View {
                         ForEach(headers) { header in
                             HStack(alignment: .top, spacing: 4) {
                                 Text(header.name + ":")
-                                    .font(.system(.caption, design: .monospaced))
+                                    .font(appDensity.font(.caption))
                                     .foregroundStyle(header.isSecurityHeader ? .yellow : .cyan)
                                 Text(header.value)
-                                    .font(.system(.caption, design: .monospaced))
+                                    .font(appDensity.font(.caption))
                                     .foregroundStyle(.primary)
                                     .textSelection(.enabled)
                             }
@@ -1090,10 +1216,15 @@ struct WebSectionView: View {
             }
 
             CardView {
-                Text("Redirects")
-                    .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.cyan)
+                HStack {
+                    Text("Redirects")
+                        .font(appDensity.font(.subheadline, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                    Spacer()
+                    if let finalURL {
+                        AppCopyButton(value: finalURL, label: "Copy redirect URL")
+                    }
+                }
                 if redirectLoading {
                     ProgressView("Tracing redirects…")
                         .appLoadingStyle()
@@ -1108,19 +1239,20 @@ struct WebSectionView: View {
                     ForEach(redirects) { redirect in
                         HStack(alignment: .top, spacing: 6) {
                             Text(redirect.stepLabel)
-                                .font(.system(.caption, design: .monospaced))
+                                .font(appDensity.font(.caption))
                                 .foregroundStyle(.secondary)
                                 .frame(width: 16, alignment: .trailing)
                             Text(redirect.statusCode)
-                                .font(.system(.caption, design: .monospaced))
+                                .font(appDensity.font(.caption))
                                 .foregroundStyle(.cyan)
                                 .frame(width: 36, alignment: .leading)
                             Text(redirect.url)
-                                .font(.system(.caption, design: .monospaced))
+                                .font(appDensity.font(.caption))
                                 .textSelection(.enabled)
+                            AppCopyButton(value: redirect.url, label: "Copy redirect URL")
                             if redirect.isFinal {
                                 Text("(final)")
-                                    .font(.system(.caption2, design: .monospaced))
+                                    .font(appDensity.font(.caption2))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -1132,14 +1264,20 @@ struct WebSectionView: View {
 }
 
 struct EmailSectionView: View {
+    @Environment(\.appDensity) private var appDensity
+    @Binding var isCollapsed: Bool
     let rows: [EmailRowViewData]
     let loading: Bool
     let error: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitleView(title: "Email")
+        CollapsibleSectionView(title: "Email", isCollapsed: $isCollapsed) {
             CardView {
+                HStack {
+                    Spacer()
+                    AppStatusBadgeView(model: AppStatusFactory.email(nil, error: error))
+                        .opacity(loading ? 0 : 1)
+                }
                 if loading {
                     ProgressView("Checking email records…")
                         .appLoadingStyle()
@@ -1152,20 +1290,18 @@ struct EmailSectionView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 8) {
                                 Text(row.label)
-                                    .font(.system(.caption, design: .monospaced))
+                                    .font(appDensity.font(.caption))
                                     .foregroundStyle(.cyan)
                                     .frame(width: 76, alignment: .leading)
-                                Text(row.status)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(ResultColors.color(for: row.statusTone))
+                                AppStatusBadgeView(model: emailRowBadge(row))
                             }
                             Text(row.detail)
-                                .font(.system(.caption2, design: .monospaced))
+                                .font(appDensity.font(.caption2))
                                 .foregroundStyle(.primary)
                                 .textSelection(.enabled)
                             if let auxiliaryDetail = row.auxiliaryDetail {
                                 Text(auxiliaryDetail)
-                                    .font(.system(.caption2, design: .monospaced))
+                                    .font(appDensity.font(.caption2))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -1174,9 +1310,24 @@ struct EmailSectionView: View {
             }
         }
     }
+
+    private func emailRowBadge(_ row: EmailRowViewData) -> AppStatusBadgeModel {
+        switch row.statusTone {
+        case .success:
+            return .init(title: row.status, systemImage: "checkmark.shield.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+        case .warning:
+            return .init(title: row.status, systemImage: "shield.lefthalf.filled", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+        case .failure:
+            return .init(title: row.status, systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+        case .primary, .secondary:
+            return .init(title: row.status, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+        }
+    }
 }
 
 struct NetworkSectionView: View {
+    @Environment(\.appDensity) private var appDensity
+    @Binding var isCollapsed: Bool
     let reachabilityRows: [ReachabilityRowViewData]
     let reachabilityLoading: Bool
     let reachabilityError: String?
@@ -1196,13 +1347,10 @@ struct NetworkSectionView: View {
     let onScanCustomPorts: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitleView(title: "Network")
-
+        CollapsibleSectionView(title: "Network", isCollapsed: $isCollapsed) {
             CardView {
                 Text("Reachability")
-                    .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.semibold)
+                    .font(appDensity.font(.subheadline, weight: .semibold))
                     .foregroundStyle(.cyan)
                 if reachabilityLoading {
                     ProgressView("Checking ports…")
@@ -1213,14 +1361,12 @@ struct NetworkSectionView: View {
                     ForEach(reachabilityRows) { row in
                         HStack {
                             Text(row.portLabel)
-                                .font(.system(.caption, design: .monospaced))
+                                .font(appDensity.font(.caption))
                             Spacer()
                             Text(row.latencyLabel)
-                                .font(.system(.caption2, design: .monospaced))
+                                .font(appDensity.font(.caption2))
                                 .foregroundStyle(.secondary)
-                            Text(row.statusLabel)
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(ResultColors.color(for: row.statusTone))
+                            AppStatusBadgeView(model: reachabilityBadge(row))
                         }
                     }
                 }
@@ -1228,8 +1374,7 @@ struct NetworkSectionView: View {
 
             CardView(allowsHorizontalScroll: false) {
                 Text("Location")
-                    .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.semibold)
+                    .font(appDensity.font(.subheadline, weight: .semibold))
                     .foregroundStyle(.cyan)
                 if geolocationLoading {
                     ProgressView("Looking up location…")
@@ -1260,13 +1405,12 @@ struct NetworkSectionView: View {
 
             CardView(allowsHorizontalScroll: false) {
                 Text("Port Scan")
-                    .font(.system(.subheadline, design: .monospaced))
-                    .fontWeight(.semibold)
+                    .font(appDensity.font(.subheadline, weight: .semibold))
                     .foregroundStyle(.cyan)
 
                 if isCloudflareProxied {
                     Text("Domain is behind Cloudflare's proxy. Results reflect the edge, not the origin.")
-                        .font(.system(.caption2, design: .monospaced))
+                        .font(appDensity.font(.caption2))
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1286,15 +1430,16 @@ struct NetworkSectionView: View {
                 DisclosureGroup("Custom Ports", isExpanded: $customPortsExpanded) {
                     VStack(alignment: .leading, spacing: 10) {
                         TextField("8888, 9000, 27017", text: $customPortInput)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(appDensity.font(.caption))
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.numberPad)
                             .padding(10)
                             .background(Color(.systemGray6).opacity(0.5))
-                            .cornerRadius(6)
+                            .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
 
                         Button("Scan") {
+                            AppHaptics.refresh()
                             onScanCustomPorts()
                         }
                         .buttonStyle(.borderedProminent)
@@ -1316,9 +1461,23 @@ struct NetworkSectionView: View {
             }
         }
     }
+
+    private func reachabilityBadge(_ row: ReachabilityRowViewData) -> AppStatusBadgeModel {
+        switch row.statusTone {
+        case .success:
+            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+        case .warning:
+            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+        case .failure:
+            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+        case .primary, .secondary:
+            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+        }
+    }
 }
 
 struct PortRowsView: View {
+    @Environment(\.appDensity) private var appDensity
     let rows: [PortScanRowViewData]
 
     var body: some View {
@@ -1326,47 +1485,61 @@ struct PortRowsView: View {
             MessageRowView(text: "No results", isError: false)
         } else {
             ForEach(rows) { row in
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing - 1) {
                     HStack {
                         Text(row.portLabel)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(appDensity.font(.caption))
                             .frame(width: 52, alignment: .leading)
                         Text(row.service)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(appDensity.font(.caption))
                             .foregroundStyle(.primary)
                         Spacer()
                         if let durationLabel = row.durationLabel {
                             Text(durationLabel)
-                                .font(.system(.caption2, design: .monospaced))
+                                .font(appDensity.font(.caption2))
                                 .foregroundStyle(.secondary)
                         }
-                        Text(row.statusLabel)
-                            .font(.system(.caption2, design: .monospaced))
-                            .foregroundStyle(ResultColors.color(for: row.statusTone))
+                        AppStatusBadgeView(model: portBadge(row))
                     }
                     if let banner = row.banner {
                         Text(banner)
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(appDensity.font(.caption2))
                             .foregroundStyle(.secondary)
                             .padding(.leading, 8)
                     }
                 }
+                .frame(minHeight: appDensity.metrics.rowMinHeight, alignment: .topLeading)
             }
+        }
+    }
+
+    private func portBadge(_ row: PortScanRowViewData) -> AppStatusBadgeModel {
+        switch row.statusTone {
+        case .success:
+            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+        case .warning:
+            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+        case .failure:
+            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+        case .primary, .secondary:
+            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
         }
     }
 }
 
 struct SectionTitleView: View {
+    @Environment(\.appDensity) private var appDensity
     let title: String
 
     var body: some View {
         Text(title)
-            .font(.system(.headline))
+            .font(appDensity.font(.headline, design: .default, weight: .semibold))
             .foregroundStyle(.white)
     }
 }
 
 struct CardView<Content: View>: View {
+    @Environment(\.appDensity) private var appDensity
     let allowsHorizontalScroll: Bool
     let content: Content
 
@@ -1389,13 +1562,13 @@ struct CardView<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
+        .padding(appDensity.metrics.cardPadding)
         .background(Color(.systemGray6).opacity(0.5))
-        .cornerRadius(6)
+        .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
     }
 
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
             content
         }
     }
@@ -1425,29 +1598,40 @@ struct MessageCardView: View {
 }
 
 struct MessageRowView: View {
+    @Environment(\.appDensity) private var appDensity
     let text: String
     let isError: Bool
 
     var body: some View {
         Label(text, systemImage: isError ? "exclamationmark.triangle.fill" : "info.circle")
-            .font(.system(.caption, design: .monospaced))
+            .font(appDensity.font(.caption))
             .foregroundStyle(isError ? .red : .secondary)
     }
 }
 
 struct LabeledValueRow: View {
+    @Environment(\.appDensity) private var appDensity
     let row: InfoRowViewData
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(row.label)
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(.secondary)
-            Text(row.value)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(ResultColors.color(for: row.tone))
-                .textSelection(.enabled)
+        VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing - 1) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing - 1) {
+                    Text(row.label)
+                        .font(appDensity.font(.caption2))
+                        .foregroundStyle(.secondary)
+                    Text(row.value)
+                        .font(appDensity.font(.caption))
+                        .foregroundStyle(ResultColors.color(for: row.tone))
+                        .textSelection(.enabled)
+                }
+                Spacer(minLength: 6)
+                if !row.value.isEmpty, row.value != "Unavailable" {
+                    AppCopyButton(value: row.value, label: "Copy \(row.label)")
+                }
+            }
         }
+        .frame(minHeight: appDensity.metrics.rowMinHeight, alignment: .topLeading)
     }
 }
 
@@ -1490,11 +1674,17 @@ private extension String {
 }
 
 private struct SettingsView: View {
+    @Environment(\.appDensity) private var appDensity
+    @Bindable var viewModel: DomainViewModel
     @AppStorage(DNSResolverOption.userDefaultsKey)
     private var storedResolverURL = DNSResolverOption.defaultURLString
+    @AppStorage(AppDensity.userDefaultsKey)
+    private var storedDensity = AppDensity.compact.rawValue
 
     @State private var resolverOption: DNSResolverOption = .cloudflare
     @State private var customResolverURL = DNSResolverOption.defaultURLString
+    @State private var showClearHistoryConfirmation = false
+    @State private var showClearCacheConfirmation = false
 
     private var customResolverError: String? {
         guard resolverOption == .custom else {
@@ -1505,7 +1695,15 @@ private struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section {
+            Section("Display") {
+                Picker("Density", selection: $storedDensity) {
+                    ForEach(AppDensity.allCases) { density in
+                        Text(density.title).tag(density.rawValue)
+                    }
+                }
+            }
+
+            Section("Network") {
                 Picker("Resolver", selection: $resolverOption) {
                     ForEach(DNSResolverOption.allCases) { option in
                         Text(option.title).tag(option)
@@ -1520,13 +1718,45 @@ private struct SettingsView: View {
 
                     if let customResolverError {
                         Text(customResolverError)
-                            .font(.caption)
+                            .font(appDensity.font(.caption, design: .default))
                             .foregroundStyle(.red)
                     }
                 }
             }
+
+            Section("Data") {
+                Button("Clear History", role: .destructive) {
+                    showClearHistoryConfirmation = true
+                }
+
+                Button("Clear Cache", role: .destructive) {
+                    showClearCacheConfirmation = true
+                }
+            }
+
+            Section("About") {
+                LabeledContent("Version", value: appVersion)
+                LabeledContent("Storage", value: "Local-only")
+                LabeledContent("Focus", value: "Readable domain inspection")
+            }
         }
         .navigationTitle("Settings")
+        .alert("Clear history?", isPresented: $showClearHistoryConfirmation) {
+            Button("Clear", role: .destructive) {
+                viewModel.clearHistory()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes saved lookup snapshots from this device.")
+        }
+        .alert("Clear cache?", isPresented: $showClearCacheConfirmation) {
+            Button("Clear", role: .destructive) {
+                viewModel.clearLookupCache()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This clears the in-memory lookup cache and cancels any cached in-flight work.")
+        }
         .onAppear {
             let currentResolverURL = storedResolverURL.trimmingCharacters(in: .whitespacesAndNewlines)
             resolverOption = DNSResolverOption.option(for: currentResolverURL)
@@ -1543,6 +1773,10 @@ private struct SettingsView: View {
             guard resolverOption == .custom else { return }
             storedResolverURL = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
         }
+    }
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.6.0"
     }
 }
 

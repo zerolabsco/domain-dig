@@ -1,11 +1,12 @@
 import SwiftUI
 
 struct BatchResultsView: View {
+    @Environment(\.appDensity) private var appDensity
     @Bindable var viewModel: DomainViewModel
     let title: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
             HStack(alignment: .top) {
                 SectionTitleView(title: title)
                 Spacer()
@@ -15,18 +16,23 @@ struct BatchResultsView: View {
                             .tint(.cyan)
                             .frame(width: 120)
                         Text(viewModel.batchProgressLabel)
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(appDensity.font(.caption2))
                             .foregroundStyle(.secondary)
                     }
                 } else if !viewModel.batchResults.isEmpty {
                     Text("\(viewModel.batchResults.count) domains")
-                        .font(.system(.caption2, design: .monospaced))
+                        .font(appDensity.font(.caption2))
                         .foregroundStyle(.secondary)
                 }
             }
 
             if viewModel.batchResults.isEmpty {
-                MessageCardView(text: "No batch results yet", isError: false)
+                EmptyStateCardView(
+                    title: "No Batch Results Yet",
+                    message: "Batch runs collect availability, IP, and change status for multiple domains in one pass.",
+                    suggestion: "Switch to Bulk mode, paste a list of domains, then run a batch lookup.",
+                    systemImage: "square.stack.3d.up"
+                )
             } else {
                 CardView(allowsHorizontalScroll: false) {
                     ForEach(viewModel.batchResults) { result in
@@ -48,50 +54,46 @@ struct BatchResultsView: View {
 }
 
 struct BatchResultRowView: View {
+    @Environment(\.appDensity) private var appDensity
     let result: BatchLookupResult
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing + 1) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(result.domain)
-                    .font(.system(.callout, design: .monospaced))
+                    .font(appDensity.font(.callout))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 Text(result.resultSource.label.lowercased())
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(appDensity.font(.caption2))
                     .foregroundStyle(.secondary)
-                Text(result.quickStatus)
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(quickStatusColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(quickStatusColor.opacity(0.16))
-                    .clipShape(Capsule())
+                AppStatusBadgeView(model: quickStatusBadge)
             }
 
             HStack(spacing: 10) {
-                Text(availabilityText)
+                AppStatusBadgeView(model: AppStatusFactory.availability(result.availability))
                 Text(result.primaryIP ?? "No IP")
                 Text(result.timestamp.formatted(date: .abbreviated, time: .shortened))
             }
-            .font(.system(.caption2, design: .monospaced))
+            .font(appDensity.font(.caption2))
             .foregroundStyle(.secondary)
 
             if let summaryMessage = result.summaryMessage {
                 Text(summaryMessage)
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(appDensity.font(.caption2))
                     .foregroundStyle(.secondary)
             }
 
             if let errorMessage = result.errorMessage {
                 Text(errorMessage)
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(appDensity.font(.caption2))
                     .foregroundStyle(result.status == .failed ? .red : .secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+        .frame(minHeight: appDensity.metrics.rowMinHeight + 12, alignment: .topLeading)
     }
 
     private var availabilityText: String {
@@ -105,25 +107,25 @@ struct BatchResultRowView: View {
         }
     }
 
-    private var quickStatusColor: Color {
+    private var quickStatusBadge: AppStatusBadgeModel {
         switch result.status {
         case .pending:
-            return .secondary
+            return .init(title: "Pending", systemImage: "clock", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
         case .running:
-            return .cyan
+            return .init(title: "Running", systemImage: "arrow.clockwise", foregroundColor: .cyan, backgroundColor: .cyan.opacity(0.16))
         case .completed:
             if result.changeSeverity == .high || result.certificateWarningLevel == .critical {
-                return .red
+                return .init(title: "High", systemImage: "exclamationmark.octagon.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
             }
             if result.changeSeverity == .medium || result.certificateWarningLevel == .warning {
-                return .yellow
+                return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
             }
             if result.quickStatus == "Changed" {
-                return .blue
+                return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: .cyan, backgroundColor: .cyan.opacity(0.16))
             }
-            return .green
+            return .init(title: "Stable", systemImage: "checkmark.circle.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
         case .failed:
-            return .red
+            return .init(title: "Failed", systemImage: "xmark.circle.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
         }
     }
 }
