@@ -607,12 +607,14 @@ final class DomainViewModel {
             savedDomains.append(searchedDomain)
         }
         DomainDataPortabilityService.saveSavedDomains(savedDomains)
+        CloudSyncService.shared.markAppSettingsChanged()
         refreshDataLifecycleSummary()
     }
 
     func removeSavedDomains(at offsets: IndexSet) {
         savedDomains.remove(atOffsets: offsets)
         DomainDataPortabilityService.saveSavedDomains(savedDomains)
+        CloudSyncService.shared.markAppSettingsChanged()
         refreshDataLifecycleSummary()
     }
 
@@ -641,7 +643,12 @@ final class DomainViewModel {
                 domain: normalizedDomain,
                 createdAt: Date(),
                 updatedAt: Date(),
-                lastKnownAvailability: availabilityStatus
+                lastKnownAvailability: availabilityStatus,
+                collaboration: CollaborationMetadata(
+                    scope: .privateDatabase,
+                    ownership: .owner,
+                    permission: .editable
+                )
             ),
             at: 0
         )
@@ -666,7 +673,9 @@ final class DomainViewModel {
     }
 
     func deleteTrackedDomains(at offsets: IndexSet) {
-        let ids = offsets.map { sortedTrackedDomains[$0].id }
+        let removedDomains = offsets.map { sortedTrackedDomains[$0] }
+        let ids = removedDomains.map(\.id)
+        CloudSyncService.shared.recordTrackedDomainReset(removedDomains)
         trackedDomains.removeAll { ids.contains($0.id) }
         history.indices.forEach { index in
             if let trackedDomainID = history[index].trackedDomainID, ids.contains(trackedDomainID) {
@@ -679,6 +688,8 @@ final class DomainViewModel {
     }
 
     func deleteTrackedDomain(_ trackedDomain: TrackedDomain) {
+        guard canDelete(trackedDomain) else { return }
+        CloudSyncService.shared.recordTrackedDomainDeletion(trackedDomain)
         trackedDomains.removeAll { $0.id == trackedDomain.id }
         history.indices.forEach { index in
             if history[index].trackedDomainID == trackedDomain.id {
@@ -691,14 +702,19 @@ final class DomainViewModel {
     }
 
     func togglePinned(for trackedDomain: TrackedDomain) {
+        guard canEdit(trackedDomain) else { return }
         guard let index = trackedDomains.firstIndex(where: { $0.id == trackedDomain.id }) else { return }
         trackedDomains[index].isPinned.toggle()
+        trackedDomains[index].updatedAt = Date()
         persistTrackedDomains()
     }
 
     func updateNote(_ note: String, for trackedDomain: TrackedDomain) {
+        guard canEdit(trackedDomain) else { return }
         guard let index = trackedDomains.firstIndex(where: { $0.id == trackedDomain.id }) else { return }
         trackedDomains[index].note = note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        trackedDomains[index].updatedAt = Date()
+        CloudSyncService.shared.markNoteChanged(for: trackedDomains[index].domain, updatedAt: trackedDomains[index].updatedAt)
         persistTrackedDomains()
     }
 
@@ -725,6 +741,7 @@ final class DomainViewModel {
     }
 
     func clearWorkflows() {
+        CloudSyncService.shared.recordWorkflowReset(workflows)
         workflows.removeAll()
         latestWorkflowRunSummary = nil
         persistWorkflows()
@@ -732,6 +749,7 @@ final class DomainViewModel {
     }
 
     func clearTrackedDomains() {
+        CloudSyncService.shared.recordTrackedDomainReset(trackedDomains)
         trackedDomains.removeAll()
         refreshingTrackedDomainID = nil
         persistTrackedDomains()
@@ -742,6 +760,7 @@ final class DomainViewModel {
     func clearRecentSearches() {
         recentSearches.removeAll()
         DomainDataPortabilityService.saveRecentSearches([])
+        CloudSyncService.shared.markAppSettingsChanged()
         refreshDataLifecycleSummary()
     }
 
@@ -789,13 +808,13 @@ final class DomainViewModel {
         }
 
         monitoringSettings.isEnabled = isEnabled
-        persistMonitoringSettings()
+        persistMonitoringSettings(localActivationConfirmed: isEnabled)
         monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
     }
 
     func setMonitoringScope(_ scope: MonitoringScope) {
         monitoringSettings.scope = scope
-        persistMonitoringSettings()
+        persistMonitoringSettings(localActivationConfirmed: monitoringSettings.isEnabled)
     }
 
     func setMonitoringFrequency(_ frequency: MonitoringFrequency) {
@@ -804,7 +823,7 @@ final class DomainViewModel {
             return
         }
         monitoringSettings.frequency = frequency
-        persistMonitoringSettings()
+        persistMonitoringSettings(localActivationConfirmed: monitoringSettings.isEnabled)
         monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
     }
 
@@ -815,7 +834,7 @@ final class DomainViewModel {
             return
         }
         monitoringSettings.alertFilter = filter
-        persistMonitoringSettings()
+        persistMonitoringSettings(localActivationConfirmed: monitoringSettings.isEnabled)
     }
 
     func setMonitoringAlertsEnabled(_ isEnabled: Bool) {
@@ -825,7 +844,7 @@ final class DomainViewModel {
             return
         }
         monitoringSettings.alertsEnabled = isEnabled
-        persistMonitoringSettings()
+        persistMonitoringSettings(localActivationConfirmed: monitoringSettings.isEnabled)
     }
 
     func setMonitoringSelection(for trackedDomain: TrackedDomain, isSelected: Bool) {
@@ -836,24 +855,27 @@ final class DomainViewModel {
         } else {
             monitoringSettings.selectedDomainIDs.removeAll { $0 == trackedDomain.id }
         }
-        persistMonitoringSettings()
+        persistMonitoringSettings(localActivationConfirmed: monitoringSettings.isEnabled)
     }
 
     func toggleMonitoring(for trackedDomain: TrackedDomain) {
+        guard canEdit(trackedDomain) else { return }
         guard FeatureAccessService.hasAccess(to: .automatedMonitoring) else {
             upgradePrompt = FeatureAccessService.upgradePrompt(for: .automatedMonitoring)
             return
         }
         guard let index = trackedDomains.firstIndex(where: { $0.id == trackedDomain.id }) else { return }
         trackedDomains[index].monitoringEnabled.toggle()
+        trackedDomains[index].updatedAt = Date()
         MonitoringStorage.saveTrackedDomains(trackedDomains)
+        CloudSyncService.shared.scheduleSyncIfNeeded()
         sanitizeMonitoringSelection()
     }
 
     func requestMonitoringNotificationAuthorization() async {
         let granted = await LocalNotificationService.shared.requestAuthorizationIfNeeded()
         monitoringSettings.alertsEnabled = granted
-        persistMonitoringSettings()
+        persistMonitoringSettings(localActivationConfirmed: monitoringSettings.isEnabled)
         await refreshMonitoringAuthorizationStatus()
     }
 
@@ -991,6 +1013,32 @@ final class DomainViewModel {
         }
     }
 
+    func canEdit(_ trackedDomain: TrackedDomain) -> Bool {
+        trackedDomain.collaboration?.canEdit ?? true
+    }
+
+    func canDelete(_ trackedDomain: TrackedDomain) -> Bool {
+        trackedDomain.collaboration?.isOwner ?? true
+    }
+
+    func collaborationLabel(for trackedDomain: TrackedDomain) -> String? {
+        guard let collaboration = trackedDomain.collaboration, collaboration.isShared else { return nil }
+        return "\(collaboration.ownership.title) • \(collaboration.permission.title)"
+    }
+
+    func canEdit(_ workflow: DomainWorkflow) -> Bool {
+        workflow.collaboration?.canEdit ?? true
+    }
+
+    func canDelete(_ workflow: DomainWorkflow) -> Bool {
+        workflow.collaboration?.isOwner ?? true
+    }
+
+    func collaborationLabel(for workflow: DomainWorkflow) -> String? {
+        guard let collaboration = workflow.collaboration, collaboration.isShared else { return nil }
+        return "\(collaboration.ownership.title) • \(collaboration.permission.title)"
+    }
+
     @discardableResult
     func createWorkflow(name: String, domains: [String], notes: String? = nil) -> DomainWorkflow? {
         let normalizedDomains = normalizedDomains(domains)
@@ -1006,7 +1054,12 @@ final class DomainViewModel {
             domains: normalizedDomains,
             createdAt: Date(),
             updatedAt: Date(),
-            notes: notes?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            notes: notes?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+            collaboration: CollaborationMetadata(
+                scope: .privateDatabase,
+                ownership: .owner,
+                permission: .editable
+            )
         )
         workflows.insert(workflow, at: 0)
         persistWorkflows()
@@ -1014,6 +1067,7 @@ final class DomainViewModel {
     }
 
     func updateWorkflow(_ workflow: DomainWorkflow, name: String, domains: [String], notes: String?) {
+        guard canEdit(workflow) else { return }
         guard let index = workflows.firstIndex(where: { $0.id == workflow.id }) else { return }
         let normalizedDomains = normalizedDomains(domains)
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1027,6 +1081,8 @@ final class DomainViewModel {
     }
 
     func deleteWorkflow(_ workflow: DomainWorkflow) {
+        guard canDelete(workflow) else { return }
+        CloudSyncService.shared.recordWorkflowDeletion(workflow)
         workflows.removeAll { $0.id == workflow.id }
         if latestWorkflowRunSummary?.workflowID == workflow.id {
             latestWorkflowRunSummary = nil
@@ -1039,6 +1095,7 @@ final class DomainViewModel {
     }
 
     func addDomains(_ domains: [String], to workflow: DomainWorkflow) {
+        guard canEdit(workflow) else { return }
         guard let index = workflows.firstIndex(where: { $0.id == workflow.id }) else { return }
         let mergedDomains = normalizedDomains(workflows[index].domains + domains)
         guard mergedDomains != workflows[index].domains else { return }
@@ -1048,6 +1105,7 @@ final class DomainViewModel {
     }
 
     func removeWorkflowDomains(at offsets: IndexSet, from workflow: DomainWorkflow) {
+        guard canEdit(workflow) else { return }
         guard let index = workflows.firstIndex(where: { $0.id == workflow.id }) else { return }
         workflows[index].domains.remove(atOffsets: offsets)
         workflows[index].updatedAt = Date()
@@ -1055,6 +1113,7 @@ final class DomainViewModel {
     }
 
     func moveWorkflowDomains(from offsets: IndexSet, to destination: Int, in workflow: DomainWorkflow) {
+        guard canEdit(workflow) else { return }
         guard let index = workflows.firstIndex(where: { $0.id == workflow.id }) else { return }
         workflows[index].domains.move(fromOffsets: offsets, toOffset: destination)
         workflows[index].updatedAt = Date()
@@ -1349,7 +1408,23 @@ final class DomainViewModel {
         let result = try DomainDataPortabilityService.applyImport(preview, mode: mode)
         refreshPersistedData()
         portabilityStatusMessage = result.summary
+        CloudSyncService.shared.markAppSettingsChanged()
+        CloudSyncService.shared.markMonitoringSettingsChanged(localActivationConfirmed: monitoringSettings.isEnabled)
+        CloudSyncService.shared.scheduleSyncIfNeeded(trigger: .import)
         return result
+    }
+
+    func persistCurrentAppSettings(resolverURLString: String, appDensityRawValue: String) {
+        DomainDataPortabilityService.saveAppSettings(
+            AppSettingsSnapshot(
+                recentSearches: recentSearches,
+                savedDomains: savedDomains,
+                resolverURLString: resolverURLString,
+                appDensityRawValue: appDensityRawValue
+            )
+        )
+        CloudSyncService.shared.markAppSettingsChanged()
+        refreshDataLifecycleSummary()
     }
 
     func exportWorkflowText(summary: WorkflowRunSummary, changedOnly: Bool) -> String {
@@ -2011,17 +2086,20 @@ final class DomainViewModel {
 
     private func persistTrackedDomains() {
         DomainDataPortabilityService.saveTrackedDomains(trackedDomains)
+        CloudSyncService.shared.scheduleSyncIfNeeded()
         refreshDataLifecycleSummary()
     }
 
-    private func persistMonitoringSettings() {
+    private func persistMonitoringSettings(localActivationConfirmed: Bool = false) {
         monitoringSettings = MonitoringStorage.sanitizeSettings(monitoringSettings, trackedDomains: trackedDomains)
         MonitoringStorage.saveSettings(monitoringSettings)
+        CloudSyncService.shared.markMonitoringSettingsChanged(localActivationConfirmed: localActivationConfirmed)
     }
 
     private func sanitizeMonitoringSelection() {
         monitoringSettings = MonitoringStorage.sanitizeSettings(monitoringSettings, trackedDomains: trackedDomains)
         MonitoringStorage.saveSettings(monitoringSettings)
+        CloudSyncService.shared.markMonitoringSettingsChanged(localActivationConfirmed: false)
     }
 
     private func updateTrackedDomainAvailability(for domain: String, status: DomainAvailabilityStatus) {
@@ -2150,6 +2228,7 @@ final class DomainViewModel {
             recentSearches = Array(recentSearches.prefix(Self.maxRecent))
         }
         DomainDataPortabilityService.saveRecentSearches(recentSearches)
+        CloudSyncService.shared.markAppSettingsChanged()
         refreshDataLifecycleSummary()
     }
 
@@ -2723,6 +2802,7 @@ final class DomainViewModel {
 
     private func persistWorkflows() {
         DomainDataPortabilityService.saveWorkflows(workflows)
+        CloudSyncService.shared.scheduleSyncIfNeeded()
         refreshDataLifecycleSummary()
     }
 

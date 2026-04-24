@@ -129,6 +129,11 @@ private struct WorkflowRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing + 1) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if workflow.collaboration?.isShared == true {
+                    Image(systemName: "person.2.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.cyan)
+                }
                 Text(workflow.name)
                     .font(appDensity.font(.callout, design: .default, weight: .semibold))
                     .foregroundStyle(.primary)
@@ -142,6 +147,12 @@ private struct WorkflowRowView: View {
             Text("Updated \(workflow.updatedAt.formatted(date: .abbreviated, time: .shortened))")
                 .font(appDensity.font(.caption2))
                 .foregroundStyle(.secondary)
+
+            if let collaboration = workflow.collaboration, collaboration.isShared {
+                Text("\(collaboration.ownership.title) • \(collaboration.permission.title)")
+                    .font(appDensity.font(.caption2))
+                    .foregroundStyle(.secondary)
+            }
 
             if let notes = workflow.notes, !notes.isEmpty {
                 Text(notes)
@@ -163,6 +174,7 @@ struct WorkflowDetailView: View {
     @State private var showingEditor = false
     @State private var draftDomain = ""
     @State private var includeAllExports = false
+    @State private var shareEntity: ShareableEntity?
 
     private var workflow: DomainWorkflow? {
         viewModel.workflow(withID: workflowID)
@@ -186,6 +198,11 @@ struct WorkflowDetailView: View {
                                 .font(appDensity.font(.caption))
                                 .foregroundStyle(.secondary)
                         }
+                        if let collaboration = workflow.collaboration, collaboration.isShared {
+                            Text("\(collaboration.ownership.title) • \(collaboration.permission.title)")
+                                .font(appDensity.font(.caption))
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     Section("Actions") {
@@ -206,6 +223,13 @@ struct WorkflowDetailView: View {
                             showingEditor = true
                         } label: {
                             Label("Edit Workflow", systemImage: "pencil")
+                        }
+                        .disabled(!viewModel.canEdit(workflow))
+
+                        Button {
+                            shareEntity = .workflow(workflow.id)
+                        } label: {
+                            Label(workflow.collaboration?.isShared == true ? "Manage Share" : "Share Workflow", systemImage: "person.2")
                         }
 
                         if latestSummary != nil {
@@ -263,6 +287,7 @@ struct WorkflowDetailView: View {
                                 viewModel.addDomains([draftDomain], to: workflow)
                                 draftDomain = ""
                             }
+                            .disabled(!viewModel.canEdit(workflow))
                         }
                     }
 
@@ -288,9 +313,11 @@ struct WorkflowDetailView: View {
                                 .buttonStyle(.plain)
                             }
                             .onDelete { offsets in
+                                guard viewModel.canEdit(workflow) else { return }
                                 viewModel.removeWorkflowDomains(at: offsets, from: workflow)
                             }
                             .onMove { offsets, destination in
+                                guard viewModel.canEdit(workflow) else { return }
                                 viewModel.moveWorkflowDomains(from: offsets, to: destination, in: workflow)
                             }
                         }
@@ -302,6 +329,7 @@ struct WorkflowDetailView: View {
                 .toolbar {
                     if !workflow.domains.isEmpty {
                         EditButton()
+                            .disabled(!viewModel.canEdit(workflow))
                     }
                 }
                 .sheet(isPresented: $showingEditor) {
@@ -309,6 +337,9 @@ struct WorkflowDetailView: View {
                 }
                 .sheet(item: workflowSummaryBinding) { summary in
                     WorkflowRunSummaryView(viewModel: viewModel, summary: summary)
+                }
+                .sheet(item: $shareEntity) { entity in
+                    CloudSharingSheet(entity: entity, title: workflow.name)
                 }
             } else {
                 Text("Workflow not found")

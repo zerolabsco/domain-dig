@@ -193,10 +193,12 @@ struct WatchlistView: View {
             }
             .tint(.cyan)
 
-            Button(role: .destructive) {
-                viewModel.deleteTrackedDomain(trackedDomain)
-            } label: {
-                Label("Delete", systemImage: "trash")
+            if viewModel.canDelete(trackedDomain) {
+                Button(role: .destructive) {
+                    viewModel.deleteTrackedDomain(trackedDomain)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
         .contextMenu {
@@ -219,11 +221,21 @@ struct WatchlistView: View {
             } label: {
                 Label(trackedDomain.isPinned ? "Unpin" : "Pin", systemImage: trackedDomain.isPinned ? "pin.slash" : "pin")
             }
+            .disabled(!viewModel.canEdit(trackedDomain))
 
-            Button(role: .destructive) {
-                viewModel.deleteTrackedDomain(trackedDomain)
+            Button {
+                // The system sharing UI manages participants and permissions.
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label(trackedDomain.collaboration?.isShared == true ? "Shared" : "Private", systemImage: "person.2")
+            }
+            .disabled(true)
+
+            if viewModel.canDelete(trackedDomain) {
+                Button(role: .destructive) {
+                    viewModel.deleteTrackedDomain(trackedDomain)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
             }
         }
         .listRowBackground(Color(.systemGray6).opacity(0.5))
@@ -287,6 +299,12 @@ struct WatchlistRowView: View {
                 .font(appDensity.font(.caption2))
                 .foregroundStyle(.secondary)
 
+            if let collaboration = trackedDomain.collaboration, collaboration.isShared {
+                Text("\(collaboration.ownership.title) • \(collaboration.permission.title)")
+                    .font(appDensity.font(.caption2))
+                    .foregroundStyle(.secondary)
+            }
+
             HStack(spacing: 8) {
                 Text(trackedDomain.monitoringEnabled ? "Monitoring on" : "Monitoring off")
                 if let lastMonitoredAt = trackedDomain.lastMonitoredAt {
@@ -340,6 +358,17 @@ struct WatchlistRowView: View {
     @ViewBuilder
     private var indicatorRow: some View {
         HStack(spacing: 8) {
+            if trackedDomain.collaboration?.isShared == true {
+                AppStatusBadgeView(
+                    model: .init(
+                        title: "Shared",
+                        systemImage: "person.2.fill",
+                        foregroundColor: .cyan,
+                        backgroundColor: .cyan.opacity(0.16)
+                    )
+                )
+            }
+
             AppStatusBadgeView(model: AppStatusFactory.change(trackedDomain.lastChangeSummary))
 
             if trackedDomain.certificateWarningLevel != .none {
@@ -369,6 +398,7 @@ struct TrackedDomainDetailView: View {
     @State private var noteDraft = ""
     @State private var isEditingNote = false
     @State private var showRerunOptions = false
+    @State private var shareEntity: ShareableEntity?
 
     private var liveTrackedDomain: TrackedDomain {
         viewModel.trackedDomains.first(where: { $0.id == trackedDomain.id }) ?? trackedDomain
@@ -410,6 +440,7 @@ struct TrackedDomainDetailView: View {
                 } label: {
                     Label(liveTrackedDomain.isPinned ? "Unpin Domain" : "Pin Domain", systemImage: liveTrackedDomain.isPinned ? "pin.slash" : "pin")
                 }
+                .disabled(!viewModel.canEdit(liveTrackedDomain))
 
                 Button {
                     viewModel.toggleMonitoring(for: liveTrackedDomain)
@@ -419,12 +450,20 @@ struct TrackedDomainDetailView: View {
                         systemImage: liveTrackedDomain.monitoringEnabled ? "bell.slash" : "bell"
                     )
                 }
+                .disabled(!viewModel.canEdit(liveTrackedDomain))
 
                 Button {
                     noteDraft = liveTrackedDomain.note ?? ""
                     isEditingNote = true
                 } label: {
                     Label(liveTrackedDomain.note == nil ? "Add Note" : "Edit Note", systemImage: "note.text")
+                }
+                .disabled(!viewModel.canEdit(liveTrackedDomain))
+
+                Button {
+                    shareEntity = .trackedDomain(liveTrackedDomain.domain)
+                } label: {
+                    Label(liveTrackedDomain.collaboration?.isShared == true ? "Manage Share" : "Share Domain", systemImage: "person.2")
                 }
             }
             .listRowBackground(Color(.systemGray6).opacity(0.5))
@@ -517,6 +556,9 @@ struct TrackedDomainDetailView: View {
                     }
                 }
             }
+        }
+        .sheet(item: $shareEntity) { entity in
+            CloudSharingSheet(entity: entity, title: liveTrackedDomain.domain)
         }
     }
 }

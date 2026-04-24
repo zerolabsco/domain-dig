@@ -10,17 +10,14 @@ struct DomainAvailabilityService {
         }
 
         if await checkViaRDAP(domain: normalizedDomain) == .registered {
-            debugLog("rdap", domain: normalizedDomain, status: .registered)
             return DomainAvailabilityResult(domain: normalizedDomain, status: .registered)
         }
 
         let fallbackStatus = await checkViaDNSFallback(domain: normalizedDomain)
         if fallbackStatus == .registered {
-            debugLog("dns-evidence", domain: normalizedDomain, details: "DNS exists but RDAP did not confirm registration")
             return DomainAvailabilityResult(domain: normalizedDomain, status: .unknown)
         }
 
-        debugLog("fallback", domain: normalizedDomain, status: fallbackStatus)
         return DomainAvailabilityResult(domain: normalizedDomain, status: fallbackStatus)
     }
 
@@ -40,9 +37,6 @@ struct DomainAvailabilityService {
 
     private static func checkViaRDAP(domain: String) async -> DomainAvailabilityStatus? {
         let status = await RDAPService.registrationStatus(for: domain)
-        if status == nil {
-            debugLog("rdap-not-found", domain: domain, details: "Ignoring unavailable response from rdap.org")
-        }
         return status
     }
 
@@ -53,7 +47,6 @@ struct DomainAvailabilityService {
                 return .registered
             }
         } catch {
-            debugLog("dns-a-error", domain: domain, details: error.localizedDescription)
         }
 
         do {
@@ -63,7 +56,6 @@ struct DomainAvailabilityService {
             }
             return .unknown
         } catch {
-            debugLog("dns-ns-error", domain: domain, details: error.localizedDescription)
             return .unknown
         }
     }
@@ -98,17 +90,5 @@ struct DomainAvailabilityService {
         domain
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-    }
-
-    private static func debugLog(_ method: String, domain: String, status: DomainAvailabilityStatus) {
-        #if DEBUG
-        print("[Availability] \(domain) -> \(status.rawValue) via \(method)")
-        #endif
-    }
-
-    private static func debugLog(_ method: String, domain: String, details: String) {
-        #if DEBUG
-        print("[Availability] \(domain) -> \(method): \(details)")
-        #endif
     }
 }

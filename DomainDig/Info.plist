@@ -10,6 +10,8 @@
 	<array>
 		<string>net.cleberg.DomainDig.monitor.refresh</string>
 	</array>
+	<key>CKSharingSupported</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

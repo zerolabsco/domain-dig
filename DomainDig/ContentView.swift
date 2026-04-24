@@ -2421,6 +2421,7 @@ struct SettingsView: View {
     @Environment(\.appDensity) private var appDensity
     @Bindable var viewModel: DomainViewModel
     @State private var purchaseService = PurchaseService.shared
+    @State private var cloudSyncService = CloudSyncService.shared
     @AppStorage(DNSResolverOption.userDefaultsKey)
     private var storedResolverURL = DNSResolverOption.defaultURLString
     @AppStorage(AppDensity.userDefaultsKey)
@@ -2477,6 +2478,43 @@ struct SettingsView: View {
                             .font(appDensity.font(.caption, design: .default))
                             .foregroundStyle(.red)
                     }
+                }
+            }
+
+            Section("iCloud Sync") {
+                Toggle(
+                    "Enable iCloud Sync",
+                    isOn: Binding(
+                        get: { cloudSyncService.isEnabled },
+                        set: { cloudSyncService.setSyncEnabled($0) }
+                    )
+                )
+
+                LabeledContent("Status", value: cloudSyncService.status.title)
+                LabeledContent(
+                    "Last Sync",
+                    value: cloudSyncService.lastSyncDate?.formatted(date: .abbreviated, time: .shortened) ?? "Not yet synced"
+                )
+
+                Button(cloudSyncService.status == .syncing ? "Syncing…" : "Sync Now") {
+                    Task {
+                        await cloudSyncService.syncNow(trigger: .manual)
+                    }
+                }
+                .disabled(!cloudSyncService.isEnabled || cloudSyncService.status == .syncing)
+
+                Text("iCloud Sync stores DomainDig data in your private iCloud account. DomainDig does not operate a sync server. Disabling sync keeps local data on this device.")
+                    .font(appDensity.font(.caption, design: .default))
+                    .foregroundStyle(.secondary)
+
+                Text(cloudSyncService.detailMessage)
+                    .font(appDensity.font(.caption, design: .default))
+                    .foregroundStyle(.secondary)
+
+                if let lastErrorMessage = cloudSyncService.lastErrorMessage {
+                    Text(lastErrorMessage)
+                        .font(appDensity.font(.caption, design: .default))
+                        .foregroundStyle(.red)
                 }
             }
 
@@ -2713,7 +2751,7 @@ struct SettingsView: View {
 
             Section("About") {
                 LabeledContent("Version", value: appVersion)
-                LabeledContent("Storage", value: "Local-only")
+                LabeledContent("Storage", value: cloudSyncService.isEnabled ? "Local-first + iCloud" : "Local-only")
                 LabeledContent("Backup Schema", value: "v\(DomainDigBackup.currentSchemaVersion)")
             }
         }
@@ -2817,18 +2855,37 @@ struct SettingsView: View {
             Task {
                 await viewModel.refreshUsageCredits()
                 await viewModel.refreshMonitoringAuthorizationStatus()
+                await cloudSyncService.refreshAvailability()
             }
         }
         .onChange(of: resolverOption) { _, newValue in
             guard let presetURL = newValue.urlString else {
                 storedResolverURL = customResolverURL.trimmingCharacters(in: .whitespacesAndNewlines)
+                viewModel.persistCurrentAppSettings(
+                    resolverURLString: storedResolverURL,
+                    appDensityRawValue: storedDensity
+                )
                 return
             }
             storedResolverURL = presetURL
+            viewModel.persistCurrentAppSettings(
+                resolverURLString: storedResolverURL,
+                appDensityRawValue: storedDensity
+            )
         }
         .onChange(of: customResolverURL) { _, newValue in
             guard resolverOption == .custom else { return }
             storedResolverURL = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            viewModel.persistCurrentAppSettings(
+                resolverURLString: storedResolverURL,
+                appDensityRawValue: storedDensity
+            )
+        }
+        .onChange(of: storedDensity) { _, newValue in
+            viewModel.persistCurrentAppSettings(
+                resolverURLString: storedResolverURL,
+                appDensityRawValue: newValue
+            )
         }
     }
 

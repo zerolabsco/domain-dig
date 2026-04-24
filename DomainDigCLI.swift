@@ -428,6 +428,8 @@ struct DomainDigCLI {
                domaindig backup export [path]
                domaindig backup import <path> [--replace]
                domaindig backup validate <path> [--json]
+        
+        note: the CLI remains local-only and does not sync with iCloud yet.
         """
     }
 }

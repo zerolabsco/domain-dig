@@ -332,6 +332,7 @@ struct DomainWorkflow: Codable, Identifiable, Equatable {
     var createdAt: Date
     var updatedAt: Date
     var notes: String?
+    var collaboration: CollaborationMetadata?
 
     init(
         id: UUID = UUID(),
@@ -339,7 +340,8 @@ struct DomainWorkflow: Codable, Identifiable, Equatable {
         domains: [String],
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
-        notes: String? = nil
+        notes: String? = nil,
+        collaboration: CollaborationMetadata? = nil
     ) {
         self.id = id
         self.name = name
@@ -347,6 +349,7 @@ struct DomainWorkflow: Codable, Identifiable, Equatable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.notes = notes
+        self.collaboration = collaboration
     }
 }
 
@@ -584,6 +587,70 @@ enum PremiumCapability: String, Codable {
     case advancedExports
 }
 
+enum CollaborationPermission: String, Codable, Equatable {
+    case readOnly
+    case editable
+
+    var title: String {
+        switch self {
+        case .readOnly:
+            return "Read only"
+        case .editable:
+            return "Editable"
+        }
+    }
+}
+
+enum CollaborationOwnership: String, Codable, Equatable {
+    case owner
+    case participant
+
+    var title: String {
+        switch self {
+        case .owner:
+            return "Owned by you"
+        case .participant:
+            return "Shared with you"
+        }
+    }
+}
+
+enum CollaborationScope: String, Codable, Equatable {
+    case privateDatabase
+    case sharedDatabase
+}
+
+struct CollaborationMetadata: Codable, Equatable {
+    var scope: CollaborationScope
+    var ownership: CollaborationOwnership
+    var permission: CollaborationPermission
+    var shareRecordName: String?
+
+    init(
+        scope: CollaborationScope,
+        ownership: CollaborationOwnership,
+        permission: CollaborationPermission,
+        shareRecordName: String? = nil
+    ) {
+        self.scope = scope
+        self.ownership = ownership
+        self.permission = permission
+        self.shareRecordName = shareRecordName
+    }
+
+    var isShared: Bool {
+        shareRecordName != nil || scope == .sharedDatabase
+    }
+
+    var canEdit: Bool {
+        permission == .editable
+    }
+
+    var isOwner: Bool {
+        ownership == .owner
+    }
+}
+
 struct TrackedDomain: Codable, Identifiable, Equatable {
     let id: UUID
     var domain: String
@@ -600,6 +667,7 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
     var certificateDaysRemaining: Int?
     var lastMonitoredAt: Date?
     var lastAlertAt: Date?
+    var collaboration: CollaborationMetadata?
 
     init(
         id: UUID = UUID(),
@@ -616,7 +684,8 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         certificateWarningLevel: CertificateWarningLevel = .none,
         certificateDaysRemaining: Int? = nil,
         lastMonitoredAt: Date? = nil,
-        lastAlertAt: Date? = nil
+        lastAlertAt: Date? = nil,
+        collaboration: CollaborationMetadata? = nil
     ) {
         self.id = id
         self.domain = domain
@@ -633,6 +702,7 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         self.certificateDaysRemaining = certificateDaysRemaining
         self.lastMonitoredAt = lastMonitoredAt
         self.lastAlertAt = lastAlertAt
+        self.collaboration = collaboration
     }
 
     init(from decoder: Decoder) throws {
@@ -652,6 +722,7 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         certificateDaysRemaining = try container.decodeIfPresent(Int.self, forKey: .certificateDaysRemaining)
         lastMonitoredAt = try container.decodeIfPresent(Date.self, forKey: .lastMonitoredAt)
         lastAlertAt = try container.decodeIfPresent(Date.self, forKey: .lastAlertAt)
+        collaboration = try container.decodeIfPresent(CollaborationMetadata.self, forKey: .collaboration)
     }
 }
 
