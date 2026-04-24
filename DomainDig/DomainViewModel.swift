@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 
 enum ResultTone {
     case primary
@@ -218,10 +219,10 @@ final class DomainViewModel {
 
     private static let recentSearchesKey = "recentSearches"
     private static let maxRecent = 20
-    var recentSearches: [String] = UserDefaults.standard.stringArray(forKey: recentSearchesKey) ?? []
+    var recentSearches: [String] = DomainDataPortabilityService.loadRecentSearches()
 
     private static let savedDomainsKey = "savedDomains"
-    var savedDomains: [String] = UserDefaults.standard.stringArray(forKey: savedDomainsKey) ?? []
+    var savedDomains: [String] = DomainDataPortabilityService.loadSavedDomains()
 
     private static let trackedDomainsKey = "trackedDomains"
     private static let legacyWatchedDomainsKey = "watchedDomains"
@@ -239,6 +240,13 @@ final class DomainViewModel {
     var watchlistSearchText = ""
     var watchlistFilter: WatchlistFilterOption = .all
     var watchlistSortOption: WatchlistSortOption = .pinned
+    var monitoringSettings: MonitoringSettings = MonitoringStorage.loadSettings()
+    var monitoringLogs: [MonitoringLog] = MonitoringStorage.loadLogs()
+    var monitoringRunInProgress = false
+    var monitoringStatusMessage: String?
+    var monitoringNotificationStatus: UNAuthorizationStatus = .notDetermined
+    var dataLifecycleSummary = DomainDataPortabilityService.lifecycleSummary()
+    var portabilityStatusMessage: String?
     var upgradePrompt: UpgradePromptContext?
     var isPaywallPresented = false
 
@@ -598,12 +606,14 @@ final class DomainViewModel {
         } else {
             savedDomains.append(searchedDomain)
         }
-        UserDefaults.standard.set(savedDomains, forKey: Self.savedDomainsKey)
+        DomainDataPortabilityService.saveSavedDomains(savedDomains)
+        refreshDataLifecycleSummary()
     }
 
     func removeSavedDomains(at offsets: IndexSet) {
         savedDomains.remove(atOffsets: offsets)
-        UserDefaults.standard.set(savedDomains, forKey: Self.savedDomainsKey)
+        DomainDataPortabilityService.saveSavedDomains(savedDomains)
+        refreshDataLifecycleSummary()
     }
 
     @discardableResult
@@ -636,6 +646,7 @@ final class DomainViewModel {
             at: 0
         )
         persistTrackedDomains()
+        sanitizeMonitoringSelection()
         linkTrackedDomainHistory(for: normalizedDomain)
         return true
     }
@@ -664,6 +675,7 @@ final class DomainViewModel {
         }
         persistTrackedDomains()
         persistHistory()
+        sanitizeMonitoringSelection()
     }
 
     func deleteTrackedDomain(_ trackedDomain: TrackedDomain) {
@@ -675,6 +687,7 @@ final class DomainViewModel {
         }
         persistTrackedDomains()
         persistHistory()
+        sanitizeMonitoringSelection()
     }
 
     func togglePinned(for trackedDomain: TrackedDomain) {
@@ -702,6 +715,7 @@ final class DomainViewModel {
     func clearHistory() {
         history.removeAll()
         persistHistory()
+        refreshDataLifecycleSummary()
     }
 
     func clearLookupCache() {
@@ -714,17 +728,157 @@ final class DomainViewModel {
         workflows.removeAll()
         latestWorkflowRunSummary = nil
         persistWorkflows()
+        refreshDataLifecycleSummary()
     }
 
     func clearTrackedDomains() {
         trackedDomains.removeAll()
         refreshingTrackedDomainID = nil
         persistTrackedDomains()
+        sanitizeMonitoringSelection()
+        refreshDataLifecycleSummary()
     }
 
     func clearRecentSearches() {
         recentSearches.removeAll()
-        UserDefaults.standard.removeObject(forKey: Self.recentSearchesKey)
+        DomainDataPortabilityService.saveRecentSearches([])
+        refreshDataLifecycleSummary()
+    }
+
+    func refreshMonitoringState() {
+        DataMigrationService.migrateIfNeeded()
+        trackedDomains = Self.loadTrackedDomains()
+        history = Self.loadHistoryEntries()
+        monitoringSettings = MonitoringStorage.sanitizeSettings(
+            MonitoringStorage.loadSettings(),
+            trackedDomains: trackedDomains
+        )
+        monitoringLogs = MonitoringStorage.loadLogs()
+        persistMonitoringSettings()
+        refreshDataLifecycleSummary()
+    }
+
+    func refreshDataLifecycleSummary() {
+        dataLifecycleSummary = DomainDataPortabilityService.lifecycleSummary()
+    }
+
+    func refreshPersistedData() {
+        recentSearches = DomainDataPortabilityService.loadRecentSearches()
+        savedDomains = DomainDataPortabilityService.loadSavedDomains()
+        trackedDomains = Self.loadTrackedDomains()
+        history = Self.loadHistoryEntries()
+        workflows = Self.loadWorkflows()
+        monitoringSettings = MonitoringStorage.sanitizeSettings(
+            MonitoringStorage.loadSettings(),
+            trackedDomains: trackedDomains
+        )
+        monitoringLogs = MonitoringStorage.loadLogs()
+        refreshDataLifecycleSummary()
+    }
+
+    func refreshMonitoringAuthorizationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        monitoringNotificationStatus = settings.authorizationStatus
+    }
+
+    func setMonitoringEnabled(_ isEnabled: Bool) {
+        guard !isEnabled || FeatureAccessService.hasAccess(to: .automatedMonitoring) else {
+            monitoringSettings.isEnabled = false
+            upgradePrompt = FeatureAccessService.upgradePrompt(for: .automatedMonitoring)
+            return
+        }
+
+        monitoringSettings.isEnabled = isEnabled
+        persistMonitoringSettings()
+        monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
+    }
+
+    func setMonitoringScope(_ scope: MonitoringScope) {
+        monitoringSettings.scope = scope
+        persistMonitoringSettings()
+    }
+
+    func setMonitoringFrequency(_ frequency: MonitoringFrequency) {
+        guard FeatureAccessService.hasAccess(to: .automatedMonitoring) else {
+            upgradePrompt = FeatureAccessService.upgradePrompt(for: .automatedMonitoring)
+            return
+        }
+        monitoringSettings.frequency = frequency
+        persistMonitoringSettings()
+        monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
+    }
+
+    func setMonitoringAlertFilter(_ filter: MonitoringAlertFilter) {
+        guard FeatureAccessService.hasAccess(to: .localAlerts) else {
+            monitoringSettings.alertsEnabled = false
+            upgradePrompt = FeatureAccessService.upgradePrompt(for: .localAlerts)
+            return
+        }
+        monitoringSettings.alertFilter = filter
+        persistMonitoringSettings()
+    }
+
+    func setMonitoringAlertsEnabled(_ isEnabled: Bool) {
+        guard !isEnabled || FeatureAccessService.hasAccess(to: .localAlerts) else {
+            monitoringSettings.alertsEnabled = false
+            upgradePrompt = FeatureAccessService.upgradePrompt(for: .localAlerts)
+            return
+        }
+        monitoringSettings.alertsEnabled = isEnabled
+        persistMonitoringSettings()
+    }
+
+    func setMonitoringSelection(for trackedDomain: TrackedDomain, isSelected: Bool) {
+        if isSelected {
+            if !monitoringSettings.selectedDomainIDs.contains(trackedDomain.id) {
+                monitoringSettings.selectedDomainIDs.append(trackedDomain.id)
+            }
+        } else {
+            monitoringSettings.selectedDomainIDs.removeAll { $0 == trackedDomain.id }
+        }
+        persistMonitoringSettings()
+    }
+
+    func toggleMonitoring(for trackedDomain: TrackedDomain) {
+        guard FeatureAccessService.hasAccess(to: .automatedMonitoring) else {
+            upgradePrompt = FeatureAccessService.upgradePrompt(for: .automatedMonitoring)
+            return
+        }
+        guard let index = trackedDomains.firstIndex(where: { $0.id == trackedDomain.id }) else { return }
+        trackedDomains[index].monitoringEnabled.toggle()
+        MonitoringStorage.saveTrackedDomains(trackedDomains)
+        sanitizeMonitoringSelection()
+    }
+
+    func requestMonitoringNotificationAuthorization() async {
+        let granted = await LocalNotificationService.shared.requestAuthorizationIfNeeded()
+        monitoringSettings.alertsEnabled = granted
+        persistMonitoringSettings()
+        await refreshMonitoringAuthorizationStatus()
+    }
+
+    func runMonitoringNow() {
+        guard FeatureAccessService.hasAccess(to: .automatedMonitoring) else {
+            upgradePrompt = FeatureAccessService.upgradePrompt(for: .automatedMonitoring)
+            return
+        }
+        guard !monitoringRunInProgress else { return }
+
+        monitoringRunInProgress = true
+        monitoringStatusMessage = nil
+
+        Task { [weak self] in
+            guard let self else { return }
+            let outcome = await DomainMonitoringService.shared.performMonitoring(
+                trigger: .manual,
+                requireEnabledSetting: false
+            )
+            await MainActor.run {
+                self.refreshMonitoringState()
+                self.monitoringRunInProgress = false
+                self.monitoringStatusMessage = outcome.message
+            }
+        }
     }
 
     func rerunLookup(from entry: HistoryEntry, useSnapshotResolver: Bool) {
@@ -1157,6 +1311,45 @@ final class DomainViewModel {
             format: .json,
             title: "Tracked Domains Export"
         )
+    }
+
+    func exportFullBackupData() -> Data? {
+        try? DomainDataPortabilityService.backupData()
+    }
+
+    func exportPortableTrackedDomainsJSONData() -> Data? {
+        try? DomainDataPortabilityService.trackedDomainsExportData()
+    }
+
+    func exportPortableTrackedDomainsCSV() -> String {
+        DomainDataPortabilityService.trackedDomainsCSV()
+    }
+
+    func exportPortableWorkflowsJSONData() -> Data? {
+        try? DomainDataPortabilityService.workflowsExportData()
+    }
+
+    func exportPortableWorkflowsCSV() -> String {
+        DomainDataPortabilityService.workflowsCSV()
+    }
+
+    func exportPortableHistoryJSONData() -> Data? {
+        try? DomainDataPortabilityService.historyExportData()
+    }
+
+    func prepareDataImport(
+        data: Data,
+        fileName: String,
+        mode: DataPortabilityImportMode
+    ) throws -> DataImportPreview {
+        try DomainDataPortabilityService.prepareImport(data: data, fileName: fileName, mode: mode)
+    }
+
+    func applyDataImport(_ preview: DataImportPreview, mode: DataPortabilityImportMode) throws -> DataImportResult {
+        let result = try DomainDataPortabilityService.applyImport(preview, mode: mode)
+        refreshPersistedData()
+        portabilityStatusMessage = result.summary
+        return result
     }
 
     func exportWorkflowText(summary: WorkflowRunSummary, changedOnly: Bool) -> String {
@@ -1806,9 +1999,8 @@ final class DomainViewModel {
     }
 
     private func persistHistory() {
-        if let data = try? JSONEncoder().encode(history) {
-            UserDefaults.standard.set(data, forKey: Self.historyKey)
-        }
+        DomainDataPortabilityService.saveHistoryEntries(history)
+        refreshDataLifecycleSummary()
     }
 
     func updateHistoryNote(_ note: String, for entry: HistoryEntry) {
@@ -1818,9 +2010,18 @@ final class DomainViewModel {
     }
 
     private func persistTrackedDomains() {
-        if let data = try? JSONEncoder().encode(trackedDomains) {
-            UserDefaults.standard.set(data, forKey: Self.trackedDomainsKey)
-        }
+        DomainDataPortabilityService.saveTrackedDomains(trackedDomains)
+        refreshDataLifecycleSummary()
+    }
+
+    private func persistMonitoringSettings() {
+        monitoringSettings = MonitoringStorage.sanitizeSettings(monitoringSettings, trackedDomains: trackedDomains)
+        MonitoringStorage.saveSettings(monitoringSettings)
+    }
+
+    private func sanitizeMonitoringSelection() {
+        monitoringSettings = MonitoringStorage.sanitizeSettings(monitoringSettings, trackedDomains: trackedDomains)
+        MonitoringStorage.saveSettings(monitoringSettings)
     }
 
     private func updateTrackedDomainAvailability(for domain: String, status: DomainAvailabilityStatus) {
@@ -1948,7 +2149,8 @@ final class DomainViewModel {
         if recentSearches.count > Self.maxRecent {
             recentSearches = Array(recentSearches.prefix(Self.maxRecent))
         }
-        UserDefaults.standard.set(recentSearches, forKey: Self.recentSearchesKey)
+        DomainDataPortabilityService.saveRecentSearches(recentSearches)
+        refreshDataLifecycleSummary()
     }
 
     private func beginLookup(for target: String, cancelExistingTask: Bool = true) -> UUID {
@@ -2510,76 +2712,23 @@ final class DomainViewModel {
     }
 
     private static func loadHistoryEntries() -> [HistoryEntry] {
-        let defaults = UserDefaults.standard
-        guard let data = defaults.data(forKey: historyKey) else {
-            return []
-        }
-
-        if let entries = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
-            return entries
-        }
-
-        guard let rawArray = (try? JSONSerialization.jsonObject(with: data)) as? [Any] else {
-            return []
-        }
-
-        let decoder = JSONDecoder()
-        return rawArray.compactMap { item in
-            guard JSONSerialization.isValidJSONObject(item),
-                  let itemData = try? JSONSerialization.data(withJSONObject: item),
-                  let entry = try? decoder.decode(HistoryEntry.self, from: itemData) else {
-                return nil
-            }
-            return entry
-        }
+        DataMigrationService.migrateIfNeeded()
+        return DomainDataPortabilityService.loadHistoryEntries()
     }
 
     private static func loadTrackedDomains() -> [TrackedDomain] {
-        let defaults = UserDefaults.standard
-        let decoder = JSONDecoder()
-
-        if let data = defaults.data(forKey: trackedDomainsKey),
-           let domains = try? decoder.decode([TrackedDomain].self, from: data) {
-            return deduplicatedTrackedDomains(domains)
-        }
-
-        if let legacyData = defaults.data(forKey: legacyWatchedDomainsKey),
-           let legacyDomains = try? decoder.decode([WatchedDomain].self, from: legacyData) {
-            return deduplicatedTrackedDomains(
-                legacyDomains.map {
-                    TrackedDomain(
-                        id: $0.id,
-                        domain: $0.domain.lowercased(),
-                        createdAt: $0.createdAt,
-                        updatedAt: $0.createdAt,
-                        lastKnownAvailability: $0.lastKnownAvailability
-                    )
-                }
-            )
-        }
-
-        return []
+        DataMigrationService.migrateIfNeeded()
+        return DomainDataPortabilityService.loadTrackedDomains()
     }
 
     private func persistWorkflows() {
-        if let data = try? JSONEncoder().encode(workflows) {
-            UserDefaults.standard.set(data, forKey: Self.workflowsKey)
-        }
+        DomainDataPortabilityService.saveWorkflows(workflows)
+        refreshDataLifecycleSummary()
     }
 
     private static func loadWorkflows() -> [DomainWorkflow] {
-        let defaults = UserDefaults.standard
-        guard let data = defaults.data(forKey: workflowsKey),
-              let workflows = try? JSONDecoder().decode([DomainWorkflow].self, from: data) else {
-            return []
-        }
-
-        return workflows.sorted { lhs, rhs in
-            if lhs.updatedAt != rhs.updatedAt {
-                return lhs.updatedAt > rhs.updatedAt
-            }
-            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-        }
+        DataMigrationService.migrateIfNeeded()
+        return DomainDataPortabilityService.loadWorkflows()
     }
 
     private static func deduplicatedTrackedDomains(_ domains: [TrackedDomain]) -> [TrackedDomain] {

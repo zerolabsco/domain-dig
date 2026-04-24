@@ -591,12 +591,15 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
     var updatedAt: Date
     var note: String?
     var isPinned: Bool
+    var monitoringEnabled: Bool
     var lastKnownAvailability: DomainAvailabilityStatus?
     var lastSnapshotID: UUID?
     var lastChangeSummary: DomainChangeSummary?
     var lastChangeSeverity: ChangeSeverity?
     var certificateWarningLevel: CertificateWarningLevel
     var certificateDaysRemaining: Int?
+    var lastMonitoredAt: Date?
+    var lastAlertAt: Date?
 
     init(
         id: UUID = UUID(),
@@ -605,12 +608,15 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         updatedAt: Date = Date(),
         note: String? = nil,
         isPinned: Bool = false,
+        monitoringEnabled: Bool = true,
         lastKnownAvailability: DomainAvailabilityStatus? = nil,
         lastSnapshotID: UUID? = nil,
         lastChangeSummary: DomainChangeSummary? = nil,
         lastChangeSeverity: ChangeSeverity? = nil,
         certificateWarningLevel: CertificateWarningLevel = .none,
-        certificateDaysRemaining: Int? = nil
+        certificateDaysRemaining: Int? = nil,
+        lastMonitoredAt: Date? = nil,
+        lastAlertAt: Date? = nil
     ) {
         self.id = id
         self.domain = domain
@@ -618,12 +624,15 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         self.updatedAt = updatedAt
         self.note = note
         self.isPinned = isPinned
+        self.monitoringEnabled = monitoringEnabled
         self.lastKnownAvailability = lastKnownAvailability
         self.lastSnapshotID = lastSnapshotID
         self.lastChangeSummary = lastChangeSummary
         self.lastChangeSeverity = lastChangeSeverity
         self.certificateWarningLevel = certificateWarningLevel
         self.certificateDaysRemaining = certificateDaysRemaining
+        self.lastMonitoredAt = lastMonitoredAt
+        self.lastAlertAt = lastAlertAt
     }
 
     init(from decoder: Decoder) throws {
@@ -634,12 +643,224 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
         note = try container.decodeIfPresent(String.self, forKey: .note)
         isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+        monitoringEnabled = try container.decodeIfPresent(Bool.self, forKey: .monitoringEnabled) ?? true
         lastKnownAvailability = try container.decodeIfPresent(DomainAvailabilityStatus.self, forKey: .lastKnownAvailability)
         lastSnapshotID = try container.decodeIfPresent(UUID.self, forKey: .lastSnapshotID)
         lastChangeSummary = try container.decodeIfPresent(DomainChangeSummary.self, forKey: .lastChangeSummary)
         lastChangeSeverity = try container.decodeIfPresent(ChangeSeverity.self, forKey: .lastChangeSeverity) ?? lastChangeSummary?.severity
         certificateWarningLevel = try container.decodeIfPresent(CertificateWarningLevel.self, forKey: .certificateWarningLevel) ?? .none
         certificateDaysRemaining = try container.decodeIfPresent(Int.self, forKey: .certificateDaysRemaining)
+        lastMonitoredAt = try container.decodeIfPresent(Date.self, forKey: .lastMonitoredAt)
+        lastAlertAt = try container.decodeIfPresent(Date.self, forKey: .lastAlertAt)
+    }
+}
+
+enum MonitoringFrequency: String, Codable, CaseIterable, Identifiable {
+    case daily
+    case twiceDaily
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .daily:
+            return "Daily"
+        case .twiceDaily:
+            return "Twice Daily"
+        }
+    }
+
+    var schedulingInterval: TimeInterval {
+        switch self {
+        case .daily:
+            return 24 * 60 * 60
+        case .twiceDaily:
+            return 12 * 60 * 60
+        }
+    }
+}
+
+enum MonitoringScope: String, Codable, CaseIterable, Identifiable {
+    case allTracked
+    case selectedOnly
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .allTracked:
+            return "All Tracked"
+        case .selectedOnly:
+            return "Selected Only"
+        }
+    }
+}
+
+enum MonitoringAlertSeverity: Int, Codable, CaseIterable, Comparable {
+    case info
+    case warning
+    case critical
+
+    static func < (lhs: MonitoringAlertSeverity, rhs: MonitoringAlertSeverity) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .info:
+            return "Info"
+        case .warning:
+            return "Warning"
+        case .critical:
+            return "Critical"
+        }
+    }
+}
+
+enum MonitoringAlertFilter: String, Codable, CaseIterable, Identifiable {
+    case criticalOnly
+    case criticalAndWarnings
+    case allChanges
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .criticalOnly:
+            return "Critical Only"
+        case .criticalAndWarnings:
+            return "Critical + Warnings"
+        case .allChanges:
+            return "All Changes"
+        }
+    }
+
+    var minimumSeverity: MonitoringAlertSeverity {
+        switch self {
+        case .criticalOnly:
+            return .critical
+        case .criticalAndWarnings:
+            return .warning
+        case .allChanges:
+            return .info
+        }
+    }
+}
+
+enum MonitoringRunTrigger: String, Codable {
+    case manual
+    case background
+    case cli
+
+    var title: String {
+        switch self {
+        case .manual:
+            return "Manual"
+        case .background:
+            return "Background"
+        case .cli:
+            return "CLI"
+        }
+    }
+}
+
+struct MonitoringSettings: Codable, Equatable {
+    var isEnabled: Bool
+    var frequency: MonitoringFrequency
+    var scope: MonitoringScope
+    var selectedDomainIDs: [UUID]
+    var alertFilter: MonitoringAlertFilter
+    var alertsEnabled: Bool
+
+    init(
+        isEnabled: Bool = false,
+        frequency: MonitoringFrequency = .daily,
+        scope: MonitoringScope = .allTracked,
+        selectedDomainIDs: [UUID] = [],
+        alertFilter: MonitoringAlertFilter = .criticalAndWarnings,
+        alertsEnabled: Bool = false
+    ) {
+        self.isEnabled = isEnabled
+        self.frequency = frequency
+        self.scope = scope
+        self.selectedDomainIDs = selectedDomainIDs
+        self.alertFilter = alertFilter
+        self.alertsEnabled = alertsEnabled
+    }
+}
+
+struct MonitoringDomainResult: Codable, Identifiable, Equatable {
+    let id: UUID
+    let domain: String
+    let historyEntryID: UUID?
+    let checkedAt: Date
+    let didChange: Bool
+    let summaryMessage: String
+    let alertSeverity: MonitoringAlertSeverity?
+    let certificateWarningLevel: CertificateWarningLevel
+    let resultSource: LookupResultSource
+    let errorMessage: String?
+
+    init(
+        id: UUID = UUID(),
+        domain: String,
+        historyEntryID: UUID?,
+        checkedAt: Date,
+        didChange: Bool,
+        summaryMessage: String,
+        alertSeverity: MonitoringAlertSeverity?,
+        certificateWarningLevel: CertificateWarningLevel,
+        resultSource: LookupResultSource,
+        errorMessage: String? = nil
+    ) {
+        self.id = id
+        self.domain = domain
+        self.historyEntryID = historyEntryID
+        self.checkedAt = checkedAt
+        self.didChange = didChange
+        self.summaryMessage = summaryMessage
+        self.alertSeverity = alertSeverity
+        self.certificateWarningLevel = certificateWarningLevel
+        self.resultSource = resultSource
+        self.errorMessage = errorMessage
+    }
+}
+
+struct MonitoringLog: Codable, Identifiable, Equatable {
+    let id: UUID
+    let timestamp: Date
+    let trigger: MonitoringRunTrigger
+    let domainsChecked: Int
+    let changesFound: Int
+    let alertsTriggered: Int
+    let checkedDomains: [MonitoringDomainResult]
+    let errors: [String]
+
+    init(
+        id: UUID = UUID(),
+        timestamp: Date,
+        trigger: MonitoringRunTrigger,
+        domainsChecked: Int,
+        changesFound: Int,
+        alertsTriggered: Int,
+        checkedDomains: [MonitoringDomainResult],
+        errors: [String] = []
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.trigger = trigger
+        self.domainsChecked = domainsChecked
+        self.changesFound = changesFound
+        self.alertsTriggered = alertsTriggered
+        self.checkedDomains = checkedDomains
+        self.errors = errors
+    }
+
+    var summary: String {
+        if errors.isEmpty {
+            return "\(changesFound) changes across \(domainsChecked) domains"
+        }
+        return "\(changesFound) changes, \(errors.count) errors"
     }
 }
 

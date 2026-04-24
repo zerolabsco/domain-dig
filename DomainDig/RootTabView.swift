@@ -21,6 +21,13 @@ struct RootTabView: View {
             }
 
             NavigationStack {
+                MonitoringView(viewModel: viewModel)
+            }
+            .tabItem {
+                Label("Monitoring", systemImage: "waveform.path.ecg")
+            }
+
+            NavigationStack {
                 HistoryView(viewModel: viewModel)
             }
             .tabItem {

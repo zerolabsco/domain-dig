@@ -4,14 +4,24 @@ import Foundation
 struct DomainDigCLI {
     static func main() async {
         let arguments = Array(CommandLine.arguments.dropFirst())
+        let wantsJSON = arguments.contains("--json") || arguments.contains("-j")
 
         guard let command = CommandLine.arguments.first else {
-            fputs("usage: domaindig <domain> [--json] [--ownership-history] [--dns-history] [--extended-subdomains] [--pricing] [--show-usage]\n", stderr)
+            fputs(usageText, stderr)
             Foundation.exit(1)
         }
         _ = command
 
-        let wantsJSON = arguments.contains("--json") || arguments.contains("-j")
+        if arguments.first == "backup" {
+            runBackupCommand(arguments: Array(arguments.dropFirst()), wantsJSON: wantsJSON)
+            return
+        }
+
+        if arguments.first == "monitor" {
+            await runMonitorCommand(wantsJSON: wantsJSON)
+            return
+        }
+
         let wantsOwnershipHistory = arguments.contains("--ownership-history")
         let wantsDNSHistory = arguments.contains("--dns-history")
         let wantsExtendedSubdomains = arguments.contains("--extended-subdomains")
@@ -24,7 +34,7 @@ struct DomainDigCLI {
             .filter { !$0.isEmpty }
 
         guard !requestedDomains.isEmpty else {
-            fputs("usage: domaindig <domain> [--json] [--ownership-history] [--dns-history] [--extended-subdomains] [--pricing] [--show-usage]\n", stderr)
+            fputs(usageText, stderr)
             Foundation.exit(1)
         }
 
@@ -252,10 +262,172 @@ struct DomainDigCLI {
     }
 
     private static func loadHistoryEntries() -> [HistoryEntry] {
-        guard let data = UserDefaults.standard.data(forKey: "lookupHistory"),
-              let entries = try? JSONDecoder().decode([HistoryEntry].self, from: data) else {
-            return []
+        DomainDataPortabilityService.loadHistoryEntries()
+    }
+
+    private static func runBackupCommand(arguments: [String], wantsJSON: Bool) {
+        guard let subcommand = arguments.first else {
+            fputs(usageText, stderr)
+            Foundation.exit(1)
         }
-        return entries
+
+        switch subcommand {
+        case "export":
+            do {
+                let data = try DomainDataPortabilityService.backupData()
+                let outputPath = arguments.dropFirst().first(where: { !$0.hasPrefix("-") })
+                if let outputPath {
+                    try data.write(to: URL(fileURLWithPath: outputPath), options: .atomic)
+                } else {
+                    FileHandle.standardOutput.write(data)
+                    if data.last != 0x0A {
+                        FileHandle.standardOutput.write(Data([0x0A]))
+                    }
+                }
+            } catch {
+                fputs("domaindig backup export: \(error.localizedDescription)\n", stderr)
+                Foundation.exit(1)
+            }
+        case "validate":
+            guard let path = arguments.dropFirst().first(where: { !$0.hasPrefix("-") }) else {
+                fputs("usage: domaindig backup validate <path>\n", stderr)
+                Foundation.exit(1)
+            }
+
+            do {
+                let data = try Data(contentsOf: URL(fileURLWithPath: path))
+                let report = try DomainDataPortabilityService.validateBackup(data: data, fileName: URL(fileURLWithPath: path).lastPathComponent)
+                if wantsJSON {
+                    let payload = [
+                        "warnings": report.warnings,
+                        "errors": report.errors
+                    ]
+                    let encoded = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
+                    FileHandle.standardOutput.write(encoded)
+                } else {
+                    let lines = [
+                        "Warnings: \(report.warnings.count)",
+                        "Errors: \(report.errors.count)"
+                    ] + report.warnings.map { "warning: \($0)" } + report.errors.map { "error: \($0)" }
+                    FileHandle.standardOutput.write(Data(lines.joined(separator: "\n").utf8))
+                }
+                FileHandle.standardOutput.write(Data([0x0A]))
+                if !report.errors.isEmpty {
+                    Foundation.exit(1)
+                }
+            } catch {
+                fputs("domaindig backup validate: \(error.localizedDescription)\n", stderr)
+                Foundation.exit(1)
+            }
+        case "import":
+            guard let path = arguments.dropFirst().first(where: { !$0.hasPrefix("-") }) else {
+                fputs("usage: domaindig backup import <path> [--replace]\n", stderr)
+                Foundation.exit(1)
+            }
+
+            let mode: DataPortabilityImportMode = arguments.contains("--replace") ? .replace : .merge
+
+            do {
+                let fileURL = URL(fileURLWithPath: path)
+                let data = try Data(contentsOf: fileURL)
+                let preview = try DomainDataPortabilityService.prepareImport(
+                    data: data,
+                    fileName: fileURL.lastPathComponent,
+                    mode: mode
+                )
+                guard preview.kind == .backup else {
+                    fputs("domaindig backup import: expected a full backup file\n", stderr)
+                    Foundation.exit(1)
+                }
+                let result = try DomainDataPortabilityService.applyImport(preview, mode: mode)
+                let lines = [result.summary] + result.warnings.map { "warning: \($0)" }
+                FileHandle.standardOutput.write(Data(lines.joined(separator: "\n").utf8))
+                FileHandle.standardOutput.write(Data([0x0A]))
+            } catch {
+                fputs("domaindig backup import: \(error.localizedDescription)\n", stderr)
+                Foundation.exit(1)
+            }
+        default:
+            fputs(usageText, stderr)
+            Foundation.exit(1)
+        }
+    }
+
+    private static func runMonitorCommand(wantsJSON: Bool) async {
+        guard FeatureAccessService.hasAccess(to: .automatedMonitoring) else {
+            fputs("domaindig monitor: monitoring requires Pro\n", stderr)
+            Foundation.exit(1)
+        }
+
+        let outcome = await DomainMonitoringService.shared.performMonitoring(
+            trigger: .cli,
+            requireEnabledSetting: false
+        )
+
+        guard let log = outcome.log else {
+            fputs("domaindig monitor: \(outcome.message)\n", stderr)
+            Foundation.exit(1)
+        }
+
+        do {
+            let output: Data
+            if wantsJSON {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                output = try encoder.encode(log)
+            } else {
+                output = Data(monitoringTextSummary(for: log).utf8)
+            }
+            FileHandle.standardOutput.write(output)
+            if output.last != 0x0A {
+                FileHandle.standardOutput.write(Data([0x0A]))
+            }
+            if !outcome.success {
+                Foundation.exit(1)
+            }
+        } catch {
+            fputs("domaindig monitor: \(error.localizedDescription)\n", stderr)
+            Foundation.exit(1)
+        }
+    }
+
+    private static func monitoringTextSummary(for log: MonitoringLog) -> String {
+        var lines = [
+            "DomainDig Monitoring",
+            "====================",
+            "Trigger: \(log.trigger.title)",
+            "Timestamp: \(log.timestamp.formatted(date: .abbreviated, time: .shortened))",
+            "Checked: \(log.domainsChecked)",
+            "Changes: \(log.changesFound)",
+            "Alerts: \(log.alertsTriggered)",
+            ""
+        ]
+
+        if log.checkedDomains.isEmpty {
+            lines.append("No domains were checked.")
+        } else {
+            for result in log.checkedDomains {
+                let severity = result.alertSeverity?.title ?? "None"
+                lines.append("\(result.domain): \(result.summaryMessage) [alert: \(severity)]")
+            }
+        }
+
+        if !log.errors.isEmpty {
+            lines.append("")
+            lines.append("Errors:")
+            lines.append(contentsOf: log.errors.map { "- \($0)" })
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private static var usageText: String {
+        """
+        usage: domaindig <domain> [--json] [--ownership-history] [--dns-history] [--extended-subdomains] [--pricing] [--show-usage]
+               domaindig monitor [--json]
+               domaindig backup export [path]
+               domaindig backup import <path> [--replace]
+               domaindig backup validate <path> [--json]
+        """
     }
 }

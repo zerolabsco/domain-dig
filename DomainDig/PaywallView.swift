@@ -10,7 +10,7 @@ struct PaywallView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("Pro unlocks workflows, scale, and exports. Data+ adds deeper external intelligence with local-first usage credits and no account requirement.")
+                    Text("Pro unlocks workflows, scale, monitoring automation, and exports. Data+ adds deeper external intelligence with local-first usage credits and no account requirement.")
                         .font(appDensity.font(.body, design: .default))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -20,6 +20,8 @@ struct PaywallView: View {
                     featureRow("Unlimited tracked domains")
                     featureRow("Workflows")
                     featureRow("Larger batch sizes")
+                    featureRow("Background monitoring")
+                    featureRow("Local alerts")
                     featureRow("Advanced exports")
                 }
 

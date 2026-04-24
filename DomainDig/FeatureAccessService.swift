@@ -25,6 +25,8 @@ enum FeatureCapability: String, CaseIterable, Identifiable {
     case limitedTracking
     case workflows
     case batchOperations
+    case automatedMonitoring
+    case localAlerts
     case advancedExports
     case ownershipHistory
     case dnsHistory
@@ -45,6 +47,10 @@ enum FeatureCapability: String, CaseIterable, Identifiable {
             return "Workflows"
         case .batchOperations:
             return "Batch operations"
+        case .automatedMonitoring:
+            return "Background monitoring"
+        case .localAlerts:
+            return "Local alerts"
         case .advancedExports:
             return "Advanced exports"
         case .ownershipHistory:
@@ -94,7 +100,16 @@ enum FeatureAccessService {
         case .pro:
             return FeatureEntitlements(
                 tier: .pro,
-                capabilities: [.singleLookup, .basicHistory, .limitedTracking, .workflows, .batchOperations, .advancedExports],
+                capabilities: [
+                    .singleLookup,
+                    .basicHistory,
+                    .limitedTracking,
+                    .workflows,
+                    .batchOperations,
+                    .automatedMonitoring,
+                    .localAlerts,
+                    .advancedExports
+                ],
                 trackedDomainLimit: effectivelyUnlimitedTrackedDomains,
                 workflowLimit: nil,
                 batchSizeLimit: nil
@@ -140,7 +155,7 @@ enum FeatureAccessService {
 
     static func upgradeMessage(for capability: FeatureCapability) -> String {
         switch capability {
-        case .workflows, .batchOperations, .advancedExports:
+        case .workflows, .batchOperations, .automatedMonitoring, .localAlerts, .advancedExports:
             return "Available in Pro"
         case .ownershipHistory, .dnsHistory, .extendedSubdomains, .domainPricing:
             return "Available in Data+"

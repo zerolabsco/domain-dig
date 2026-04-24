@@ -9,8 +9,10 @@ enum PremiumAccessService {
             return FeatureAccessService.hasAccess(to: .batchOperations)
         case .unlimitedTrackedDomains:
             return FeatureAccessService.currentTier != .free
-        case .automatedMonitoring, .pushAlerts:
-            return false
+        case .automatedMonitoring:
+            return FeatureAccessService.hasAccess(to: .automatedMonitoring)
+        case .pushAlerts:
+            return FeatureAccessService.hasAccess(to: .localAlerts)
         }
     }
 

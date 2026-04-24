@@ -27,6 +27,18 @@ final class LocalNotificationService {
         }
     }
 
+    func isAuthorizedForAlerts() async -> Bool {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        case .denied, .notDetermined:
+            return false
+        @unknown default:
+            return false
+        }
+    }
+
     func notifyDomainEvent(domain: String, message: String, severity: ChangeSeverity) async {
         await schedule(
             identifier: "domain-change-\(domain)",
@@ -42,6 +54,27 @@ final class LocalNotificationService {
             title: domain,
             body: "Certificate expires in \(daysRemaining) days",
             interruptionLevel: .timeSensitive
+        )
+    }
+
+    func notifyMonitoringAlert(
+        domain: String,
+        message: String,
+        severity: MonitoringAlertSeverity
+    ) async {
+        let interruptionLevel: UNNotificationInterruptionLevel
+        switch severity {
+        case .critical:
+            interruptionLevel = .timeSensitive
+        case .warning, .info:
+            interruptionLevel = .active
+        }
+
+        await schedule(
+            identifier: "monitoring-\(domain)-\(UUID().uuidString)",
+            title: domain,
+            body: message,
+            interruptionLevel: interruptionLevel
         )
     }
 

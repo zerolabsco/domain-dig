@@ -16,6 +16,8 @@
 		8BBFEFCB2F987E8700E8E144 /* DomainReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */; };
 		8BBFEFCC2F987E8700E8E144 /* DomainReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */; };
 		8BBFEFCD2F987E8700E8E144 /* LookupSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */; };
+		8BF9DA862F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
+		8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +28,7 @@
 		8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainReportExporter.swift; sourceTree = "<group>"; };
 		8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LookupSnapshot.swift; sourceTree = "<group>"; };
 		8BF124F92F70000100933221 /* domaindig */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = domaindig; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -95,6 +98,7 @@
 				8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */,
 				8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */,
 				8BBFEF022F9874AE00E8E144 /* DomainDigCLI.swift */,
+				8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -206,6 +210,7 @@
 				8BBFEF092F9874AE00E8E144 /* DomainInspectionService.swift in Sources */,
 				8BBFEF0A2F9874AE00E8E144 /* DomainReportBuilder.swift in Sources */,
 				8BBFEF0B2F9874AE00E8E144 /* DomainReportExporter.swift in Sources */,
+				8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */,
 				8BBFEF0C2F9874AE00E8E144 /* LookupSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -215,6 +220,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8BBFEF082F9874AE00E8E144 /* DomainDigCLI.swift in Sources */,
+				8BF9DA862F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */,
 				8BBFEFCA2F987E8700E8E144 /* DomainInspectionService.swift in Sources */,
 				8BBFEFCB2F987E8700E8E144 /* DomainReportBuilder.swift in Sources */,
 				8BBFEFCC2F987E8700E8E144 /* DomainReportExporter.swift in Sources */,
@@ -354,7 +360,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 26;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -371,7 +377,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.9.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -390,7 +396,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 26;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -407,7 +413,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.9.0;
+				MARKETING_VERSION = 3.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -426,6 +432,7 @@
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				PRODUCT_NAME = domaindig;
 			};
 			name = Debug;
@@ -435,6 +442,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				PRODUCT_NAME = domaindig;
 			};
 			name = Release;

@@ -287,6 +287,18 @@ struct WatchlistRowView: View {
                 .font(appDensity.font(.caption2))
                 .foregroundStyle(.secondary)
 
+            HStack(spacing: 8) {
+                Text(trackedDomain.monitoringEnabled ? "Monitoring on" : "Monitoring off")
+                if let lastMonitoredAt = trackedDomain.lastMonitoredAt {
+                    Text("Checked \(lastMonitoredAt.formatted(date: .omitted, time: .shortened))")
+                }
+                if let lastAlertAt = trackedDomain.lastAlertAt {
+                    Text("Alert \(lastAlertAt.formatted(date: .omitted, time: .shortened))")
+                }
+            }
+            .font(appDensity.font(.caption2))
+            .foregroundStyle(.secondary)
+
             indicatorRow
 
             if let note = trackedDomain.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty {
@@ -397,6 +409,15 @@ struct TrackedDomainDetailView: View {
                     viewModel.togglePinned(for: liveTrackedDomain)
                 } label: {
                     Label(liveTrackedDomain.isPinned ? "Unpin Domain" : "Pin Domain", systemImage: liveTrackedDomain.isPinned ? "pin.slash" : "pin")
+                }
+
+                Button {
+                    viewModel.toggleMonitoring(for: liveTrackedDomain)
+                } label: {
+                    Label(
+                        liveTrackedDomain.monitoringEnabled ? "Disable Monitoring" : "Enable Monitoring",
+                        systemImage: liveTrackedDomain.monitoringEnabled ? "bell.slash" : "bell"
+                    )
                 }
 
                 Button {

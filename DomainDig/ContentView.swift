@@ -1,5 +1,6 @@
 import MapKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 enum LookupInputMode: String, CaseIterable, Identifiable {
     case single
@@ -2431,6 +2432,13 @@ struct SettingsView: View {
     @State private var showClearCacheConfirmation = false
     @State private var showClearWorkflowsConfirmation = false
     @State private var showClearTrackedDomainsConfirmation = false
+    @State private var importMode: DataPortabilityImportMode = .merge
+    @State private var showBackupImporter = false
+    @State private var showTrackedDomainsImporter = false
+    @State private var showWorkflowsImporter = false
+    @State private var pendingImportPreview: DataImportPreview?
+    @State private var pendingImportError: String?
+    @State private var showReplaceImportConfirmation = false
 
     private var customResolverError: String? {
         guard resolverOption == .custom else {
@@ -2469,6 +2477,161 @@ struct SettingsView: View {
                             .font(appDensity.font(.caption, design: .default))
                             .foregroundStyle(.red)
                     }
+                }
+            }
+
+            Section("Monitoring") {
+                Toggle(
+                    "Enable Background Monitoring",
+                    isOn: Binding(
+                        get: { viewModel.monitoringSettings.isEnabled },
+                        set: { viewModel.setMonitoringEnabled($0) }
+                    )
+                )
+
+                Picker(
+                    "Frequency",
+                    selection: Binding(
+                        get: { viewModel.monitoringSettings.frequency },
+                        set: { viewModel.setMonitoringFrequency($0) }
+                    )
+                ) {
+                    ForEach(MonitoringFrequency.allCases) { frequency in
+                        Text(frequency.title).tag(frequency)
+                    }
+                }
+
+                Picker(
+                    "Domains",
+                    selection: Binding(
+                        get: { viewModel.monitoringSettings.scope },
+                        set: { viewModel.setMonitoringScope($0) }
+                    )
+                ) {
+                    ForEach(MonitoringScope.allCases) { scope in
+                        Text(scope.title).tag(scope)
+                    }
+                }
+
+                if viewModel.monitoringSettings.scope == .selectedOnly {
+                    ForEach(viewModel.trackedDomains) { trackedDomain in
+                        Toggle(
+                            trackedDomain.domain,
+                            isOn: Binding(
+                                get: { viewModel.monitoringSettings.selectedDomainIDs.contains(trackedDomain.id) },
+                                set: { viewModel.setMonitoringSelection(for: trackedDomain, isSelected: $0) }
+                            )
+                        )
+                    }
+                }
+
+                Toggle(
+                    "Local Alerts",
+                    isOn: Binding(
+                        get: { viewModel.monitoringSettings.alertsEnabled },
+                        set: { isEnabled in
+                            if isEnabled {
+                                Task {
+                                    await viewModel.requestMonitoringNotificationAuthorization()
+                                }
+                            } else {
+                                viewModel.setMonitoringAlertsEnabled(false)
+                            }
+                        }
+                    )
+                )
+
+                Picker(
+                    "Notify For",
+                    selection: Binding(
+                        get: { viewModel.monitoringSettings.alertFilter },
+                        set: { viewModel.setMonitoringAlertFilter($0) }
+                    )
+                ) {
+                    ForEach(MonitoringAlertFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
+                    }
+                }
+
+                LabeledContent("Background Refresh", value: DomainMonitoringScheduler.shared.backgroundRefreshStatusDescription())
+                LabeledContent("Notification Access", value: notificationAuthorizationLabel)
+
+                if let monitoringStatusMessage = viewModel.monitoringStatusMessage {
+                    Text(monitoringStatusMessage)
+                        .font(appDensity.font(.caption, design: .default))
+                        .foregroundStyle(.secondary)
+                }
+
+                if !FeatureAccessService.hasAccess(to: .automatedMonitoring) {
+                    Text("Background monitoring and alerts are available in Pro.")
+                        .font(appDensity.font(.caption, design: .default))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Data Portability") {
+                Picker("Import Mode", selection: $importMode) {
+                    ForEach(DataPortabilityImportMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+
+                Text(importMode.explanation)
+                    .font(appDensity.font(.caption, design: .default))
+                    .foregroundStyle(.secondary)
+
+                Button("Export Full Backup") {
+                    exportFullBackup()
+                }
+
+                Button("Import Backup") {
+                    showBackupImporter = true
+                }
+
+                Menu("Export Tracked Domains") {
+                    Button("JSON") {
+                        exportPortableTrackedDomainsJSON()
+                    }
+                    Button("CSV") {
+                        exportPortableTrackedDomainsCSV()
+                    }
+                }
+
+                Button("Import Tracked Domains") {
+                    showTrackedDomainsImporter = true
+                }
+
+                Menu("Export Workflows") {
+                    Button("JSON") {
+                        exportPortableWorkflowsJSON()
+                    }
+                    Button("CSV") {
+                        exportPortableWorkflowsCSV()
+                    }
+                }
+
+                Button("Import Workflows") {
+                    showWorkflowsImporter = true
+                }
+
+                Button("Export History") {
+                    exportPortableHistoryJSON()
+                }
+
+                LabeledContent("Tracked Domains", value: "\(viewModel.dataLifecycleSummary.trackedDomains)")
+                LabeledContent("History Snapshots", value: "\(viewModel.dataLifecycleSummary.historySnapshots)")
+                LabeledContent("Workflows", value: "\(viewModel.dataLifecycleSummary.workflows)")
+                LabeledContent("Cached Items", value: "\(viewModel.dataLifecycleSummary.cachedItems)")
+                LabeledContent("Monitoring Logs", value: "\(viewModel.dataLifecycleSummary.monitoringLogs)")
+
+                Text("Data stays on this device unless you export it. Backup files can include domain history, monitoring settings, and notes. Imported files are processed on-device.")
+                    .font(appDensity.font(.caption, design: .default))
+                    .foregroundStyle(.secondary)
+
+                if let portabilityStatusMessage = viewModel.portabilityStatusMessage {
+                    Text(portabilityStatusMessage)
+                        .font(appDensity.font(.caption, design: .default))
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -2551,7 +2714,7 @@ struct SettingsView: View {
             Section("About") {
                 LabeledContent("Version", value: appVersion)
                 LabeledContent("Storage", value: "Local-only")
-                LabeledContent("Report Schema", value: "3.2.0")
+                LabeledContent("Backup Schema", value: "v\(DomainDigBackup.currentSchemaVersion)")
             }
         }
         .navigationTitle("Settings")
@@ -2587,12 +2750,73 @@ struct SettingsView: View {
         } message: {
             Text("This removes the watchlist only. History and workflows stay intact.")
         }
+        .alert("Replace local data?", isPresented: $showReplaceImportConfirmation) {
+            Button("Replace", role: .destructive) {
+                applyPendingImport()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Replace mode overwrites local data covered by the imported file and may remove items that are only on this device.")
+        }
+        .alert("Import Error", isPresented: Binding(
+            get: { pendingImportError != nil },
+            set: { if !$0 { pendingImportError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(pendingImportError ?? "The import could not be completed.")
+        }
+        .sheet(isPresented: Binding(
+            get: { pendingImportPreview != nil },
+            set: { if !$0 { pendingImportPreview = nil } }
+        )) {
+            if let pendingImportPreview {
+                DataImportPreviewSheet(
+                    preview: pendingImportPreview,
+                    mode: importMode,
+                    onCancel: {
+                        self.pendingImportPreview = nil
+                    },
+                    onApply: {
+                        if importMode == .replace {
+                            showReplaceImportConfirmation = true
+                        } else {
+                            applyPendingImport()
+                        }
+                    }
+                )
+            }
+        }
+        .fileImporter(
+            isPresented: $showBackupImporter,
+            allowedContentTypes: [UTType.json],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImportResult(result, expectedKind: .backup)
+        }
+        .fileImporter(
+            isPresented: $showTrackedDomainsImporter,
+            allowedContentTypes: [UTType.json, UTType.commaSeparatedText],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImportResult(result, expectedKind: .trackedDomains)
+        }
+        .fileImporter(
+            isPresented: $showWorkflowsImporter,
+            allowedContentTypes: [UTType.json, UTType.commaSeparatedText],
+            allowsMultipleSelection: false
+        ) { result in
+            handleImportResult(result, expectedKind: .workflows)
+        }
         .onAppear {
             let currentResolverURL = storedResolverURL.trimmingCharacters(in: .whitespacesAndNewlines)
             resolverOption = DNSResolverOption.option(for: currentResolverURL)
             customResolverURL = resolverOption == .custom ? currentResolverURL : DNSResolverOption.defaultURLString
+            viewModel.refreshMonitoringState()
+            viewModel.refreshDataLifecycleSummary()
             Task {
                 await viewModel.refreshUsageCredits()
+                await viewModel.refreshMonitoringAuthorizationStatus()
             }
         }
         .onChange(of: resolverOption) { _, newValue in
@@ -2610,6 +2834,157 @@ struct SettingsView: View {
 
     private var appVersion: String {
         AppVersion.current
+    }
+
+    private var notificationAuthorizationLabel: String {
+        switch viewModel.monitoringNotificationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return "Allowed"
+        case .denied:
+            return "Denied"
+        case .notDetermined:
+            return "Not Requested"
+        @unknown default:
+            return "Unknown"
+        }
+    }
+
+    private func exportFullBackup() {
+        guard let data = viewModel.exportFullBackupData() else { return }
+        ExportPresenter.share(filename: portabilityFilename(suffix: "backup", fileExtension: "json"), data: data)
+    }
+
+    private func exportPortableTrackedDomainsJSON() {
+        guard let data = viewModel.exportPortableTrackedDomainsJSONData() else { return }
+        ExportPresenter.share(filename: portabilityFilename(suffix: "tracked_domains", fileExtension: "json"), data: data)
+    }
+
+    private func exportPortableTrackedDomainsCSV() {
+        ExportPresenter.share(
+            filename: portabilityFilename(suffix: "tracked_domains", fileExtension: "csv"),
+            contents: viewModel.exportPortableTrackedDomainsCSV()
+        )
+    }
+
+    private func exportPortableWorkflowsJSON() {
+        guard let data = viewModel.exportPortableWorkflowsJSONData() else { return }
+        ExportPresenter.share(filename: portabilityFilename(suffix: "workflows", fileExtension: "json"), data: data)
+    }
+
+    private func exportPortableWorkflowsCSV() {
+        ExportPresenter.share(
+            filename: portabilityFilename(suffix: "workflows", fileExtension: "csv"),
+            contents: viewModel.exportPortableWorkflowsCSV()
+        )
+    }
+
+    private func exportPortableHistoryJSON() {
+        guard let data = viewModel.exportPortableHistoryJSONData() else { return }
+        ExportPresenter.share(filename: portabilityFilename(suffix: "history", fileExtension: "json"), data: data)
+    }
+
+    private func handleImportResult(
+        _ result: Result<[URL], Error>,
+        expectedKind: DataPortabilityImportKind
+    ) {
+        do {
+            guard let url = try result.get().first else { return }
+            let shouldStopAccessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if shouldStopAccessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            let data = try Data(contentsOf: url)
+            let preview = try viewModel.prepareDataImport(
+                data: data,
+                fileName: url.lastPathComponent,
+                mode: importMode
+            )
+
+            guard preview.kind == expectedKind else {
+                pendingImportError = preview.kind == .backup
+                    ? "That file is a full backup. Use Import Backup."
+                    : "That file type does not match this import action."
+                return
+            }
+
+            pendingImportPreview = preview
+        } catch {
+            pendingImportError = error.localizedDescription
+        }
+    }
+
+    private func applyPendingImport() {
+        guard let pendingImportPreview else { return }
+        do {
+            _ = try viewModel.applyDataImport(pendingImportPreview, mode: importMode)
+            self.pendingImportPreview = nil
+        } catch {
+            pendingImportError = error.localizedDescription
+        }
+    }
+
+    private func portabilityFilename(suffix: String, fileExtension: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        return "\(formatter.string(from: Date()))_domaindig_\(suffix).\(fileExtension)"
+    }
+}
+
+private struct DataImportPreviewSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let preview: DataImportPreview
+    let mode: DataPortabilityImportMode
+    let onCancel: () -> Void
+    let onApply: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Summary") {
+                    ForEach(preview.summaryLines, id: \.self) { line in
+                        Text(line)
+                    }
+                }
+
+                Section("Projected Counts") {
+                    LabeledContent("Tracked Domains", value: "\(preview.projectedCounts.trackedDomains)")
+                    LabeledContent("History Snapshots", value: "\(preview.projectedCounts.historySnapshots)")
+                    LabeledContent("Workflows", value: "\(preview.projectedCounts.workflows)")
+                    LabeledContent("Cached Items", value: "\(preview.projectedCounts.cachedItems)")
+                    LabeledContent("Monitoring Logs", value: "\(preview.projectedCounts.monitoringLogs)")
+                }
+
+                if !preview.warnings.isEmpty {
+                    Section("Warnings") {
+                        ForEach(preview.warnings, id: \.self) { warning in
+                            Text(warning)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Import Preview")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(mode == .replace ? "Replace" : "Import") {
+                        onApply()
+                        if mode == .merge {
+                            dismiss()
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
