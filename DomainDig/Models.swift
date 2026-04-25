@@ -176,6 +176,26 @@ enum CertificateWarningLevel: String, Codable {
     }
 }
 
+enum DomainHealth: String, Codable, Sendable, CaseIterable {
+    case healthy
+    case warning
+    case critical
+
+    var title: String {
+        rawValue.capitalized
+    }
+}
+
+struct PortfolioSnapshot: Codable, Sendable {
+    var totalDomains: Int
+    var healthyCount: Int
+    var warningCount: Int
+    var criticalCount: Int
+    var changedLast24h: Int
+    var expiringSoonCount: Int
+    var unreachableCount: Int
+}
+
 struct DomainChangeSummary: Codable, Equatable {
     let hasChanges: Bool
     let changedSections: [String]
@@ -653,6 +673,80 @@ enum WatchlistSortOption: String, CaseIterable, Identifiable {
         case .alphabetical:
             return "Alphabetical"
         }
+    }
+}
+
+enum PortfolioFilterOption: String, CaseIterable, Identifiable {
+    case all
+    case healthy
+    case warning
+    case critical
+    case changed
+    case expiring
+    case unreachable
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all:
+            return "All"
+        case .healthy:
+            return "Healthy"
+        case .warning:
+            return "Warning"
+        case .critical:
+            return "Critical"
+        case .changed:
+            return "Changed"
+        case .expiring:
+            return "Expiring"
+        case .unreachable:
+            return "Unreachable"
+        }
+    }
+}
+
+extension DomainHealth {
+    static func classify(
+        certificateExpiryState: CertificateWarningLevel,
+        isReachable: Bool,
+        recentMonitoringFailureCount: Int,
+        hasRecentDNSChange: Bool,
+        instabilityScore: Int,
+        hasRecentCriticalChange: Bool,
+        hasInvalidTLS: Bool
+    ) -> DomainHealth {
+        if !isReachable
+            || hasInvalidTLS
+            || certificateExpiryState == .critical
+            || recentMonitoringFailureCount >= 2
+            || instabilityScore >= 70
+            || hasRecentCriticalChange {
+            return .critical
+        }
+
+        if certificateExpiryState == .warning
+            || recentMonitoringFailureCount == 1
+            || hasRecentDNSChange
+            || instabilityScore >= 35 {
+            return .warning
+        }
+
+        return .healthy
+    }
+
+    static func instabilityScore(
+        recentChangeCount: Int,
+        recentFailureCount: Int,
+        pendingAlertCount: Int,
+        hasRecentDNSChange: Bool
+    ) -> Int {
+        let rawScore = (recentChangeCount * 12)
+            + (recentFailureCount * 24)
+            + (pendingAlertCount * 8)
+            + (hasRecentDNSChange ? 14 : 0)
+        return min(rawScore, 100)
     }
 }
 

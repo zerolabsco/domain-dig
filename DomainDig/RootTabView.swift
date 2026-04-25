@@ -1,31 +1,28 @@
 import SwiftUI
 
+private enum RootTab: Hashable {
+    case dashboard
+    case history
+    case inspect
+    case settings
+}
+
 struct RootTabView: View {
     @Bindable var viewModel: DomainViewModel
     @State private var purchaseService = PurchaseService.shared
+    @State private var selectedTab: RootTab = FeatureAccessService.currentTier == .free ? .inspect : .dashboard
 
     var body: some View {
         let _ = purchaseService.currentTier
 
-        TabView {
-            ContentView(viewModel: viewModel)
-                .tabItem {
-                    Label("Inspect", systemImage: "magnifyingglass")
-                }
-
+        TabView(selection: $selectedTab) {
             NavigationStack {
-                WatchlistView(viewModel: viewModel)
+                DashboardView(viewModel: viewModel)
             }
             .tabItem {
-                Label("Watchlist", systemImage: "eye")
+                Label("Dashboard", systemImage: "square.grid.2x2")
             }
-
-            NavigationStack {
-                MonitoringView(viewModel: viewModel)
-            }
-            .tabItem {
-                Label("Monitoring", systemImage: "waveform.path.ecg")
-            }
+            .tag(RootTab.dashboard)
 
             NavigationStack {
                 HistoryView(viewModel: viewModel)
@@ -33,13 +30,21 @@ struct RootTabView: View {
             .tabItem {
                 Label("History", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
             }
+            .tag(RootTab.history)
+
+            ContentView(viewModel: viewModel)
+                .tabItem {
+                    Label("Inspect", systemImage: "magnifyingglass")
+                }
+                .tag(RootTab.inspect)
 
             NavigationStack {
                 SettingsView(viewModel: viewModel)
             }
             .tabItem {
-                Label("More", systemImage: "ellipsis.circle")
+                Label("Settings", systemImage: "gearshape")
             }
+            .tag(RootTab.settings)
         }
         .sheet(isPresented: Binding(
             get: { viewModel.isPaywallPresented },
@@ -62,6 +67,11 @@ struct RootTabView: View {
                     viewModel.upgradePrompt = nil
                 }
             )
+        }
+        .onChange(of: purchaseService.currentTier) { _, newValue in
+            if newValue != .free, selectedTab == .inspect, viewModel.trackedDomains.isEmpty == false {
+                selectedTab = .dashboard
+            }
         }
     }
 }

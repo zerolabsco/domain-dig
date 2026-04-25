@@ -34,6 +34,11 @@ struct DomainReport: Codable {
     let riskAssessment: DomainRiskAssessment
     let insights: [String]
     let changeSummary: DomainChangeSummary?
+    let lastChangeDate: Date?
+    let health: DomainHealth
+    let lastMonitoringFailure: Date?
+    let instabilityScore: Int
+    let certificateExpiryState: CertificateWarningLevel
     let workflowContext: DomainWorkflowContext?
     let metadata: DomainReportMetadata
 }
@@ -223,7 +228,29 @@ struct DomainReportBuilder {
         primaryIP: String?,
         changeSummary: DomainChangeSummary?
     ) -> DomainReport {
-        DomainReport(
+        let certificateExpiryState = DomainDiffService.certificateWarningLevel(for: snapshot)
+        let recentChangeCount = changeSummary?.hasChanges == true ? 1 : 0
+        let instabilityScore = DomainHealth.instabilityScore(
+            recentChangeCount: recentChangeCount,
+            recentFailureCount: 0,
+            pendingAlertCount: 0,
+            hasRecentDNSChange: changeSummary?.changedSections.contains(where: { $0.localizedCaseInsensitiveContains("dns") }) == true
+        )
+        let hasInvalidTLS = snapshot.sslInfo == nil && snapshot.sslError != nil
+        let isReachable = !snapshot.reachabilityResults.isEmpty
+            ? snapshot.reachabilityResults.contains(where: \.reachable)
+            : snapshot.reachabilityError == nil
+        let health = DomainHealth.classify(
+            certificateExpiryState: certificateExpiryState,
+            isReachable: isReachable,
+            recentMonitoringFailureCount: 0,
+            hasRecentDNSChange: changeSummary?.changedSections.contains(where: { $0.localizedCaseInsensitiveContains("dns") }) == true,
+            instabilityScore: instabilityScore,
+            hasRecentCriticalChange: changeSummary?.impactClassification == .critical,
+            hasInvalidTLS: hasInvalidTLS
+        )
+
+        return DomainReport(
             domain: snapshot.domain,
             timestamp: snapshot.timestamp,
             provenance: DomainReportProvenance(
@@ -309,6 +336,11 @@ struct DomainReportBuilder {
             riskAssessment: analysis.riskAssessment,
             insights: analysis.insights,
             changeSummary: changeSummary,
+            lastChangeDate: changeSummary?.hasChanges == true ? snapshot.timestamp : nil,
+            health: health,
+            lastMonitoringFailure: nil,
+            instabilityScore: instabilityScore,
+            certificateExpiryState: certificateExpiryState,
             workflowContext: workflowContext,
             metadata: DomainReportMetadata(
                 schemaVersion: "3.7.0",

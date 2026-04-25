@@ -2518,6 +2518,10 @@ struct SettingsView: View {
             }
 
             Section("Preferences") {
+                NavigationLink("Tracked Domains") {
+                    WatchlistView(viewModel: viewModel)
+                }
+
                 NavigationLink("Workflows") {
                     WorkflowsView(viewModel: viewModel)
                 }
@@ -2532,6 +2536,10 @@ struct SettingsView: View {
             }
 
             Section("Services") {
+                NavigationLink("Monitoring Activity") {
+                    MonitoringView(viewModel: viewModel)
+                }
+
                 NavigationLink("iCloud Sync") {
                     CloudSyncSettingsView()
                 }
@@ -2557,7 +2565,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .navigationTitle("More")
+        .navigationTitle("Settings")
     }
 }
 

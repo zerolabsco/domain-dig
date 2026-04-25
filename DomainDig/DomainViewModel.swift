@@ -104,6 +104,66 @@ private struct WorkflowExportPayload: Codable {
     let reports: [DomainReport]
 }
 
+struct PortfolioDomainStatus: Identifiable {
+    let trackedDomain: TrackedDomain
+    let latestEntry: HistoryEntry?
+    let report: DomainReport
+    let apexDomain: String
+    let health: DomainHealth
+    let lastChangeDate: Date?
+    let lastMonitoringFailure: Date?
+    let instabilityScore: Int
+    let certificateExpiryState: CertificateWarningLevel
+    let certificateDaysRemaining: Int?
+    let isUnreachable: Bool
+    let recentDNSChange: Bool
+    let recentCriticalChange: Bool
+    let recentFailureCount: Int
+
+    var id: UUID { trackedDomain.id }
+}
+
+struct PortfolioActivityItem: Identifiable {
+    let id: String
+    let trackedDomainID: UUID
+    let domain: String
+    let message: String
+    let timestamp: Date
+    let health: DomainHealth
+    let systemImage: String
+}
+
+struct PortfolioAttentionItem: Identifiable {
+    let id: String
+    let trackedDomainID: UUID
+    let domain: String
+    let reason: String
+    let timestamp: Date
+    let health: DomainHealth
+}
+
+struct PortfolioGroup: Identifiable {
+    let apexDomain: String
+    let domains: [PortfolioDomainStatus]
+
+    var id: String { apexDomain }
+}
+
+struct PortfolioDashboardData {
+    let snapshot: PortfolioSnapshot
+    let domainStates: [PortfolioDomainStatus]
+    let recentActivity: [PortfolioActivityItem]
+    let attentionRequired: [PortfolioAttentionItem]
+    let expiringSoon: [PortfolioDomainStatus]
+    let groups: [PortfolioGroup]
+}
+
+private struct PortfolioDashboardStamp: Equatable {
+    let trackedDomainSignature: [String]
+    let historySignature: [String]
+    let monitoringSignature: [String]
+}
+
 @MainActor
 @Observable
 final class DomainViewModel {
@@ -214,6 +274,8 @@ final class DomainViewModel {
     private var trackedDomainsPersistenceDirty = false
     private let reportBuilder = DomainReportBuilder()
     private let inspectionService = DomainInspectionService()
+    private var cachedPortfolioDashboardData: PortfolioDashboardData?
+    private var cachedPortfolioDashboardStamp: PortfolioDashboardStamp?
     private(set) var currentResultSource: LookupResultSource = .live
     private(set) var currentCachedSections: [LookupSectionKind] = []
     private(set) var currentStatusMessage: String?
@@ -246,6 +308,8 @@ final class DomainViewModel {
     var watchlistSearchText = ""
     var watchlistFilter: WatchlistFilterOption = .all
     var watchlistSortOption: WatchlistSortOption = .pinned
+    var dashboardSearchText = ""
+    var dashboardFilter: PortfolioFilterOption = .all
     var monitoringSettings: MonitoringSettings = MonitoringStorage.loadSettings()
     var monitoringLogs: [MonitoringLog] = MonitoringStorage.loadLogs()
     var monitoringRunInProgress = false
@@ -375,6 +439,73 @@ final class DomainViewModel {
         }
 
         return sortedTrackedDomains(from: filtered, using: watchlistSortOption)
+    }
+
+    var portfolioDashboardData: PortfolioDashboardData {
+        let stamp = portfolioDashboardStamp()
+        if let cachedPortfolioDashboardData, cachedPortfolioDashboardStamp == stamp {
+            return cachedPortfolioDashboardData
+        }
+
+        let domainStates = buildPortfolioDomainStates()
+        let recentActivity = buildPortfolioActivity(from: domainStates)
+        let attentionRequired = buildAttentionQueue(from: domainStates)
+        let expiringSoon = domainStates
+            .filter { $0.certificateExpiryState != .none }
+            .sorted {
+                ($0.certificateDaysRemaining ?? .max, $0.trackedDomain.domain)
+                    < ($1.certificateDaysRemaining ?? .max, $1.trackedDomain.domain)
+            }
+        let groups = buildPortfolioGroups(from: domainStates)
+        let snapshot = PortfolioSnapshot(
+            totalDomains: domainStates.count,
+            healthyCount: domainStates.filter { $0.health == .healthy }.count,
+            warningCount: domainStates.filter { $0.health == .warning }.count,
+            criticalCount: domainStates.filter { $0.health == .critical }.count,
+            changedLast24h: domainStates.filter {
+                guard let lastChangeDate = $0.lastChangeDate else { return false }
+                return Date().timeIntervalSince(lastChangeDate) <= 24 * 60 * 60
+            }.count,
+            expiringSoonCount: expiringSoon.count,
+            unreachableCount: domainStates.filter(\.isUnreachable).count
+        )
+        let data = PortfolioDashboardData(
+            snapshot: snapshot,
+            domainStates: domainStates,
+            recentActivity: recentActivity,
+            attentionRequired: attentionRequired,
+            expiringSoon: expiringSoon,
+            groups: groups
+        )
+        cachedPortfolioDashboardStamp = stamp
+        cachedPortfolioDashboardData = data
+        return data
+    }
+
+    var filteredPortfolioDomainStates: [PortfolioDomainStatus] {
+        let query = dashboardSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return portfolioDashboardData.domainStates.filter { state in
+            matchesPortfolioFilter(state) && matchesDashboardSearch(state, query: query)
+        }
+    }
+
+    var filteredPortfolioGroups: [PortfolioGroup] {
+        buildPortfolioGroups(from: filteredPortfolioDomainStates)
+    }
+
+    var filteredPortfolioRecentActivity: [PortfolioActivityItem] {
+        let visibleDomainIDs = Set(filteredPortfolioDomainStates.map(\.trackedDomain.id))
+        return portfolioDashboardData.recentActivity.filter { visibleDomainIDs.contains($0.trackedDomainID) }
+    }
+
+    var filteredPortfolioAttentionRequired: [PortfolioAttentionItem] {
+        let visibleDomainIDs = Set(filteredPortfolioDomainStates.map(\.trackedDomain.id))
+        return portfolioDashboardData.attentionRequired.filter { visibleDomainIDs.contains($0.trackedDomainID) }
+    }
+
+    var filteredPortfolioExpiringSoon: [PortfolioDomainStatus] {
+        let visibleDomainIDs = Set(filteredPortfolioDomainStates.map(\.trackedDomain.id))
+        return portfolioDashboardData.expiringSoon.filter { visibleDomainIDs.contains($0.trackedDomain.id) }
     }
 
     var timelineDomains: [String] {
@@ -2805,6 +2936,349 @@ final class DomainViewModel {
 
     func latestSnapshot(for trackedDomain: TrackedDomain) -> LookupSnapshot? {
         recentSnapshots(for: trackedDomain, limit: 1).first?.snapshot
+    }
+
+    func trackedDomain(withID id: UUID) -> TrackedDomain? {
+        trackedDomains.first(where: { $0.id == id })
+    }
+
+    private func portfolioDashboardStamp() -> PortfolioDashboardStamp {
+        PortfolioDashboardStamp(
+            trackedDomainSignature: trackedDomains
+                .sorted { $0.id.uuidString < $1.id.uuidString }
+                .map {
+                    [
+                        $0.id.uuidString,
+                        $0.updatedAt.timeIntervalSinceReferenceDate.formatted(.number.precision(.fractionLength(3))),
+                        String($0.pendingMonitoringAlerts.count),
+                        $0.lastMonitoredAt?.timeIntervalSinceReferenceDate.formatted(.number.precision(.fractionLength(3))) ?? "0",
+                        $0.lastAlertAt?.timeIntervalSinceReferenceDate.formatted(.number.precision(.fractionLength(3))) ?? "0"
+                    ].joined(separator: "|")
+                },
+            historySignature: history
+                .prefix(250)
+                .map {
+                    [
+                        $0.id.uuidString,
+                        $0.timestamp.timeIntervalSinceReferenceDate.formatted(.number.precision(.fractionLength(3))),
+                        String($0.changeCount),
+                        $0.severitySummary?.rawValue.description ?? "-"
+                    ].joined(separator: "|")
+                },
+            monitoringSignature: monitoringLogs
+                .prefix(100)
+                .map {
+                    [
+                        $0.id.uuidString,
+                        $0.timestamp.timeIntervalSinceReferenceDate.formatted(.number.precision(.fractionLength(3))),
+                        String($0.alertsTriggered),
+                        String($0.changesFound)
+                    ].joined(separator: "|")
+                }
+        )
+    }
+
+    private func buildPortfolioDomainStates() -> [PortfolioDomainStatus] {
+        let now = Date()
+        return sortedTrackedDomains(from: trackedDomains, using: .pinned).map { trackedDomain in
+            let recentEntries = recentSnapshots(for: trackedDomain, limit: 8)
+            let latestEntry = recentEntries.first
+            let report = latestEntry.map { self.report(for: $0) } ?? reportBuilder.build(from: placeholderSnapshot(for: trackedDomain))
+            let recentMonitoringResults = monitoringLogs
+                .flatMap(\.checkedDomains)
+                .filter { $0.domain.caseInsensitiveCompare(trackedDomain.domain) == .orderedSame }
+                .sorted { $0.checkedAt > $1.checkedAt }
+            let recentFailureResults = recentMonitoringResults.filter {
+                let isFailure = $0.errorMessage != nil || ($0.alertSeverity ?? .info) >= .warning
+                return isFailure && now.timeIntervalSince($0.checkedAt) <= 7 * 24 * 60 * 60
+            }
+            let recentChangeCount = recentEntries.filter {
+                guard let changeSummary = $0.changeSummary, changeSummary.hasChanges else { return false }
+                return now.timeIntervalSince($0.timestamp) <= 7 * 24 * 60 * 60
+            }.count
+            let recentDNSChange = recentEntries.contains {
+                guard let changeSummary = $0.changeSummary else { return false }
+                return changeSummary.changedSections.contains(where: { $0.localizedCaseInsensitiveContains("dns") })
+                    && now.timeIntervalSince($0.timestamp) <= 7 * 24 * 60 * 60
+            }
+            let recentCriticalChange = recentEntries.contains {
+                guard let changeSummary = $0.changeSummary else { return false }
+                return changeSummary.impactClassification == .critical
+                    && now.timeIntervalSince($0.timestamp) <= 7 * 24 * 60 * 60
+            }
+            let certificateExpiryState = trackedDomain.certificateWarningLevel == .none
+                ? report.certificateExpiryState
+                : trackedDomain.certificateWarningLevel
+            let isUnreachable: Bool = {
+                if let latestEntry {
+                    if !latestEntry.reachabilityResults.isEmpty {
+                        return !latestEntry.reachabilityResults.contains(where: \.reachable)
+                    }
+                    if latestEntry.reachabilityError != nil {
+                        return true
+                    }
+                }
+                return recentFailureResults.contains { ($0.alertSeverity ?? .info) == .critical && $0.errorMessage != nil }
+            }()
+            let hasInvalidTLS = latestEntry?.sslInfo == nil && latestEntry?.sslError != nil
+            let instabilityScore = DomainHealth.instabilityScore(
+                recentChangeCount: recentChangeCount,
+                recentFailureCount: recentFailureResults.count,
+                pendingAlertCount: trackedDomain.pendingMonitoringAlerts.count,
+                hasRecentDNSChange: recentDNSChange
+            )
+            let health = DomainHealth.classify(
+                certificateExpiryState: certificateExpiryState,
+                isReachable: !isUnreachable,
+                recentMonitoringFailureCount: recentFailureResults.count,
+                hasRecentDNSChange: recentDNSChange,
+                instabilityScore: instabilityScore,
+                hasRecentCriticalChange: recentCriticalChange,
+                hasInvalidTLS: hasInvalidTLS
+            )
+
+            return PortfolioDomainStatus(
+                trackedDomain: trackedDomain,
+                latestEntry: latestEntry,
+                report: report,
+                apexDomain: apexDomain(for: trackedDomain.domain),
+                health: health,
+                lastChangeDate: latestEntry?.changeSummary?.hasChanges == true
+                    ? latestEntry?.timestamp
+                    : trackedDomain.monitoringState.lastChangeDate ?? report.lastChangeDate,
+                lastMonitoringFailure: recentFailureResults.first?.checkedAt,
+                instabilityScore: instabilityScore,
+                certificateExpiryState: certificateExpiryState,
+                certificateDaysRemaining: trackedDomain.certificateDaysRemaining ?? latestEntry?.sslInfo?.daysUntilExpiry,
+                isUnreachable: isUnreachable,
+                recentDNSChange: recentDNSChange,
+                recentCriticalChange: recentCriticalChange,
+                recentFailureCount: recentFailureResults.count
+            )
+        }
+    }
+
+    private func buildPortfolioActivity(from domainStates: [PortfolioDomainStatus]) -> [PortfolioActivityItem] {
+        var items: [PortfolioActivityItem] = []
+        let healthByDomainID = Dictionary(uniqueKeysWithValues: domainStates.map { ($0.trackedDomain.id, $0.health) })
+
+        for state in domainStates {
+            if let latestEntry = state.latestEntry,
+               let changeSummary = latestEntry.changeSummary,
+               changeSummary.hasChanges {
+                items.append(
+                    PortfolioActivityItem(
+                        id: "history|\(latestEntry.id.uuidString)",
+                        trackedDomainID: state.trackedDomain.id,
+                        domain: state.trackedDomain.domain,
+                        message: portfolioHistoryMessage(for: latestEntry),
+                        timestamp: latestEntry.timestamp,
+                        health: state.health,
+                        systemImage: portfolioHistoryIcon(for: latestEntry)
+                    )
+                )
+            }
+        }
+
+        for log in monitoringLogs.prefix(25) {
+            for result in log.checkedDomains where result.didChange || result.errorMessage != nil || result.certificateWarningLevel != .none {
+                guard let trackedDomain = trackedDomain(for: result.domain) else { continue }
+                items.append(
+                    PortfolioActivityItem(
+                        id: "monitoring|\(log.id.uuidString)|\(result.id.uuidString)",
+                        trackedDomainID: trackedDomain.id,
+                        domain: trackedDomain.domain,
+                        message: portfolioMonitoringMessage(for: result),
+                        timestamp: result.checkedAt,
+                        health: healthByDomainID[trackedDomain.id] ?? (result.alertSeverity == .critical ? .critical : .warning),
+                        systemImage: portfolioMonitoringIcon(for: result)
+                    )
+                )
+            }
+        }
+
+        var seen = Set<String>()
+        return items
+            .sorted { $0.timestamp > $1.timestamp }
+            .filter { item in
+                let key = "\(item.domain.lowercased())|\(item.message.lowercased())"
+                return seen.insert(key).inserted
+            }
+    }
+
+    private func buildAttentionQueue(from domainStates: [PortfolioDomainStatus]) -> [PortfolioAttentionItem] {
+        domainStates.compactMap { state in
+            guard state.health != .healthy else { return nil }
+            let reason: String
+            let timestamp: Date
+
+            if state.isUnreachable {
+                reason = "Endpoint is unreachable"
+                timestamp = state.lastMonitoringFailure ?? state.trackedDomain.updatedAt
+            } else if state.certificateExpiryState == .critical {
+                reason = "Certificate is expiring in under 14 days"
+                timestamp = state.lastChangeDate ?? state.trackedDomain.updatedAt
+            } else if state.certificateExpiryState == .warning {
+                reason = "Certificate expires within 30 days"
+                timestamp = state.lastChangeDate ?? state.trackedDomain.updatedAt
+            } else if state.recentFailureCount >= 2 || state.instabilityScore >= 70 {
+                reason = "Repeated instability detected"
+                timestamp = state.lastMonitoringFailure ?? state.trackedDomain.updatedAt
+            } else if state.recentDNSChange {
+                reason = "DNS changed recently"
+                timestamp = state.lastChangeDate ?? state.trackedDomain.updatedAt
+            } else if state.recentCriticalChange {
+                reason = "Recent critical change detected"
+                timestamp = state.lastChangeDate ?? state.trackedDomain.updatedAt
+            } else {
+                reason = "Needs attention"
+                timestamp = state.trackedDomain.updatedAt
+            }
+
+            return PortfolioAttentionItem(
+                id: "\(state.trackedDomain.id.uuidString)|\(reason)",
+                trackedDomainID: state.trackedDomain.id,
+                domain: state.trackedDomain.domain,
+                reason: reason,
+                timestamp: timestamp,
+                health: state.health
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.health != rhs.health {
+                return healthRank(lhs.health) > healthRank(rhs.health)
+            }
+            return lhs.timestamp > rhs.timestamp
+        }
+    }
+
+    private func buildPortfolioGroups(from domainStates: [PortfolioDomainStatus]) -> [PortfolioGroup] {
+        Dictionary(grouping: domainStates, by: \.apexDomain)
+            .map { apexDomain, domains in
+                PortfolioGroup(
+                    apexDomain: apexDomain,
+                    domains: domains.sorted { lhs, rhs in
+                        if lhs.health != rhs.health {
+                            return healthRank(lhs.health) > healthRank(rhs.health)
+                        }
+                        return lhs.trackedDomain.domain.localizedCaseInsensitiveCompare(rhs.trackedDomain.domain) == .orderedAscending
+                    }
+                )
+            }
+            .sorted { lhs, rhs in
+                if let lhsMostSevere = lhs.domains.map(\.health).map(healthRank).max(),
+                   let rhsMostSevere = rhs.domains.map(\.health).map(healthRank).max(),
+                   lhsMostSevere != rhsMostSevere {
+                    return lhsMostSevere > rhsMostSevere
+                }
+                return lhs.apexDomain.localizedCaseInsensitiveCompare(rhs.apexDomain) == .orderedAscending
+            }
+    }
+
+    private func matchesPortfolioFilter(_ state: PortfolioDomainStatus) -> Bool {
+        switch dashboardFilter {
+        case .all:
+            return true
+        case .healthy:
+            return state.health == .healthy
+        case .warning:
+            return state.health == .warning
+        case .critical:
+            return state.health == .critical
+        case .changed:
+            guard let lastChangeDate = state.lastChangeDate else { return false }
+            return Date().timeIntervalSince(lastChangeDate) <= 24 * 60 * 60
+        case .expiring:
+            return state.certificateExpiryState != .none
+        case .unreachable:
+            return state.isUnreachable
+        }
+    }
+
+    private func matchesDashboardSearch(_ state: PortfolioDomainStatus, query: String) -> Bool {
+        guard !query.isEmpty else { return true }
+        let normalizedQuery = query.lowercased()
+        return state.trackedDomain.domain.lowercased().contains(normalizedQuery)
+            || state.apexDomain.lowercased().contains(normalizedQuery)
+    }
+
+    private func portfolioHistoryMessage(for entry: HistoryEntry) -> String {
+        guard let summary = entry.changeSummary else {
+            return "Configuration changed for \(entry.domain)"
+        }
+        if summary.changedSections.contains(where: { $0.localizedCaseInsensitiveContains("dns") }) {
+            return "DNS changed for \(entry.domain)"
+        }
+        if summary.changedSections.contains(where: {
+            $0.localizedCaseInsensitiveContains("certificate")
+                || $0.localizedCaseInsensitiveContains("tls")
+        }) {
+            return "Certificate updated for \(entry.domain)"
+        }
+        if summary.changedSections.contains(where: { $0.localizedCaseInsensitiveContains("redirect") }) {
+            return "Redirect chain changed for \(entry.domain)"
+        }
+        return summary.message
+    }
+
+    private func portfolioHistoryIcon(for entry: HistoryEntry) -> String {
+        guard let summary = entry.changeSummary else { return "clock.arrow.trianglehead.counterclockwise.rotate.90" }
+        if summary.changedSections.contains(where: { $0.localizedCaseInsensitiveContains("dns") }) {
+            return "point.3.connected.trianglepath.dotted"
+        }
+        if summary.changedSections.contains(where: {
+            $0.localizedCaseInsensitiveContains("certificate")
+                || $0.localizedCaseInsensitiveContains("tls")
+        }) {
+            return "lock.rotation"
+        }
+        if summary.changedSections.contains(where: { $0.localizedCaseInsensitiveContains("redirect") }) {
+            return "arrow.triangle.branch"
+        }
+        return "clock.arrow.trianglehead.counterclockwise.rotate.90"
+    }
+
+    private func portfolioMonitoringMessage(for result: MonitoringDomainResult) -> String {
+        if result.errorMessage != nil {
+            return "Monitoring failed for \(result.domain)"
+        }
+        if result.certificateWarningLevel != .none {
+            return "Certificate needs attention for \(result.domain)"
+        }
+        if result.didChange {
+            return result.summaryMessage.isEmpty ? "Monitoring detected a change for \(result.domain)" : result.summaryMessage
+        }
+        return "Monitoring updated \(result.domain)"
+    }
+
+    private func portfolioMonitoringIcon(for result: MonitoringDomainResult) -> String {
+        if result.errorMessage != nil {
+            return "xmark.octagon.fill"
+        }
+        if result.certificateWarningLevel != .none {
+            return "exclamationmark.triangle.fill"
+        }
+        return "waveform.path.ecg"
+    }
+
+    private func apexDomain(for domain: String) -> String {
+        let parts = domain
+            .lowercased()
+            .split(separator: ".")
+            .map(String.init)
+        guard parts.count > 2 else { return domain.lowercased() }
+        return parts.suffix(2).joined(separator: ".")
+    }
+
+    private func healthRank(_ health: DomainHealth) -> Int {
+        switch health {
+        case .healthy:
+            return 0
+        case .warning:
+            return 1
+        case .critical:
+            return 2
+        }
     }
 
     func resolverMismatchNote(for entry: HistoryEntry) -> String? {
