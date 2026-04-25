@@ -28,16 +28,19 @@ struct DomainDigApp: App {
                 .task {
                     let _ = purchaseService.currentTier
                     let _ = cloudSyncService.status
+                    let _ = IntegrationService.shared.targets.count
                     await purchaseService.refreshEntitlements()
                     viewModel.refreshMonitoringState()
                     await viewModel.refreshMonitoringAuthorizationStatus()
                     await cloudSyncService.refreshAvailability()
                     cloudSyncService.scheduleSyncIfNeeded(trigger: .launch)
                     viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
+                    IntegrationService.shared.processQueueNow()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .cloudSyncDidApplyChanges)) { _ in
                     viewModel.refreshPersistedData()
                     viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
+                    IntegrationService.shared.refresh()
                 }
         }
         .onChange(of: scenePhase) { _, newValue in
@@ -49,6 +52,7 @@ struct DomainDigApp: App {
             }
             cloudSyncService.scheduleSyncIfNeeded(trigger: .launch)
             viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
+            IntegrationService.shared.processQueueNow()
         }
     }
 }

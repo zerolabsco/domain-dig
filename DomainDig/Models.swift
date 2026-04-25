@@ -1336,6 +1336,383 @@ struct MonitoringLog: Codable, Identifiable, Equatable {
     }
 }
 
+enum EventSeverity: String, Codable, CaseIterable, Comparable, Identifiable, Sendable {
+    case info
+    case warning
+    case critical
+
+    var id: String { rawValue }
+
+    static func < (lhs: EventSeverity, rhs: EventSeverity) -> Bool {
+        lhs.rank < rhs.rank
+    }
+
+    var title: String {
+        rawValue.capitalized
+    }
+
+    private var rank: Int {
+        switch self {
+        case .info:
+            return 0
+        case .warning:
+            return 1
+        case .critical:
+            return 2
+        }
+    }
+
+    init(monitoringSeverity: MonitoringAlertSeverity) {
+        switch monitoringSeverity {
+        case .info:
+            self = .info
+        case .warning:
+            self = .warning
+        case .critical:
+            self = .critical
+        }
+    }
+}
+
+enum MonitoringEventType: String, Codable, CaseIterable, Identifiable, Sendable {
+    case dnsChanged
+    case certificateUpdated
+    case certificateExpiring
+    case redirectChanged
+    case headersChanged
+    case endpointUnreachable
+    case monitoringFailure
+    case changeDetected
+    case test
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .dnsChanged:
+            return "DNS Changed"
+        case .certificateUpdated:
+            return "Certificate Updated"
+        case .certificateExpiring:
+            return "Certificate Expiring"
+        case .redirectChanged:
+            return "Redirect Changed"
+        case .headersChanged:
+            return "Headers Changed"
+        case .endpointUnreachable:
+            return "Endpoint Unreachable"
+        case .monitoringFailure:
+            return "Monitoring Failure"
+        case .changeDetected:
+            return "Change Detected"
+        case .test:
+            return "Test Event"
+        }
+    }
+}
+
+struct MonitoringEvent: Codable, Identifiable, Equatable, Sendable {
+    var id: UUID
+    var type: MonitoringEventType
+    var severity: EventSeverity
+    var domain: String
+    var timestamp: Date
+    var summary: String
+    var details: [String: String]
+
+    init(
+        id: UUID = UUID(),
+        type: MonitoringEventType,
+        severity: EventSeverity,
+        domain: String,
+        timestamp: Date = Date(),
+        summary: String,
+        details: [String: String] = [:]
+    ) {
+        self.id = id
+        self.type = type
+        self.severity = severity
+        self.domain = domain
+        self.timestamp = timestamp
+        self.summary = summary
+        self.details = details
+    }
+}
+
+enum IntegrationType: String, Codable, CaseIterable, Identifiable, Sendable {
+    case webhook
+    case slack
+    case email
+
+    var id: String { rawValue }
+
+    var title: String {
+        rawValue.capitalized
+    }
+}
+
+enum SMTPSecurityMode: String, Codable, CaseIterable, Identifiable, Sendable {
+    case plain
+    case directTLS
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .plain:
+            return "Plain"
+        case .directTLS:
+            return "Direct TLS"
+        }
+    }
+}
+
+struct WebhookIntegrationConfiguration: Codable, Equatable, Sendable {
+    var endpointDisplayHost: String
+    var timeoutSeconds: Double
+    var additionalHeaders: [String: String]
+    var credentialReference: String?
+
+    init(
+        endpointDisplayHost: String = "",
+        timeoutSeconds: Double = 15,
+        additionalHeaders: [String: String] = [:],
+        credentialReference: String? = nil
+    ) {
+        self.endpointDisplayHost = endpointDisplayHost
+        self.timeoutSeconds = timeoutSeconds
+        self.additionalHeaders = additionalHeaders
+        self.credentialReference = credentialReference
+    }
+}
+
+struct SlackIntegrationConfiguration: Codable, Equatable, Sendable {
+    var destinationLabel: String
+    var credentialReference: String?
+
+    init(
+        destinationLabel: String = "Slack",
+        credentialReference: String? = nil
+    ) {
+        self.destinationLabel = destinationLabel
+        self.credentialReference = credentialReference
+    }
+}
+
+struct EmailIntegrationConfiguration: Codable, Equatable, Sendable {
+    var smtpHost: String
+    var port: Int
+    var username: String
+    var senderAddress: String
+    var recipientAddresses: [String]
+    var securityMode: SMTPSecurityMode
+    var credentialReference: String?
+
+    init(
+        smtpHost: String = "",
+        port: Int = 465,
+        username: String = "",
+        senderAddress: String = "",
+        recipientAddresses: [String] = [],
+        securityMode: SMTPSecurityMode = .directTLS,
+        credentialReference: String? = nil
+    ) {
+        self.smtpHost = smtpHost
+        self.port = port
+        self.username = username
+        self.senderAddress = senderAddress
+        self.recipientAddresses = recipientAddresses
+        self.securityMode = securityMode
+        self.credentialReference = credentialReference
+    }
+}
+
+enum IntegrationConfiguration: Codable, Equatable, Sendable {
+    case webhook(WebhookIntegrationConfiguration)
+    case slack(SlackIntegrationConfiguration)
+    case email(EmailIntegrationConfiguration)
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case webhook
+        case slack
+        case email
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(IntegrationType.self, forKey: .type)
+        switch type {
+        case .webhook:
+            self = .webhook(try container.decode(WebhookIntegrationConfiguration.self, forKey: .webhook))
+        case .slack:
+            self = .slack(try container.decode(SlackIntegrationConfiguration.self, forKey: .slack))
+        case .email:
+            self = .email(try container.decode(EmailIntegrationConfiguration.self, forKey: .email))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .webhook(let configuration):
+            try container.encode(IntegrationType.webhook, forKey: .type)
+            try container.encode(configuration, forKey: .webhook)
+        case .slack(let configuration):
+            try container.encode(IntegrationType.slack, forKey: .type)
+            try container.encode(configuration, forKey: .slack)
+        case .email(let configuration):
+            try container.encode(IntegrationType.email, forKey: .type)
+            try container.encode(configuration, forKey: .email)
+        }
+    }
+
+    var type: IntegrationType {
+        switch self {
+        case .webhook:
+            return .webhook
+        case .slack:
+            return .slack
+        case .email:
+            return .email
+        }
+    }
+}
+
+struct IntegrationFilterSet: Codable, Equatable, Sendable {
+    var minimumSeverity: EventSeverity
+    var eventTypes: Set<MonitoringEventType>
+    var domains: [String]
+
+    init(
+        minimumSeverity: EventSeverity = .warning,
+        eventTypes: Set<MonitoringEventType> = Set(MonitoringEventType.allCases.filter { $0 != .test }),
+        domains: [String] = []
+    ) {
+        self.minimumSeverity = minimumSeverity
+        self.eventTypes = eventTypes
+        self.domains = domains
+    }
+
+    func matches(_ event: MonitoringEvent) -> Bool {
+        guard event.severity >= minimumSeverity else {
+            return false
+        }
+        guard eventTypes.isEmpty || eventTypes.contains(event.type) else {
+            return false
+        }
+        guard domains.isEmpty || domains.map({ $0.lowercased() }).contains(event.domain.lowercased()) else {
+            return false
+        }
+        return true
+    }
+}
+
+struct IntegrationTarget: Codable, Identifiable, Equatable, Sendable {
+    var id: UUID
+    var type: IntegrationType
+    var name: String
+    var isEnabled: Bool
+    var configuration: IntegrationConfiguration
+    var filters: IntegrationFilterSet
+
+    init(
+        id: UUID = UUID(),
+        type: IntegrationType,
+        name: String,
+        isEnabled: Bool = true,
+        configuration: IntegrationConfiguration,
+        filters: IntegrationFilterSet = IntegrationFilterSet()
+    ) {
+        self.id = id
+        self.type = type
+        self.name = name
+        self.isEnabled = isEnabled
+        self.configuration = configuration
+        self.filters = filters
+    }
+}
+
+enum DeliveryStatus: String, Codable, CaseIterable, Identifiable, Sendable {
+    case pending
+    case retrying
+    case delivered
+    case failed
+    case expired
+    case skipped
+
+    var id: String { rawValue }
+
+    var title: String {
+        rawValue.capitalized
+    }
+}
+
+struct DeliveryRecord: Codable, Identifiable, Equatable, Sendable {
+    var id: UUID
+    var integrationID: UUID
+    var eventID: UUID
+    var timestamp: Date
+    var status: DeliveryStatus
+    var destination: String
+    var summary: String
+    var failureReason: String?
+    var attemptCount: Int
+
+    init(
+        id: UUID = UUID(),
+        integrationID: UUID,
+        eventID: UUID,
+        timestamp: Date = Date(),
+        status: DeliveryStatus,
+        destination: String,
+        summary: String,
+        failureReason: String? = nil,
+        attemptCount: Int = 0
+    ) {
+        self.id = id
+        self.integrationID = integrationID
+        self.eventID = eventID
+        self.timestamp = timestamp
+        self.status = status
+        self.destination = destination
+        self.summary = summary
+        self.failureReason = failureReason
+        self.attemptCount = attemptCount
+    }
+}
+
+struct QueuedDelivery: Codable, Identifiable, Equatable, Sendable {
+    var id: UUID
+    var integrationID: UUID
+    var event: MonitoringEvent
+    var createdAt: Date
+    var attemptCount: Int
+    var nextAttemptAt: Date
+    var lastError: String?
+    var expiresAt: Date
+
+    init(
+        id: UUID = UUID(),
+        integrationID: UUID,
+        event: MonitoringEvent,
+        createdAt: Date = Date(),
+        attemptCount: Int = 0,
+        nextAttemptAt: Date = Date(),
+        lastError: String? = nil,
+        expiresAt: Date = Date().addingTimeInterval(3 * 24 * 60 * 60)
+    ) {
+        self.id = id
+        self.integrationID = integrationID
+        self.event = event
+        self.createdAt = createdAt
+        self.attemptCount = attemptCount
+        self.nextAttemptAt = nextAttemptAt
+        self.lastError = lastError
+        self.expiresAt = expiresAt
+    }
+}
+
 // MARK: - DNS Models
 
 enum DNSRecordType: String, CaseIterable, Codable {

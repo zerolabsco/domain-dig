@@ -361,6 +361,12 @@ final class DomainMonitoringService {
             errors: errors
         )
         saveLog(log)
+        let outboundEvents = monitoringEvents(from: log)
+        if outboundEvents.isEmpty {
+            IntegrationService.shared.recordNoOutboundEvents(for: log.summary)
+        } else {
+            IntegrationService.shared.enqueue(events: outboundEvents)
+        }
 
         return MonitoringRunOutcome(
             success: errors.count < results.count,
@@ -373,6 +379,91 @@ final class DomainMonitoringService {
         var logs = MonitoringStorage.loadLogs()
         logs.insert(log, at: 0)
         MonitoringStorage.saveLogs(logs)
+    }
+
+    private func monitoringEvents(from log: MonitoringLog) -> [MonitoringEvent] {
+        var events: [MonitoringEvent] = log.checkedDomains.compactMap { result in
+            if let errorMessage = result.errorMessage {
+                return MonitoringEvent(
+                    type: .monitoringFailure,
+                    severity: .critical,
+                    domain: result.domain,
+                    timestamp: result.checkedAt,
+                    summary: errorMessage,
+                    details: [
+                        "trigger": log.trigger.rawValue,
+                        "resultSource": result.resultSource.rawValue
+                    ]
+                )
+            }
+
+            if result.certificateWarningLevel == .critical {
+                return MonitoringEvent(
+                    type: .certificateExpiring,
+                    severity: .critical,
+                    domain: result.domain,
+                    timestamp: result.checkedAt,
+                    summary: result.summaryMessage,
+                    details: [
+                        "certificateWarningLevel": result.certificateWarningLevel.rawValue,
+                        "trigger": log.trigger.rawValue
+                    ]
+                )
+            }
+
+            guard let alertSeverity = result.alertSeverity else {
+                return nil
+            }
+
+            return MonitoringEvent(
+                type: eventType(for: result.summaryMessage),
+                severity: EventSeverity(monitoringSeverity: alertSeverity),
+                domain: result.domain,
+                timestamp: result.checkedAt,
+                summary: result.summaryMessage,
+                details: [
+                    "alertSeverity": alertSeverity.title,
+                    "certificateWarningLevel": result.certificateWarningLevel.rawValue,
+                    "resultSource": result.resultSource.rawValue,
+                    "trigger": log.trigger.rawValue
+                ]
+            )
+        }
+
+        if !log.errors.isEmpty {
+            events.append(
+                MonitoringEvent(
+                    type: .monitoringFailure,
+                    severity: .critical,
+                    domain: "portfolio",
+                    timestamp: log.timestamp,
+                    summary: "Monitoring run completed with errors",
+                    details: [
+                        "errors": log.errors.joined(separator: " | "),
+                        "trigger": log.trigger.rawValue
+                    ]
+                )
+            )
+        }
+
+        return events
+    }
+
+    private func eventType(for summary: String) -> MonitoringEventType {
+        let normalized = summary.lowercased()
+        if normalized.contains("dns") {
+            return .dnsChanged
+        }
+        if normalized.contains("certificate") {
+            return .certificateUpdated
+        }
+        if normalized.contains("redirect") {
+            return .redirectChanged
+        }
+        if normalized.contains("header") {
+            return .headersChanged
+        }
+        return .changeDetected
     }
 
     private func latestSnapshot(for trackedDomain: TrackedDomain, history: [HistoryEntry]) -> LookupSnapshot? {

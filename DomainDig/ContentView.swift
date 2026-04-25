@@ -2540,6 +2540,10 @@ struct SettingsView: View {
                     MonitoringView(viewModel: viewModel)
                 }
 
+                NavigationLink("Integrations") {
+                    IntegrationsSettingsView()
+                }
+
                 NavigationLink("iCloud Sync") {
                     CloudSyncSettingsView()
                 }
