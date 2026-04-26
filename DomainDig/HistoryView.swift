@@ -159,7 +159,11 @@ struct HistoryDetailView: View {
     }
 
     private var report: DomainReport {
-        DomainReportBuilder().build(from: entry, previousSnapshot: viewModel.comparisonSnapshot(for: entry))
+        DomainReportBuilder().build(
+            from: entry,
+            previousSnapshot: viewModel.comparisonSnapshot(for: entry),
+            historyEntries: viewModel.historyEntries(for: entry.domain)
+        )
     }
 
     private var trackedDomain: TrackedDomain? {
@@ -176,6 +180,12 @@ struct HistoryDetailView: View {
                     .padding(.top, 8)
                 InsightsSummaryCardView(insights: report.insights)
                     .padding(.top, 8)
+                IntelligenceSectionView(
+                    isCollapsed: .constant(false),
+                    report: report,
+                    showsPlaceholder: FeatureAccessService.currentTier != .proPlus
+                )
+                .padding(.top, 8)
                 DomainSectionView(
                     isCollapsed: .constant(false),
                     rows: DomainViewModel.domainRows(from: snapshot),

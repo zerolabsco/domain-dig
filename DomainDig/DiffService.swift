@@ -115,6 +115,7 @@ enum DiffService {
             emailSection(from: oldReport, to: newReport),
             networkSection(from: oldReport, to: newReport),
             subdomainsSection(from: oldReport, to: newReport),
+            intelligenceSection(from: oldReport, to: newReport),
             riskSection(from: oldReport, to: newReport)
         ]
 
@@ -380,6 +381,20 @@ enum DiffService {
                 compare(id: "risk-level", label: "Risk Level", oldValue: oldReport.riskAssessment.level.title, newValue: newReport.riskAssessment.level.title, severity: .high),
                 compare(id: "risk-factors", label: "Risk Factors", oldValue: joined(oldReport.riskAssessment.factors.map(\.description)), newValue: joined(newReport.riskAssessment.factors.map(\.description)), severity: .medium),
                 compare(id: "risk-insights", label: "Insights", oldValue: joined(oldReport.insights), newValue: joined(newReport.insights), severity: .medium)
+            ].compactMap { $0 }
+        )
+    }
+
+    private static func intelligenceSection(from oldReport: DomainReport, to newReport: DomainReport) -> DiffSection {
+        DiffSection(
+            id: "intelligence",
+            title: "Data+ Intelligence",
+            items: [
+                compare(id: "intel-provider", label: "Provider", oldValue: oldReport.inferredProvider?.name, newValue: newReport.inferredProvider?.name, severity: .medium),
+                compare(id: "intel-classification", label: "Classification", oldValue: oldReport.domainClassification?.kind.title, newValue: newReport.domainClassification?.kind.title, severity: .medium),
+                compare(id: "intel-hosting-history", label: "Hosting Transitions", oldValue: joined(oldReport.hostingTransitions.map(\.summary)), newValue: joined(newReport.hostingTransitions.map(\.summary)), severity: .medium),
+                compare(id: "intel-ownership-history", label: "Ownership Transitions", oldValue: joined(oldReport.ownershipTransitions.map(\.summary)), newValue: joined(newReport.ownershipTransitions.map(\.summary)), severity: .high),
+                compare(id: "intel-risk-signals", label: "Risk Signals", oldValue: joined(oldReport.riskSignals.map(\.title)), newValue: joined(newReport.riskSignals.map(\.title)), severity: .medium)
             ].compactMap { $0 }
         )
     }

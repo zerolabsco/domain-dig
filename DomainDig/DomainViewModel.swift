@@ -621,6 +621,14 @@ final class DomainViewModel {
             ownershipError: ownershipError,
             ownershipHistory: ownershipHistory,
             ownershipHistoryError: ownershipHistoryError,
+            inferredProvider: currentHistoryEntry?.inferredProvider ?? currentReport?.inferredProvider,
+            priorProviders: currentHistoryEntry?.priorProviders ?? currentReport?.priorProviders ?? [],
+            domainClassification: currentHistoryEntry?.domainClassification ?? currentReport?.domainClassification,
+            ownershipTransitions: currentHistoryEntry?.ownershipTransitions ?? currentReport?.ownershipTransitions ?? [],
+            hostingTransitions: currentHistoryEntry?.hostingTransitions ?? currentReport?.hostingTransitions ?? [],
+            subdomainHistory: currentHistoryEntry?.subdomainHistory ?? currentReport?.subdomainHistory ?? [],
+            riskSignals: currentHistoryEntry?.riskSignals ?? currentReport?.riskSignals ?? [],
+            intelligenceTimeline: currentHistoryEntry?.intelligenceTimeline ?? currentReport?.intelligenceTimeline ?? [],
             ptrRecord: ptrRecord,
             ptrError: ptrError,
             redirectChain: redirectChain,
@@ -1750,7 +1758,8 @@ final class DomainViewModel {
                 for: snapshot.domain,
                 trackedDomainID: snapshot.trackedDomainID ?? trackedDomain(for: snapshot.domain)?.id,
                 replacingLatest: false
-            )
+            ),
+            historyEntries: historyEntries(for: snapshot.domain)
         )
         DomainDebugLog.signpostEnd("DomainViewModel.reportBuilder.build", start: reportStartedAt, domain: snapshot.domain)
         currentChangeSummary = currentReport?.changeSummary ?? snapshot.changeSummary
@@ -1873,6 +1882,14 @@ final class DomainViewModel {
             ownershipError: previousSnapshot.ownershipError,
             ownershipHistory: previousSnapshot.ownershipHistory,
             ownershipHistoryError: previousSnapshot.ownershipHistoryError,
+            inferredProvider: previousSnapshot.inferredProvider,
+            priorProviders: previousSnapshot.priorProviders,
+            domainClassification: previousSnapshot.domainClassification,
+            ownershipTransitions: previousSnapshot.ownershipTransitions,
+            hostingTransitions: previousSnapshot.hostingTransitions,
+            subdomainHistory: previousSnapshot.subdomainHistory,
+            riskSignals: previousSnapshot.riskSignals,
+            intelligenceTimeline: previousSnapshot.intelligenceTimeline,
             ptrRecord: previousSnapshot.ptrRecord,
             ptrError: previousSnapshot.ptrError,
             redirectChain: previousSnapshot.redirectChain,
@@ -2228,7 +2245,15 @@ final class DomainViewModel {
     ) -> HistoryEntry? {
         let trackedDomainID = snapshot.trackedDomainID ?? trackedDomain(for: snapshot.domain)?.id
         let previousSnapshot = previousSnapshot(for: snapshot.domain, trackedDomainID: trackedDomainID, replacingLatest: replaceLatest)
+        let domainHistoryEntries = history.filter {
+            $0.domain.caseInsensitiveCompare(snapshot.domain) == .orderedSame
+        }
         let analysis = reuseCurrentAnalysis ? nil : DomainInsightEngine.analyze(snapshot: snapshot, previousSnapshot: previousSnapshot)
+        let intelligence = DomainIntelligenceService.derive(
+            snapshot: snapshot,
+            previousSnapshot: previousSnapshot,
+            historyEntries: domainHistoryEntries
+        )
         let changeSummary = reuseCurrentAnalysis
             ? currentChangeSummary ?? snapshot.changeSummary
             : previousSnapshot.map {
@@ -2262,7 +2287,11 @@ final class DomainViewModel {
             currentDiffSections = diffSections
             ownershipDiff = diffSections.first(where: { $0.title == "Ownership" })?.items.filter(\.hasChanges) ?? []
             if !reuseCurrentAnalysis {
-                currentReport = reportBuilder.build(from: snapshot, previousSnapshot: previousSnapshot)
+                currentReport = reportBuilder.build(
+                    from: snapshot,
+                    previousSnapshot: previousSnapshot,
+                    historyEntries: domainHistoryEntries
+                )
             }
         }
 
@@ -2280,6 +2309,14 @@ final class DomainViewModel {
             mtaSts: snapshot.emailSecurity?.mtaSts,
             ownership: snapshot.ownership,
             ownershipHistory: snapshot.ownershipHistory,
+            inferredProvider: intelligence.inferredProvider,
+            priorProviders: intelligence.priorProviders,
+            domainClassification: intelligence.domainClassification,
+            ownershipTransitions: intelligence.ownershipTransitions,
+            hostingTransitions: intelligence.hostingTransitions,
+            subdomainHistory: intelligence.subdomainHistory,
+            riskSignals: intelligence.riskSignals,
+            intelligenceTimeline: intelligence.timelineEvents,
             ptrRecord: snapshot.ptrRecord,
             redirectChain: snapshot.redirectChain,
             subdomains: snapshot.subdomains,
@@ -3509,7 +3546,12 @@ final class DomainViewModel {
     }
 
     private func report(for entry: HistoryEntry, workflowContext: DomainWorkflowContext? = nil) -> DomainReport {
-        reportBuilder.build(from: entry, previousSnapshot: comparisonSnapshot(for: entry), workflowContext: workflowContext)
+        reportBuilder.build(
+            from: entry,
+            previousSnapshot: comparisonSnapshot(for: entry),
+            workflowContext: workflowContext,
+            historyEntries: historyEntries(for: entry.domain)
+        )
     }
 
     private var activeWorkflowContext: DomainWorkflowContext? {
@@ -3572,6 +3614,14 @@ final class DomainViewModel {
             ownershipError: nil,
             ownershipHistory: [],
             ownershipHistoryError: nil,
+            inferredProvider: nil,
+            priorProviders: [],
+            domainClassification: nil,
+            ownershipTransitions: [],
+            hostingTransitions: [],
+            subdomainHistory: [],
+            riskSignals: [],
+            intelligenceTimeline: [],
             ptrRecord: nil,
             ptrError: nil,
             redirectChain: [],

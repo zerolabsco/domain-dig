@@ -473,6 +473,8 @@ struct DNSHistoryEvent: Identifiable, Codable, Equatable, Sendable {
     let summary: String
     let aRecords: [String]
     let nameservers: [String]
+    let recordSnapshots: [DNSHistoryRecordSnapshot]
+    let changedRecordTypes: [DNSRecordType]
     let source: String
     let isExternal: Bool
 
@@ -482,6 +484,8 @@ struct DNSHistoryEvent: Identifiable, Codable, Equatable, Sendable {
         summary: String,
         aRecords: [String] = [],
         nameservers: [String] = [],
+        recordSnapshots: [DNSHistoryRecordSnapshot] = [],
+        changedRecordTypes: [DNSRecordType] = [],
         source: String,
         isExternal: Bool
     ) {
@@ -490,8 +494,224 @@ struct DNSHistoryEvent: Identifiable, Codable, Equatable, Sendable {
         self.summary = summary
         self.aRecords = aRecords
         self.nameservers = nameservers
+        self.recordSnapshots = recordSnapshots
+        self.changedRecordTypes = changedRecordTypes
         self.source = source
         self.isExternal = isExternal
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        date = try container.decode(Date.self, forKey: .date)
+        summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? "DNS change observed"
+        aRecords = try container.decodeIfPresent([String].self, forKey: .aRecords) ?? []
+        nameservers = try container.decodeIfPresent([String].self, forKey: .nameservers) ?? []
+        let decodedRecordSnapshots = try container.decodeIfPresent([DNSHistoryRecordSnapshot].self, forKey: .recordSnapshots) ?? []
+        if decodedRecordSnapshots.isEmpty {
+            var synthesizedSnapshots: [DNSHistoryRecordSnapshot] = []
+            if !aRecords.isEmpty {
+                synthesizedSnapshots.append(DNSHistoryRecordSnapshot(recordType: .A, values: aRecords))
+            }
+            if !nameservers.isEmpty {
+                synthesizedSnapshots.append(DNSHistoryRecordSnapshot(recordType: .NS, values: nameservers))
+            }
+            recordSnapshots = synthesizedSnapshots
+        } else {
+            recordSnapshots = decodedRecordSnapshots
+        }
+        changedRecordTypes = try container.decodeIfPresent([DNSRecordType].self, forKey: .changedRecordTypes)
+            ?? recordSnapshots.map(\.recordType)
+        source = try container.decodeIfPresent(String.self, forKey: .source) ?? "Unknown"
+        isExternal = try container.decodeIfPresent(Bool.self, forKey: .isExternal) ?? false
+    }
+}
+
+struct DNSHistoryRecordSnapshot: Identifiable, Codable, Sendable, Equatable {
+    let id: UUID
+    let recordType: DNSRecordType
+    let values: [String]
+
+    nonisolated init(id: UUID = UUID(), recordType: DNSRecordType, values: [String]) {
+        self.id = id
+        self.recordType = recordType
+        self.values = values
+    }
+
+    static func == (lhs: DNSHistoryRecordSnapshot, rhs: DNSHistoryRecordSnapshot) -> Bool {
+        lhs.recordType == rhs.recordType && lhs.values == rhs.values
+    }
+}
+
+struct InferredProviderFingerprint: Codable, Equatable, Sendable {
+    let name: String
+    let confidence: ConfidenceLevel
+    let evidence: [String]
+}
+
+enum DomainClassificationKind: String, Codable, CaseIterable, Sendable {
+    case marketing
+    case app
+    case api
+    case auth
+    case docs
+    case staticSite = "static"
+    case infrastructure
+    case status
+    case unknown
+
+    var title: String {
+        switch self {
+        case .staticSite:
+            return "Static"
+        default:
+            return rawValue.capitalized
+        }
+    }
+}
+
+struct DomainClassificationSummary: Codable, Equatable, Sendable {
+    let kind: DomainClassificationKind
+    let confidence: ConfidenceLevel
+    let reasons: [String]
+}
+
+struct OwnershipTransitionEvent: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    let date: Date
+    let summary: String
+    let previousRegistrar: String?
+    let currentRegistrar: String?
+    let previousRegistrant: String?
+    let currentRegistrant: String?
+    let previousNameservers: [String]
+    let currentNameservers: [String]
+
+    nonisolated init(
+        id: UUID = UUID(),
+        date: Date,
+        summary: String,
+        previousRegistrar: String? = nil,
+        currentRegistrar: String? = nil,
+        previousRegistrant: String? = nil,
+        currentRegistrant: String? = nil,
+        previousNameservers: [String] = [],
+        currentNameservers: [String] = []
+    ) {
+        self.id = id
+        self.date = date
+        self.summary = summary
+        self.previousRegistrar = previousRegistrar
+        self.currentRegistrar = currentRegistrar
+        self.previousRegistrant = previousRegistrant
+        self.currentRegistrant = currentRegistrant
+        self.previousNameservers = previousNameservers
+        self.currentNameservers = currentNameservers
+    }
+}
+
+struct HostingTransitionEvent: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    let date: Date
+    let fromProvider: String
+    let toProvider: String
+    let summary: String
+
+    nonisolated init(id: UUID = UUID(), date: Date, fromProvider: String, toProvider: String, summary: String) {
+        self.id = id
+        self.date = date
+        self.fromProvider = fromProvider
+        self.toProvider = toProvider
+        self.summary = summary
+    }
+}
+
+struct SubdomainHistoryEntry: Identifiable, Codable, Equatable, Sendable {
+    let id: String
+    let hostname: String
+    let firstSeen: Date
+    let lastSeen: Date
+    let recurrenceCount: Int
+    let statusChangeCount: Int
+    let lastKnownStatus: String
+    let isEphemeral: Bool
+
+    nonisolated init(
+        hostname: String,
+        firstSeen: Date,
+        lastSeen: Date,
+        recurrenceCount: Int,
+        statusChangeCount: Int,
+        lastKnownStatus: String,
+        isEphemeral: Bool
+    ) {
+        id = hostname.lowercased()
+        self.hostname = hostname
+        self.firstSeen = firstSeen
+        self.lastSeen = lastSeen
+        self.recurrenceCount = recurrenceCount
+        self.statusChangeCount = statusChangeCount
+        self.lastKnownStatus = lastKnownStatus
+        self.isEphemeral = isEphemeral
+    }
+}
+
+struct IntelligenceRiskSignal: Identifiable, Codable, Equatable, Sendable {
+    let id: String
+    let title: String
+    let detail: String
+    let severity: ChangeSeverity
+    let firstObserved: Date?
+    let lastObserved: Date?
+
+    nonisolated init(
+        id: String,
+        title: String,
+        detail: String,
+        severity: ChangeSeverity,
+        firstObserved: Date? = nil,
+        lastObserved: Date? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.detail = detail
+        self.severity = severity
+        self.firstObserved = firstObserved
+        self.lastObserved = lastObserved
+    }
+}
+
+enum IntelligenceTimelineEventCategory: String, Codable, Sendable {
+    case ownership
+    case dns
+    case hosting
+    case subdomain
+    case classification
+    case risk
+}
+
+struct IntelligenceTimelineEvent: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    let date: Date
+    let category: IntelligenceTimelineEventCategory
+    let title: String
+    let detail: String
+    let severity: ChangeSeverity
+
+    nonisolated init(
+        id: UUID = UUID(),
+        date: Date,
+        category: IntelligenceTimelineEventCategory,
+        title: String,
+        detail: String,
+        severity: ChangeSeverity
+    ) {
+        self.id = id
+        self.date = date
+        self.category = category
+        self.title = title
+        self.detail = detail
+        self.severity = severity
     }
 }
 
@@ -2051,6 +2271,14 @@ struct HistoryEntry: Identifiable, Codable {
     var mtaSts: MTASTSResult?
     var ownership: DomainOwnership?
     var ownershipHistory: [DomainOwnershipHistoryEvent]
+    var inferredProvider: InferredProviderFingerprint?
+    var priorProviders: [String]
+    var domainClassification: DomainClassificationSummary?
+    var ownershipTransitions: [OwnershipTransitionEvent]
+    var hostingTransitions: [HostingTransitionEvent]
+    var subdomainHistory: [SubdomainHistoryEntry]
+    var riskSignals: [IntelligenceRiskSignal]
+    var intelligenceTimeline: [IntelligenceTimelineEvent]
     var ptrRecord: String?
     var redirectChain: [RedirectHop]
     var subdomains: [DiscoveredSubdomain]
@@ -2106,6 +2334,13 @@ struct HistoryEntry: Identifiable, Codable {
          reachabilityResults: [PortReachability], ipGeolocation: IPGeolocation?,
          emailSecurity: EmailSecurityResult? = nil, mtaSts: MTASTSResult? = nil, ownership: DomainOwnership? = nil,
          ownershipHistory: [DomainOwnershipHistoryEvent] = [],
+         inferredProvider: InferredProviderFingerprint? = nil, priorProviders: [String] = [],
+         domainClassification: DomainClassificationSummary? = nil,
+         ownershipTransitions: [OwnershipTransitionEvent] = [],
+         hostingTransitions: [HostingTransitionEvent] = [],
+         subdomainHistory: [SubdomainHistoryEntry] = [],
+         riskSignals: [IntelligenceRiskSignal] = [],
+         intelligenceTimeline: [IntelligenceTimelineEvent] = [],
          ptrRecord: String? = nil, redirectChain: [RedirectHop] = [], subdomains: [DiscoveredSubdomain] = [],
          extendedSubdomains: [DiscoveredSubdomain] = [], dnsHistory: [DNSHistoryEvent] = [],
          domainPricing: DomainPricingInsight? = nil,
@@ -2141,6 +2376,14 @@ struct HistoryEntry: Identifiable, Codable {
         self.mtaSts = mtaSts ?? emailSecurity?.mtaSts
         self.ownership = ownership
         self.ownershipHistory = ownershipHistory
+        self.inferredProvider = inferredProvider
+        self.priorProviders = priorProviders
+        self.domainClassification = domainClassification
+        self.ownershipTransitions = ownershipTransitions
+        self.hostingTransitions = hostingTransitions
+        self.subdomainHistory = subdomainHistory
+        self.riskSignals = riskSignals
+        self.intelligenceTimeline = intelligenceTimeline
         self.ptrRecord = ptrRecord
         self.redirectChain = redirectChain
         self.subdomains = subdomains
@@ -2208,6 +2451,14 @@ struct HistoryEntry: Identifiable, Codable {
         mtaSts = try container.decodeIfPresent(MTASTSResult.self, forKey: .mtaSts) ?? emailSecurity?.mtaSts
         ownership = try container.decodeIfPresent(DomainOwnership.self, forKey: .ownership)
         ownershipHistory = try container.decodeIfPresent([DomainOwnershipHistoryEvent].self, forKey: .ownershipHistory) ?? []
+        inferredProvider = try container.decodeIfPresent(InferredProviderFingerprint.self, forKey: .inferredProvider)
+        priorProviders = try container.decodeIfPresent([String].self, forKey: .priorProviders) ?? []
+        domainClassification = try container.decodeIfPresent(DomainClassificationSummary.self, forKey: .domainClassification)
+        ownershipTransitions = try container.decodeIfPresent([OwnershipTransitionEvent].self, forKey: .ownershipTransitions) ?? []
+        hostingTransitions = try container.decodeIfPresent([HostingTransitionEvent].self, forKey: .hostingTransitions) ?? []
+        subdomainHistory = try container.decodeIfPresent([SubdomainHistoryEntry].self, forKey: .subdomainHistory) ?? []
+        riskSignals = try container.decodeIfPresent([IntelligenceRiskSignal].self, forKey: .riskSignals) ?? []
+        intelligenceTimeline = try container.decodeIfPresent([IntelligenceTimelineEvent].self, forKey: .intelligenceTimeline) ?? []
         ptrRecord = try container.decodeIfPresent(String.self, forKey: .ptrRecord)
         redirectChain = try container.decodeIfPresent([RedirectHop].self, forKey: .redirectChain) ?? []
         subdomains = try container.decodeIfPresent([DiscoveredSubdomain].self, forKey: .subdomains) ?? []

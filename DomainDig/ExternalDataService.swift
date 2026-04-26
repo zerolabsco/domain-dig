@@ -364,6 +364,8 @@ actor ExternalDataService {
                 summary: event["summary"] as? String ?? "DNS change observed",
                 aRecords: event["a_records"] as? [String] ?? [],
                 nameservers: event["nameservers"] as? [String] ?? [],
+                recordSnapshots: parseDNSRecordSnapshots(from: event),
+                changedRecordTypes: parseDNSChangedRecordTypes(from: event),
                 source: event["source"] as? String ?? "Configured external history feed",
                 isExternal: true
             )
@@ -459,46 +461,44 @@ actor ExternalDataService {
             .sorted { $0.timestamp < $1.timestamp }
 
         var events: [DNSHistoryEvent] = []
-        var previousARecords: [String] = []
-        var previousNameservers: [String] = []
+        var previousRecordValues: [DNSRecordType: [String]] = [:]
 
         for entry in domainHistory {
-            let aRecords = Self.dnsValues(for: .A, in: entry.dnsSections)
-            let nameservers = Self.dnsValues(for: .NS, in: entry.dnsSections)
-            let summary = dnsSummaryChange(
-                previousARecords: previousARecords,
-                currentARecords: aRecords,
-                previousNameservers: previousNameservers,
-                currentNameservers: nameservers
-            )
+            let currentRecordValues = Self.historyRecordValues(in: entry.dnsSections)
+            let changedRecordTypes = Self.changedRecordTypes(previous: previousRecordValues, current: currentRecordValues)
+            let summary = dnsSummaryChange(previous: previousRecordValues, current: currentRecordValues)
 
             if let summary {
                 events.append(
                     DNSHistoryEvent(
                         date: entry.timestamp,
                         summary: summary,
-                        aRecords: aRecords,
-                        nameservers: nameservers,
+                        aRecords: currentRecordValues[.A] ?? [],
+                        nameservers: currentRecordValues[.NS] ?? [],
+                        recordSnapshots: currentRecordValues.map { DNSHistoryRecordSnapshot(recordType: $0.key, values: $0.value) }
+                            .sorted { $0.recordType.rawValue < $1.recordType.rawValue },
+                        changedRecordTypes: changedRecordTypes,
                         source: "Local observations",
                         isExternal: false
                     )
                 )
             }
 
-            previousARecords = aRecords
-            previousNameservers = nameservers
+            previousRecordValues = currentRecordValues
         }
 
         if events.isEmpty {
-            let currentARecords = Self.dnsValues(for: .A, in: dnsSections)
-            let currentNameservers = Self.dnsValues(for: .NS, in: dnsSections)
-            if !currentARecords.isEmpty || !currentNameservers.isEmpty {
+            let currentRecordValues = Self.historyRecordValues(in: dnsSections)
+            if !currentRecordValues.isEmpty {
                 events.append(
                     DNSHistoryEvent(
                         date: Date(),
                         summary: "Current DNS snapshot",
-                        aRecords: currentARecords,
-                        nameservers: currentNameservers,
+                        aRecords: currentRecordValues[.A] ?? [],
+                        nameservers: currentRecordValues[.NS] ?? [],
+                        recordSnapshots: currentRecordValues.map { DNSHistoryRecordSnapshot(recordType: $0.key, values: $0.value) }
+                            .sorted { $0.recordType.rawValue < $1.recordType.rawValue },
+                        changedRecordTypes: Array(currentRecordValues.keys).sorted { $0.rawValue < $1.rawValue },
                         source: "Local observations",
                         isExternal: false
                     )
@@ -540,8 +540,7 @@ actor ExternalDataService {
                 let duplicate = partialResult.contains {
                     $0.date == event.date
                         && $0.summary == event.summary
-                        && $0.aRecords == event.aRecords
-                        && $0.nameservers == event.nameservers
+                        && compareDNSRecordSnapshots($0.recordSnapshots, event.recordSnapshots)
                 }
                 if !duplicate {
                     partialResult.append(event)
@@ -585,19 +584,18 @@ actor ExternalDataService {
     }
 
     private static func dnsSummaryChange(
-        previousARecords: [String],
-        currentARecords: [String],
-        previousNameservers: [String],
-        currentNameservers: [String]
+        previous: [DNSRecordType: [String]],
+        current: [DNSRecordType: [String]]
     ) -> String? {
         var changes: [String] = []
-        if previousARecords != currentARecords, !currentARecords.isEmpty {
-            changes.append("A records changed")
+        for type in [DNSRecordType.A, .AAAA, .MX, .NS, .TXT, .CNAME] {
+            let previousValues = previous[type] ?? []
+            let currentValues = current[type] ?? []
+            if previousValues != currentValues, !currentValues.isEmpty {
+                changes.append("\(type.rawValue) records changed")
+            }
         }
-        if previousNameservers != currentNameservers, !currentNameservers.isEmpty {
-            changes.append("NS records changed")
-        }
-        if previousARecords.isEmpty && previousNameservers.isEmpty && (!currentARecords.isEmpty || !currentNameservers.isEmpty) {
+        if previous.isEmpty && !current.isEmpty {
             changes.append("Initial DNS observation")
         }
         return changes.isEmpty ? nil : changes.joined(separator: " • ")
@@ -617,6 +615,62 @@ actor ExternalDataService {
             .records
             .map(\.value)
             .sorted() ?? []
+    }
+
+    private func parseDNSRecordSnapshots(from event: [String: Any]) -> [DNSHistoryRecordSnapshot] {
+        if let snapshots = event["record_snapshots"] as? [[String: Any]] {
+            return snapshots.compactMap { item in
+                guard let typeName = item["type"] as? String,
+                      let type = DNSRecordType(rawValue: typeName) else {
+                    return nil
+                }
+                return DNSHistoryRecordSnapshot(recordType: type, values: item["values"] as? [String] ?? [])
+            }
+        }
+        var snapshots: [DNSHistoryRecordSnapshot] = []
+        if let aRecords = event["a_records"] as? [String], !aRecords.isEmpty {
+            snapshots.append(DNSHistoryRecordSnapshot(recordType: .A, values: aRecords))
+        }
+        if let nameservers = event["nameservers"] as? [String], !nameservers.isEmpty {
+            snapshots.append(DNSHistoryRecordSnapshot(recordType: .NS, values: nameservers))
+        }
+        return snapshots
+    }
+
+    private func parseDNSChangedRecordTypes(from event: [String: Any]) -> [DNSRecordType] {
+        if let rawTypes = event["changed_record_types"] as? [String] {
+            return rawTypes.compactMap(DNSRecordType.init(rawValue:))
+        }
+        return parseDNSRecordSnapshots(from: event).map(\.recordType)
+    }
+
+    private static func historyRecordValues(in sections: [DNSSection]) -> [DNSRecordType: [String]] {
+        let trackedTypes: [DNSRecordType] = [.A, .AAAA, .MX, .NS, .TXT, .CNAME]
+        return trackedTypes.reduce(into: [DNSRecordType: [String]]()) { result, type in
+            let values = dnsValues(for: type, in: sections)
+            if !values.isEmpty {
+                result[type] = values
+            }
+        }
+    }
+
+    private static func changedRecordTypes(
+        previous: [DNSRecordType: [String]],
+        current: [DNSRecordType: [String]]
+    ) -> [DNSRecordType] {
+        Array(Set(previous.keys).union(current.keys))
+            .filter { previous[$0] != current[$0] }
+            .sorted { $0.rawValue < $1.rawValue }
+    }
+
+    private static func compareDNSRecordSnapshots(
+        _ lhs: [DNSHistoryRecordSnapshot],
+        _ rhs: [DNSHistoryRecordSnapshot]
+    ) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        return zip(lhs, rhs).allSatisfy { left, right in
+            left.recordType == right.recordType && left.values == right.values
+        }
     }
 
     private static let iso8601DateFormatter: ISO8601DateFormatter = {

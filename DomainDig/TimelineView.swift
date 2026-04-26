@@ -25,7 +25,7 @@ struct TimelineView: View {
                             NavigationLink {
                                 HistoryDetailView(viewModel: viewModel, entry: entry)
                             } label: {
-                                TimelineRow(summary: summary)
+                                TimelineRow(summary: summary, entry: entry)
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
@@ -102,6 +102,7 @@ struct TimelineView: View {
 private struct TimelineRow: View {
     @Environment(\.appDensity) private var appDensity
     let summary: SnapshotSummary
+    let entry: HistoryEntry
 
     var body: some View {
         VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing + 1) {
@@ -137,6 +138,17 @@ private struct TimelineRow: View {
             }
             .font(appDensity.font(.caption2))
             .foregroundStyle(.secondary)
+
+            if !entry.intelligenceTimeline.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(entry.intelligenceTimeline.prefix(2))) { event in
+                        Text("\(event.title): \(event.detail)")
+                            .font(appDensity.font(.caption2))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+            }
 
             HStack(spacing: 8) {
                 if let primaryIP = summary.primaryIP {

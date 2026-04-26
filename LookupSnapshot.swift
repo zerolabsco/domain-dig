@@ -48,6 +48,14 @@ struct LookupSnapshot {
     let ownershipError: String?
     let ownershipHistory: [DomainOwnershipHistoryEvent]
     let ownershipHistoryError: String?
+    let inferredProvider: InferredProviderFingerprint?
+    let priorProviders: [String]
+    let domainClassification: DomainClassificationSummary?
+    let ownershipTransitions: [OwnershipTransitionEvent]
+    let hostingTransitions: [HostingTransitionEvent]
+    let subdomainHistory: [SubdomainHistoryEntry]
+    let riskSignals: [IntelligenceRiskSignal]
+    let intelligenceTimeline: [IntelligenceTimelineEvent]
     let ptrRecord: String?
     let ptrError: String?
     let redirectChain: [RedirectHop]
@@ -122,6 +130,14 @@ extension HistoryEntry {
             ownershipError: ownershipError,
             ownershipHistory: ownershipHistory,
             ownershipHistoryError: ownershipHistoryError,
+            inferredProvider: inferredProvider,
+            priorProviders: priorProviders,
+            domainClassification: domainClassification,
+            ownershipTransitions: ownershipTransitions,
+            hostingTransitions: hostingTransitions,
+            subdomainHistory: subdomainHistory,
+            riskSignals: riskSignals,
+            intelligenceTimeline: intelligenceTimeline,
             ptrRecord: ptrRecord,
             ptrError: ptrError,
             redirectChain: redirectChain,
