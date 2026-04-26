@@ -2560,6 +2560,10 @@ struct SettingsView: View {
                     IntegrationsSettingsView()
                 }
 
+                NavigationLink("Local API") {
+                    LocalAPISettingsView()
+                }
+
                 NavigationLink("iCloud Sync") {
                     CloudSyncSettingsView()
                 }
@@ -2745,6 +2749,123 @@ private struct CloudSyncSettingsView: View {
         .navigationTitle("iCloud Sync")
         .task {
             await cloudSyncService.refreshAvailability()
+        }
+    }
+}
+
+private struct LocalAPISettingsView: View {
+    @Environment(\.appDensity) private var appDensity
+    @State private var localAPIService = LocalAPIService.shared
+    @State private var portText = ""
+
+    var body: some View {
+        Form {
+            Section("Local API") {
+                Toggle(
+                    "Enable Local API",
+                    isOn: Binding(
+                        get: { localAPIService.config.isEnabled },
+                        set: { localAPIService.setEnabled($0) }
+                    )
+                )
+
+                TextField(
+                    "Port",
+                    text: Binding(
+                        get: { portText },
+                        set: { newValue in
+                            portText = newValue
+                            if let port = Int(newValue) {
+                                localAPIService.setPort(port)
+                            }
+                        }
+                    )
+                )
+                .keyboardType(.numberPad)
+
+                LabeledContent("Address", value: localAPIService.address)
+                LabeledContent("Status", value: localAPIService.isRunning ? "Running" : (localAPIService.config.isEnabled ? "Stopped" : "Disabled"))
+                LabeledContent("Token", value: localAPIService.maskedToken)
+
+                if let statusMessage = localAPIService.statusMessage {
+                    Text(statusMessage)
+                        .font(appDensity.font(.caption, design: .default))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Authentication") {
+                Button("Copy Token") {
+                    localAPIService.copyToken()
+                }
+
+                Button("Rotate Token") {
+                    localAPIService.rotateToken()
+                }
+
+                Text("Every request requires either `Authorization: Bearer <token>` or `X-API-Token`. DomainDig stores the token in Keychain and only binds the server to localhost.")
+                    .font(appDensity.font(.caption, design: .default))
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Request Logging") {
+                Toggle(
+                    "Log Requests",
+                    isOn: Binding(
+                        get: { localAPIService.config.requestLoggingEnabled },
+                        set: { localAPIService.setRequestLoggingEnabled($0) }
+                    )
+                )
+
+                if localAPIService.requestLogs.isEmpty {
+                    Text("No local API requests logged yet.")
+                        .font(appDensity.font(.caption, design: .default))
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(localAPIService.requestLogs.prefix(25)) { log in
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("\(log.method) \(log.path)")
+                                    .font(appDensity.font(.callout, design: .monospaced))
+                                Spacer()
+                                Text("\(log.statusCode)")
+                                    .font(appDensity.font(.caption, design: .default))
+                                    .foregroundStyle(log.statusCode >= 400 ? .red : .secondary)
+                            }
+
+                            Text(log.timestamp.formatted(date: .abbreviated, time: .standard))
+                                .font(appDensity.font(.caption2, design: .default))
+                                .foregroundStyle(.secondary)
+
+                            Text("\(Int(log.duration * 1000)) ms")
+                                .font(appDensity.font(.caption2, design: .default))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Button("Clear Logs", role: .destructive) {
+                    localAPIService.clearRequestLogs()
+                }
+            }
+
+            Section("Control") {
+                Button("Restart Server") {
+                    localAPIService.setEnabled(false)
+                    localAPIService.setEnabled(true)
+                }
+                .disabled(!localAPIService.config.isEnabled)
+
+                Button("Stop Server") {
+                    localAPIService.stopServer()
+                }
+                .disabled(!localAPIService.isRunning)
+            }
+        }
+        .navigationTitle("Local API")
+        .onAppear {
+            portText = String(localAPIService.config.port)
+            localAPIService.refresh()
         }
     }
 }

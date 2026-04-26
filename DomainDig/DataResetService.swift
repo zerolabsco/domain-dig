@@ -15,7 +15,7 @@ enum DataResetService {
 
     static func wipeAllLocalData(viewModel: DomainViewModel) async throws {
         let secretReferences = await MainActor.run {
-            IntegrationService.shared.localSecretReferences()
+            IntegrationService.shared.localSecretReferences() + LocalAPIService.shared.localSecretReferences()
         }
 
         try await Task.detached(priority: .userInitiated) {
@@ -28,6 +28,7 @@ enum DataResetService {
 
         await MainActor.run {
             IntegrationService.shared.resetAfterLocalWipe()
+            LocalAPIService.shared.resetAfterLocalWipe()
             CloudSyncService.shared.resetLocalStateAfterWipe()
             PurchaseService.shared.resetCachedStateAfterLocalWipe()
             _ = DomainMonitoringScheduler.shared.syncSchedule()

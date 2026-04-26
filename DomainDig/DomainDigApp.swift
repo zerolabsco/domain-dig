@@ -15,6 +15,7 @@ struct DomainDigApp: App {
     @State private var viewModel = DomainViewModel()
     @State private var purchaseService = PurchaseService.shared
     @State private var cloudSyncService = CloudSyncService.shared
+    @State private var localAPIService = LocalAPIService.shared
 
     init() {
         LocalNotificationService.shared.configureForegroundPresentation()
@@ -28,11 +29,13 @@ struct DomainDigApp: App {
                 .task {
                     let _ = purchaseService.currentTier
                     let _ = cloudSyncService.status
+                    let _ = localAPIService.isRunning
                     let _ = IntegrationService.shared.targets.count
                     await purchaseService.refreshEntitlements()
                     viewModel.refreshMonitoringState()
                     await viewModel.refreshMonitoringAuthorizationStatus()
                     await cloudSyncService.refreshAvailability()
+                    localAPIService.refresh()
                     cloudSyncService.scheduleSyncIfNeeded(trigger: .launch)
                     viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
                     IntegrationService.shared.processQueueNow()
@@ -50,6 +53,7 @@ struct DomainDigApp: App {
                 await viewModel.refreshMonitoringAuthorizationStatus()
                 await cloudSyncService.refreshAvailability()
             }
+            localAPIService.refresh()
             cloudSyncService.scheduleSyncIfNeeded(trigger: .launch)
             viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
             IntegrationService.shared.processQueueNow()
