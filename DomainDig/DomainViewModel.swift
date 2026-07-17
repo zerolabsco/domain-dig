@@ -2834,6 +2834,11 @@ final class DomainViewModel {
         customPortScanTask?.cancel()
         batchTask?.cancel()
 
+        SweepActivityController.shared.begin(
+            title: source == .watchlistRefresh ? "Watchlist Sweep" : "Batch Lookup",
+            total: domains.count
+        )
+
         batchTask = Task { [weak self] in
             guard let self else { return }
             self.notificationsAuthorized = await LocalNotificationService.shared.requestAuthorizationIfNeeded()
@@ -2928,6 +2933,11 @@ final class DomainViewModel {
                 errorMessage: "Lookup cancelled"
             )
             batchCompletedCount += 1
+            SweepActivityController.shared.update(
+                completed: batchCompletedCount,
+                total: batchTotalCount,
+                currentDomain: batchCurrentDomain
+            )
             return
         }
 
@@ -2956,6 +2966,11 @@ final class DomainViewModel {
             errorMessage: payload.snapshot.statusMessage
         )
         batchCompletedCount += 1
+        SweepActivityController.shared.update(
+            completed: batchCompletedCount,
+            total: batchTotalCount,
+            currentDomain: batchCurrentDomain
+        )
     }
 
     private func finishBatchLookup(source: BatchLookupSource) {
@@ -2989,6 +3004,7 @@ final class DomainViewModel {
             generatedAt: Date()
         )
         latestBatchSweepSummary = summary
+        SweepActivityController.shared.end(changed: changedCount, warnings: warningCount)
 
         if source == .workflow, let activeWorkflowRunID, let activeWorkflowRunName {
             let workflowReports: [DomainReport] = summary.results.compactMap { result in
