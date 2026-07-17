@@ -369,6 +369,8 @@ struct DomainInspectionService {
             dnsHistoryError: nil,
             domainPricing: nil,
             domainPricingError: nil,
+            reputation: nil,
+            reputationError: nil,
             portScanResults: portScanResults.value,
             portScanError: portScanResults.message,
             changeSummary: nil,

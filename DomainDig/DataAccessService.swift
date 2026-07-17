@@ -11,6 +11,8 @@ enum DataAccessService {
             return FeatureAccessService.hasAccess(to: .extendedSubdomains)
         case .domainPricing:
             return FeatureAccessService.hasAccess(to: .domainPricing)
+        case .reputation:
+            return FeatureAccessService.hasAccess(to: .reputation)
         }
     }
 }

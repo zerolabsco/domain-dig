@@ -68,6 +68,8 @@ struct LookupSnapshot {
     let dnsHistoryError: String?
     let domainPricing: DomainPricingInsight?
     let domainPricingError: String?
+    let reputation: DomainReputationResult?
+    let reputationError: String?
     let portScanResults: [PortScanResult]
     let portScanError: String?
     let changeSummary: DomainChangeSummary?
@@ -150,6 +152,8 @@ extension HistoryEntry {
             dnsHistoryError: dnsHistoryError,
             domainPricing: domainPricing,
             domainPricingError: domainPricingError,
+            reputation: reputation,
+            reputationError: reputationError,
             portScanResults: portScanResults,
             portScanError: portScanError,
             changeSummary: changeSummary,

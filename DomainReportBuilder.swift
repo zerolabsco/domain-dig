@@ -38,6 +38,7 @@ struct DomainReport: Codable {
     let extendedSubdomains: [String]
     let dnsHistory: [DNSHistoryEvent]
     let domainPricing: DomainPricingInsight?
+    let reputation: DomainReputationResult?
     let subdomainGroups: [SubdomainGroup]
     let riskAssessment: DomainRiskAssessment
     let insights: [String]
@@ -360,6 +361,7 @@ struct DomainReportBuilder {
             extendedSubdomains: snapshot.extendedSubdomains.map(\.hostname),
             dnsHistory: snapshot.dnsHistory,
             domainPricing: snapshot.domainPricing,
+            reputation: snapshot.reputation,
             subdomainGroups: analysis.subdomainGroups,
             riskAssessment: analysis.riskAssessment,
             insights: analysis.insights,

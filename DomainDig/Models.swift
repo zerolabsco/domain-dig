@@ -391,6 +391,7 @@ enum DataCapability: String, Codable {
     case dnsHistory
     case extendedSubdomains
     case domainPricing
+    case reputation
 }
 
 enum UsageCreditFeature: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -722,6 +723,29 @@ struct DomainPricingInsight: Codable, Equatable, Sendable {
     let auctionSignal: String?
     let source: String
     let collectedAt: Date
+}
+
+enum DomainReputationStatus: String, Codable, Sendable {
+    case clean
+    case listed
+    case unknown
+
+    var title: String {
+        switch self {
+        case .clean:
+            return "Clean"
+        case .listed:
+            return "Listed"
+        case .unknown:
+            return "Unknown"
+        }
+    }
+}
+
+struct DomainReputationResult: Codable, Equatable, Sendable {
+    let status: DomainReputationStatus
+    let listedSources: [String]
+    let checkedAt: Date
 }
 
 enum HistoryDateFilter: String, CaseIterable, Identifiable {
@@ -2285,6 +2309,7 @@ struct HistoryEntry: Identifiable, Codable {
     var extendedSubdomains: [DiscoveredSubdomain]
     var dnsHistory: [DNSHistoryEvent]
     var domainPricing: DomainPricingInsight?
+    var reputation: DomainReputationResult?
     var portScanResults: [PortScanResult]
     var hstsPreloaded: Bool?
     var availabilityResult: DomainAvailabilityResult?
@@ -2327,6 +2352,7 @@ struct HistoryEntry: Identifiable, Codable {
     var extendedSubdomainsError: String?
     var dnsHistoryError: String?
     var domainPricingError: String?
+    var reputationError: String?
     var portScanError: String?
 
     init(domain: String, timestamp: Date, trackedDomainID: UUID? = nil, note: String? = nil, dnsSections: [DNSSection],
@@ -2344,6 +2370,7 @@ struct HistoryEntry: Identifiable, Codable {
          ptrRecord: String? = nil, redirectChain: [RedirectHop] = [], subdomains: [DiscoveredSubdomain] = [],
          extendedSubdomains: [DiscoveredSubdomain] = [], dnsHistory: [DNSHistoryEvent] = [],
          domainPricing: DomainPricingInsight? = nil,
+         reputation: DomainReputationResult? = nil,
          portScanResults: [PortScanResult] = [],
          hstsPreloaded: Bool? = nil, availabilityResult: DomainAvailabilityResult? = nil,
          suggestions: [DomainSuggestionResult] = [], appVersion: String = "2.7.0",
@@ -2362,7 +2389,7 @@ struct HistoryEntry: Identifiable, Codable {
          emailSecurityError: String? = nil, ownershipError: String? = nil, ownershipHistoryError: String? = nil,
          ptrError: String? = nil, redirectChainError: String? = nil, subdomainsError: String? = nil,
          extendedSubdomainsError: String? = nil, dnsHistoryError: String? = nil,
-         domainPricingError: String? = nil, portScanError: String? = nil) {
+         domainPricingError: String? = nil, reputationError: String? = nil, portScanError: String? = nil) {
         self.domain = domain
         self.timestamp = timestamp
         self.trackedDomainID = trackedDomainID
@@ -2390,6 +2417,7 @@ struct HistoryEntry: Identifiable, Codable {
         self.extendedSubdomains = extendedSubdomains
         self.dnsHistory = dnsHistory
         self.domainPricing = domainPricing
+        self.reputation = reputation
         self.portScanResults = portScanResults
         self.hstsPreloaded = hstsPreloaded
         self.availabilityResult = availabilityResult
@@ -2432,6 +2460,7 @@ struct HistoryEntry: Identifiable, Codable {
         self.extendedSubdomainsError = extendedSubdomainsError
         self.dnsHistoryError = dnsHistoryError
         self.domainPricingError = domainPricingError
+        self.reputationError = reputationError
         self.portScanError = portScanError
     }
 
@@ -2465,6 +2494,7 @@ struct HistoryEntry: Identifiable, Codable {
         extendedSubdomains = try container.decodeIfPresent([DiscoveredSubdomain].self, forKey: .extendedSubdomains) ?? []
         dnsHistory = try container.decodeIfPresent([DNSHistoryEvent].self, forKey: .dnsHistory) ?? []
         domainPricing = try container.decodeIfPresent(DomainPricingInsight.self, forKey: .domainPricing)
+        reputation = try container.decodeIfPresent(DomainReputationResult.self, forKey: .reputation)
         portScanResults = try container.decodeIfPresent([PortScanResult].self, forKey: .portScanResults) ?? []
         hstsPreloaded = try container.decodeIfPresent(Bool.self, forKey: .hstsPreloaded)
         availabilityResult = try container.decodeIfPresent(DomainAvailabilityResult.self, forKey: .availabilityResult)
@@ -2510,6 +2540,7 @@ struct HistoryEntry: Identifiable, Codable {
         extendedSubdomainsError = try container.decodeIfPresent(String.self, forKey: .extendedSubdomainsError)
         dnsHistoryError = try container.decodeIfPresent(String.self, forKey: .dnsHistoryError)
         domainPricingError = try container.decodeIfPresent(String.self, forKey: .domainPricingError)
+        reputationError = try container.decodeIfPresent(String.self, forKey: .reputationError)
         portScanError = try container.decodeIfPresent(String.self, forKey: .portScanError)
     }
 

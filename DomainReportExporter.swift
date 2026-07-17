@@ -69,7 +69,8 @@ enum DomainReportExporter {
                 "Email: \(report.email.summary)",
                 "Subdomains: \(report.subdomains.count)",
                 "Extended Subdomains: \(report.extendedSubdomains.count)",
-                "External Price: \(report.domainPricing?.estimatedPrice ?? "Unavailable")"
+                "External Price: \(report.domainPricing?.estimatedPrice ?? "Unavailable")",
+                "Reputation: \(report.reputation?.status.title ?? "Unavailable")"
             ]
         }
 
@@ -406,6 +407,8 @@ enum DomainReportExporter {
             "pricing_resale_signal",
             "pricing_auction_signal",
             "pricing_source",
+            "reputation_status",
+            "reputation_listed_sources",
             "open_ports",
             "reachability_summary",
             "geolocation_summary",
@@ -438,6 +441,8 @@ enum DomainReportExporter {
             let subdomainGroups = report.subdomainGroups.map { "\($0.label):\($0.subdomains.count)" }.joined(separator: " | ")
             let ownershipHistory = report.ownershipHistory.map { "\($0.date.ISO8601Format()) \($0.summary)" }.joined(separator: " | ")
             let dnsHistory = report.dnsHistory.map { "\($0.date.ISO8601Format()) \($0.summary)" }.joined(separator: " | ")
+            let reputationStatus = report.reputation?.status.rawValue ?? ""
+            let reputationListedSources = report.reputation?.listedSources.joined(separator: " | ") ?? ""
 
             return [
                 report.domain,
@@ -483,6 +488,8 @@ enum DomainReportExporter {
                 report.domainPricing?.resaleSignal ?? "",
                 report.domainPricing?.auctionSignal ?? "",
                 report.domainPricing?.source ?? "",
+                reputationStatus,
+                reputationListedSources,
                 openPorts,
                 report.network.reachabilitySummary,
                 report.network.geolocationSummary,

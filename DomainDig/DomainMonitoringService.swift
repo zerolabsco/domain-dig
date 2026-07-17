@@ -516,6 +516,7 @@ final class DomainMonitoringService {
             extendedSubdomains: snapshot.extendedSubdomains,
             dnsHistory: snapshot.dnsHistory,
             domainPricing: snapshot.domainPricing,
+            reputation: snapshot.reputation,
             portScanResults: snapshot.portScanResults,
             hstsPreloaded: snapshot.hstsPreloaded,
             availabilityResult: snapshot.availabilityResult,
@@ -554,6 +555,7 @@ final class DomainMonitoringService {
             extendedSubdomainsError: snapshot.extendedSubdomainsError,
             dnsHistoryError: snapshot.dnsHistoryError,
             domainPricingError: snapshot.domainPricingError,
+            reputationError: snapshot.reputationError,
             portScanError: snapshot.portScanError
         )
 
@@ -930,6 +932,8 @@ final class DomainMonitoringService {
             dnsHistoryError: previousSnapshot.dnsHistoryError,
             domainPricing: previousSnapshot.domainPricing,
             domainPricingError: previousSnapshot.domainPricingError,
+            reputation: previousSnapshot.reputation,
+            reputationError: previousSnapshot.reputationError,
             portScanResults: previousSnapshot.portScanResults,
             portScanError: previousSnapshot.portScanError,
             changeSummary: previousSnapshot.changeSummary,
