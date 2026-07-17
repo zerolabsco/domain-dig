@@ -232,6 +232,9 @@ final class DomainViewModel {
     var domainPricing: DomainPricingInsight?
     var domainPricingLoading = false
     var domainPricingError: String?
+    var reputation: DomainReputationResult?
+    var reputationLoading = false
+    var reputationError: String?
     var usageCredits: [UsageCreditFeature: UsageCreditStatus] = DomainViewModel.defaultUsageCredits()
 
     var portScanResults: [PortScanResult] = []
@@ -642,6 +645,8 @@ final class DomainViewModel {
             dnsHistoryError: dnsHistoryError,
             domainPricing: domainPricing,
             domainPricingError: domainPricingError,
+            reputation: reputation,
+            reputationError: reputationError,
             portScanResults: allPortScanResults,
             portScanError: combinedPortScanError,
             changeSummary: currentChangeSummary,
@@ -1883,6 +1888,11 @@ final class DomainViewModel {
             await refreshDomainPricing(for: snapshot.domain, persistAfterFetch: false)
         }
 
+        if DataAccessService.hasAccess(to: .reputation), reputation == nil {
+            DomainDebugLog.debug("DomainViewModel.performLookup loadingReputation domain=\(domain)")
+            await refreshReputation(for: snapshot.domain, persistAfterFetch: false)
+        }
+
         guard snapshot.statusMessage == nil else {
             return history.first(where: { $0.id == snapshot.historyEntryID })
         }
@@ -2053,6 +2063,8 @@ final class DomainViewModel {
             dnsHistoryError: previousSnapshot.dnsHistoryError,
             domainPricing: previousSnapshot.domainPricing,
             domainPricingError: previousSnapshot.domainPricingError,
+            reputation: previousSnapshot.reputation,
+            reputationError: previousSnapshot.reputationError,
             portScanResults: previousSnapshot.portScanResults,
             portScanError: previousSnapshot.portScanError,
             changeSummary: previousSnapshot.changeSummary,
@@ -2474,6 +2486,7 @@ final class DomainViewModel {
             extendedSubdomains: snapshot.extendedSubdomains,
             dnsHistory: snapshot.dnsHistory,
             domainPricing: snapshot.domainPricing,
+            reputation: snapshot.reputation,
             portScanResults: snapshot.portScanResults,
             hstsPreloaded: snapshot.hstsPreloaded,
             availabilityResult: snapshot.availabilityResult,
@@ -2516,6 +2529,7 @@ final class DomainViewModel {
             extendedSubdomainsError: snapshot.extendedSubdomainsError,
             dnsHistoryError: snapshot.dnsHistoryError,
             domainPricingError: snapshot.domainPricingError,
+            reputationError: snapshot.reputationError,
             portScanError: snapshot.portScanError
         )
 
@@ -3844,6 +3858,8 @@ final class DomainViewModel {
             dnsHistoryError: nil,
             domainPricing: nil,
             domainPricingError: nil,
+            reputation: nil,
+            reputationError: nil,
             portScanResults: [],
             portScanError: nil,
             changeSummary: trackedDomain.lastChangeSummary,
@@ -4004,6 +4020,18 @@ final class DomainViewModel {
             if let auctionSignal = pricing.auctionSignal {
                 rows.append(InfoRowViewData(label: "Auction", value: auctionSignal, tone: .secondary))
             }
+        }
+        if let reputation = snapshot.reputation {
+            let tone: ResultTone
+            switch reputation.status {
+            case .clean: tone = .success
+            case .listed: tone = .failure
+            case .unknown: tone = .secondary
+            }
+            let value = reputation.status == .listed && !reputation.listedSources.isEmpty
+                ? "\(reputation.status.title) (\(reputation.listedSources.joined(separator: ", ")))"
+                : reputation.status.title
+            rows.append(InfoRowViewData(label: "Reputation", value: value, tone: tone))
         }
         if let certificateStatus = certificateBadgeLabel(from: snapshot) {
             rows.insert(
@@ -4694,6 +4722,29 @@ final class DomainViewModel {
         }
 
         domainPricingLoading = false
+
+        if persistAfterFetch {
+            _ = saveHistoryEntry(replaceLatest: true)
+        }
+    }
+
+    private func refreshReputation(for domain: String, persistAfterFetch: Bool) async {
+        reputationLoading = true
+        let outcome = await ExternalDataService.shared.reputation(domain: domain)
+
+        switch outcome.value {
+        case let .success(result):
+            reputation = result
+            reputationError = nil
+        case let .empty(message):
+            reputation = nil
+            reputationError = conciseExternalMessage(message, fallback: "Reputation check unavailable")
+        case let .error(message):
+            reputation = nil
+            reputationError = conciseExternalMessage(message, fallback: "Reputation check unavailable")
+        }
+
+        reputationLoading = false
 
         if persistAfterFetch {
             _ = saveHistoryEntry(replaceLatest: true)

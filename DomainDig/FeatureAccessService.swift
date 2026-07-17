@@ -32,6 +32,7 @@ enum FeatureCapability: String, CaseIterable, Identifiable {
     case dnsHistory
     case extendedSubdomains
     case domainPricing
+    case reputation
 
     var id: String { rawValue }
 
@@ -61,6 +62,8 @@ enum FeatureCapability: String, CaseIterable, Identifiable {
             return "Extended subdomains"
         case .domainPricing:
             return "Domain pricing"
+        case .reputation:
+            return "Domain reputation"
         }
     }
 }
@@ -157,7 +160,7 @@ enum FeatureAccessService {
         switch capability {
         case .workflows, .batchOperations, .automatedMonitoring, .localAlerts, .advancedExports:
             return "Available in Pro"
-        case .ownershipHistory, .dnsHistory, .extendedSubdomains, .domainPricing:
+        case .ownershipHistory, .dnsHistory, .extendedSubdomains, .domainPricing, .reputation:
             return "Available in Pro+"
         case .limitedTracking:
             return "Tracking is limited on Free"
@@ -219,7 +222,7 @@ enum FeatureAccessService {
     static func upgradePrompt(for capability: FeatureCapability) -> UpgradePromptContext {
         let title: String
         switch capability {
-        case .ownershipHistory, .dnsHistory, .extendedSubdomains, .domainPricing:
+        case .ownershipHistory, .dnsHistory, .extendedSubdomains, .domainPricing, .reputation:
             title = "Available in Pro+"
         default:
             title = "Available in Pro"

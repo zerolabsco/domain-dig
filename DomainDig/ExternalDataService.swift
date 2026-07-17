@@ -8,12 +8,14 @@ actor ExternalDataService {
         case dnsHistory(String)
         case extendedSubdomains(String)
         case pricing(String)
+        case reputation(String)
     }
 
     private enum RateLimitBucket: Hashable {
         case history
         case subdomains
         case pricing
+        case reputation
 
         var minimumSpacing: TimeInterval {
             switch self {
@@ -22,6 +24,8 @@ actor ExternalDataService {
             case .subdomains:
                 return 1.5
             case .pricing:
+                return 1.0
+            case .reputation:
                 return 1.0
             }
         }
@@ -32,6 +36,7 @@ actor ExternalDataService {
         case dnsHistory(ServiceResult<[DNSHistoryEvent]>)
         case extendedSubdomains(ServiceResult<[DiscoveredSubdomain]>)
         case pricing(ServiceResult<DomainPricingInsight>)
+        case reputation(ServiceResult<DomainReputationResult>)
     }
 
     private struct CacheEntry {
@@ -44,6 +49,7 @@ actor ExternalDataService {
         let dnsHistoryURL: String?
         let extendedSubdomainsURL: String?
         let pricingURL: String?
+        let reputationURL: String?
     }
 
     private let ttl: TimeInterval = 900
@@ -161,6 +167,25 @@ actor ExternalDataService {
         )
     }
 
+    /// Checks a domain against a configured blocklist/reputation endpoint. With
+    /// no endpoint configured (the default, since DomainDig ships no bundled
+    /// third-party reputation dependency) this resolves to `.empty` and callers
+    /// treat the result as unavailable rather than "clean".
+    func reputation(domain: String) async -> CachedLookupResult<ServiceResult<DomainReputationResult>> {
+        let normalizedDomain = Self.normalize(domain)
+        return await execute(
+            key: .reputation(normalizedDomain),
+            rateLimitBucket: .reputation,
+            extract: { payload in
+                guard case let .reputation(result) = payload else { return nil }
+                return result
+            },
+            operation: { [configuration = configuration()] in
+                .reputation(await self.fetchReputation(domain: normalizedDomain, configuration: configuration))
+            }
+        )
+    }
+
     private func execute<T>(
         key: RequestKey,
         rateLimitBucket: RateLimitBucket,
@@ -213,7 +238,9 @@ actor ExternalDataService {
             extendedSubdomainsURL: defaults.string(forKey: "externalData.extendedSubdomainsURL")
                 ?? Bundle.main.object(forInfoDictionaryKey: "ExternalExtendedSubdomainsURL") as? String,
             pricingURL: defaults.string(forKey: "externalData.pricingURL")
-                ?? Bundle.main.object(forInfoDictionaryKey: "ExternalPricingURL") as? String
+                ?? Bundle.main.object(forInfoDictionaryKey: "ExternalPricingURL") as? String,
+            reputationURL: defaults.string(forKey: "externalData.reputationURL")
+                ?? Bundle.main.object(forInfoDictionaryKey: "ExternalReputationURL") as? String
         )
     }
 
@@ -283,6 +310,28 @@ actor ExternalDataService {
                 return .error("Invalid external response")
             }
             return .success(pricing)
+        case let .empty(message):
+            return .empty(message)
+        case let .error(message):
+            return .error(message)
+        }
+    }
+
+    private func fetchReputation(
+        domain: String,
+        configuration: Configuration
+    ) async -> ServiceResult<DomainReputationResult> {
+        guard let template = configuration.reputationURL,
+              let url = Self.url(from: template, domain: domain) else {
+            return .empty("No reputation source configured")
+        }
+
+        switch await requestData(url: url) {
+        case let .success(data):
+            guard let reputation = parseReputation(from: data) else {
+                return .error("Invalid external response")
+            }
+            return .success(reputation)
         case let .empty(message):
             return .empty(message)
         case let .error(message):
@@ -401,6 +450,22 @@ actor ExternalDataService {
             source: json["source"] as? String ?? "Configured external pricing feed",
             collectedAt: Date()
         )
+    }
+
+    private func parseReputation(from data: Data) -> DomainReputationResult? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+
+        let listedSources = json["listed_sources"] as? [String] ?? []
+        let status: DomainReputationStatus
+        if let statusString = json["status"] as? String, let parsed = DomainReputationStatus(rawValue: statusString) {
+            status = parsed
+        } else {
+            status = listedSources.isEmpty ? .clean : .listed
+        }
+
+        return DomainReputationResult(status: status, listedSources: listedSources, checkedAt: Date())
     }
 
     private static func localOwnershipHistory(

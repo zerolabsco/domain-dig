@@ -303,6 +303,19 @@ enum DomainInsightEngine {
             }
         }
 
+        if let reputation = snapshot.reputation {
+            switch reputation.status {
+            case .listed:
+                score += 25
+                let sourceList = reputation.listedSources.isEmpty ? "" : " (\(reputation.listedSources.joined(separator: ", ")))"
+                factors.append(.init(description: "Domain is flagged by a configured reputation source\(sourceList)", impact: .negative))
+            case .clean:
+                factors.append(.init(description: "Domain is clean against the configured reputation source", impact: .positive))
+            case .unknown:
+                break
+            }
+        }
+
         let clampedScore = min(max(score, 0), 100)
         let level: RiskLevel
         switch clampedScore {
@@ -327,6 +340,9 @@ enum DomainInsightEngine {
     ) -> [String] {
         var items: [String] = []
 
+        if snapshot.reputation?.status == .listed {
+            items.append("Domain is flagged by a configured reputation source")
+        }
         if let group = subdomainGroups.first(where: { $0.label == "staging" || $0.label == "dev" }) {
             items.append("Multiple \(group.label) subdomains suggest non-production environments are exposed")
         }
