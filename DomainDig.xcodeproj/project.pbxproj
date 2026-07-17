@@ -14,7 +14,32 @@
 		8BCA3CC02F9C8D57004B742C /* LocalAPIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */; };
 		8BCA3CC12F9C8D57004B742C /* LocalAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */; };
 		8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
+		8BDA00010000000000000002 /* DomainDigWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8BDA00010000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8B7800612F6090E300933221 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8BDA00010000000000000006;
+			remoteInfo = DomainDigWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8BDA00010000000000000005 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8BDA00010000000000000002 /* DomainDigWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		8B7800692F6090E300933221 /* DomainDig.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DomainDig.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -25,6 +50,7 @@
 		8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAPIModels.swift; sourceTree = "<group>"; };
 		8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAPIService.swift; sourceTree = "<group>"; };
 		8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityService.swift; sourceTree = "<group>"; };
+		8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DomainDigWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -37,6 +63,13 @@
 			);
 			target = 8B7800682F6090E300933221 /* DomainDig */;
 		};
+		8BDA0001000000000000000F /* Exceptions for "DomainDigWidget" folder in "DomainDigWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8BDA00010000000000000006 /* DomainDigWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -48,10 +81,30 @@
 			path = DomainDig;
 			sourceTree = "<group>";
 		};
+		8BDA0001000000000000000D /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		8BDA0001000000000000000E /* DomainDigWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8BDA0001000000000000000F /* Exceptions for "DomainDigWidget" folder in "DomainDigWidgetExtension" target */,
+			);
+			path = DomainDigWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		8B7800662F6090E300933221 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BDA00010000000000000008 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -65,6 +118,8 @@
 			isa = PBXGroup;
 			children = (
 				8B78006B2F6090E300933221 /* DomainDig */,
+				8BDA0001000000000000000D /* Shared */,
+				8BDA0001000000000000000E /* DomainDigWidget */,
 				8B78006A2F6090E300933221 /* Products */,
 				8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */,
 				8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */,
@@ -80,6 +135,7 @@
 			isa = PBXGroup;
 			children = (
 				8B7800692F6090E300933221 /* DomainDig.app */,
+				8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -94,13 +150,16 @@
 				8B7800652F6090E300933221 /* Sources */,
 				8B7800662F6090E300933221 /* Frameworks */,
 				8B7800672F6090E300933221 /* Resources */,
+				8BDA00010000000000000005 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				8BDA00010000000000000004 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8B78006B2F6090E300933221 /* DomainDig */,
+				8BDA0001000000000000000D /* Shared */,
 			);
 			name = DomainDig;
 			packageProductDependencies = (
@@ -109,7 +168,38 @@
 			productReference = 8B7800692F6090E300933221 /* DomainDig.app */;
 			productType = "com.apple.product-type.application";
 		};
+		8BDA00010000000000000006 /* DomainDigWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8BDA0001000000000000000A /* Build configuration list for PBXNativeTarget "DomainDigWidgetExtension" */;
+			buildPhases = (
+				8BDA00010000000000000007 /* Sources */,
+				8BDA00010000000000000008 /* Frameworks */,
+				8BDA00010000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8BDA0001000000000000000D /* Shared */,
+				8BDA0001000000000000000E /* DomainDigWidget */,
+			);
+			name = DomainDigWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = DomainDigWidgetExtension;
+			productReference = 8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
+
+/* Begin PBXTargetDependency section */
+		8BDA00010000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8BDA00010000000000000006 /* DomainDigWidgetExtension */;
+			targetProxy = 8BDA00010000000000000003 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		8B7800612F6090E300933221 /* Project object */ = {
@@ -126,6 +216,9 @@
 								enabled = 1;
 							};
 						};
+					};
+					8BDA00010000000000000006 = {
+						CreatedOnToolsVersion = 26.3;
 					};
 				};
 			};
@@ -144,12 +237,20 @@
 			projectRoot = "";
 			targets = (
 				8B7800682F6090E300933221 /* DomainDig */,
+				8BDA00010000000000000006 /* DomainDigWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		8B7800672F6090E300933221 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BDA00010000000000000009 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -170,6 +271,13 @@
 				8BBFEF0B2F9874AE00E8E144 /* DomainReportExporter.swift in Sources */,
 				8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */,
 				8BBFEF0C2F9874AE00E8E144 /* LookupSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BDA00010000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -373,6 +481,62 @@
 			};
 			name = Release;
 		};
+		8BDA0001000000000000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = DomainDigWidget/DomainDigWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 37;
+				DEVELOPMENT_TEAM = ZCNAX3VL9D;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DomainDigWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 4.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8BDA0001000000000000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = DomainDigWidget/DomainDigWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 37;
+				DEVELOPMENT_TEAM = ZCNAX3VL9D;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DomainDigWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 4.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -390,6 +554,15 @@
 			buildConfigurations = (
 				8B7800752F6090E400933221 /* Debug */,
 				8B7800762F6090E400933221 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8BDA0001000000000000000A /* Build configuration list for PBXNativeTarget "DomainDigWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8BDA0001000000000000000B /* Debug */,
+				8BDA0001000000000000000C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

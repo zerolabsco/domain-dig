@@ -124,6 +124,24 @@ struct AddToWatchlistIntent: AppIntent {
     }
 }
 
+/// App Intent that opens DomainDig and re-inspects every tracked domain. It runs
+/// through the existing view-model batch path (`refreshAllTrackedDomains`), which
+/// enforces the batch feature gate and surfaces the paywall when needed.
+struct RunSweepIntent: AppIntent {
+    static var title: LocalizedStringResource = "Run Watchlist Sweep"
+    static var description = IntentDescription(
+        "Open DomainDig and re-inspect every domain on your watchlist."
+    )
+
+    static var openAppWhenRun = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        DomainDigIntentRouter.shared.pendingAction = .sweep
+        return .result()
+    }
+}
+
 /// In-process hand-off from an `openAppWhenRun` intent to the running SwiftUI
 /// layer. `RootTabView` observes `pendingAction` and performs it.
 @MainActor
@@ -132,57 +150,6 @@ final class DomainDigIntentRouter {
     static let shared = DomainDigIntentRouter()
     var pendingAction: DomainDigDeepLink.Action?
     private init() {}
-}
-
-/// Shared builder/parser for the `domaindig://` URL scheme, used by both the
-/// intents (to open the app) and the app (to route incoming links).
-enum DomainDigDeepLink {
-    static let scheme = "domaindig"
-
-    enum Action: Equatable {
-        case inspect(String)
-        case watch(String)
-
-        var host: String {
-            switch self {
-            case .inspect: return "inspect"
-            case .watch: return "watch"
-            }
-        }
-
-        var domain: String {
-            switch self {
-            case let .inspect(domain), let .watch(domain): return domain
-            }
-        }
-    }
-
-    static func url(for action: Action) -> URL {
-        var components = URLComponents()
-        components.scheme = scheme
-        components.host = action.host
-        components.queryItems = [URLQueryItem(name: "domain", value: action.domain)]
-        // The scheme and host are fixed and the domain is percent-encoded by
-        // URLComponents, so this is always a valid URL.
-        return components.url!
-    }
-
-    static func action(from url: URL) -> Action? {
-        guard url.scheme == scheme else { return nil }
-
-        let domain = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-            .queryItems?
-            .first { $0.name == "domain" }?
-            .value?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !domain.isEmpty else { return nil }
-
-        switch url.host() {
-        case "inspect": return .inspect(domain)
-        case "watch": return .watch(domain)
-        default: return nil
-        }
-    }
 }
 
 /// Exposes DomainDig intents to Spotlight and Siri with invocation phrases.
@@ -205,6 +172,15 @@ struct DomainDigShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Add to Watchlist",
             systemImageName: "plus.circle"
+        )
+        AppShortcut(
+            intent: RunSweepIntent(),
+            phrases: [
+                "Run a sweep with \(.applicationName)",
+                "Sweep my \(.applicationName) watchlist"
+            ],
+            shortTitle: "Run Sweep",
+            systemImageName: "arrow.trianglehead.2.clockwise"
         )
     }
 }

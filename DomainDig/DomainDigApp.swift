@@ -39,6 +39,7 @@ struct DomainDigApp: App {
                     cloudSyncService.scheduleSyncIfNeeded(trigger: .launch)
                     viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
                     IntegrationService.shared.processQueueNow()
+                    viewModel.refreshWidgetData()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .cloudSyncDidApplyChanges)) { _ in
                     viewModel.refreshPersistedData()
@@ -57,6 +58,7 @@ struct DomainDigApp: App {
             cloudSyncService.scheduleSyncIfNeeded(trigger: .launch)
             viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
             IntegrationService.shared.processQueueNow()
+            viewModel.refreshWidgetData()
         }
     }
 }

@@ -12,6 +12,7 @@ struct RootTabView: View {
     @Bindable var viewModel: DomainViewModel
     @State private var purchaseService = PurchaseService.shared
     @State private var intentRouter = DomainDigIntentRouter.shared
+    @State private var detailDomain: TrackedDomain?
     @State private var selectedTab: RootTab = FeatureAccessService.currentTier == .free ? .inspect : .dashboard
 
     var body: some View {
@@ -83,6 +84,11 @@ struct RootTabView: View {
                 selectedTab = .dashboard
             }
         }
+        .sheet(item: $detailDomain) { trackedDomain in
+            NavigationStack {
+                TrackedDomainDetailView(viewModel: viewModel, trackedDomain: trackedDomain)
+            }
+        }
         .onOpenURL { url in
             guard let action = DomainDigDeepLink.action(from: url) else { return }
             perform(action)
@@ -113,6 +119,19 @@ struct RootTabView: View {
             if viewModel.trackDomain(domain: domain, availabilityStatus: nil) {
                 selectedTab = .dashboard
             }
+        case let .detail(domain):
+            // Open the tracked domain's detail (e.g. from a widget tap). If it is
+            // no longer tracked, fall back to inspecting it.
+            if let tracked = viewModel.trackedDomains.first(
+                where: { $0.domain.caseInsensitiveCompare(domain) == .orderedSame }
+            ) {
+                detailDomain = tracked
+            } else {
+                perform(.inspect(domain))
+            }
+        case .sweep:
+            selectedTab = .dashboard
+            viewModel.refreshAllTrackedDomains()
         }
     }
 }
