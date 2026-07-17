@@ -10,6 +10,9 @@ struct WatchlistView: View {
     @State private var newTrackedDomain = ""
     @State private var addDomainError: String?
     @FocusState private var isAddDomainFieldFocused: Bool
+    @State private var showSavedViewsSheet = false
+    @State private var showSaveViewPrompt = false
+    @State private var newSavedViewName = ""
 
     private var pinnedDomains: [TrackedDomain] {
         viewModel.filteredTrackedDomains.filter(\.isPinned)
@@ -23,6 +26,14 @@ struct WatchlistView: View {
         let _ = purchaseService.currentTier
 
         List {
+            if !viewModel.allWatchlistTags.isEmpty {
+                Section {
+                    TagFilterChipRowView(tags: viewModel.allWatchlistTags, selection: $viewModel.watchlistTagFilter)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+            }
+
             if viewModel.batchLookupSource == .watchlistRefresh, (!viewModel.batchResults.isEmpty || viewModel.batchLookupRunning) {
                 Section("Refresh Progress") {
                     VStack(alignment: .leading, spacing: 8) {
@@ -107,6 +118,17 @@ struct WatchlistView: View {
                         Picker("Sort", selection: $viewModel.watchlistSortOption) {
                             ForEach(WatchlistSortOption.allCases) { option in
                                 Text(option.title).tag(option)
+                            }
+                        }
+
+                        Button("Save Current View…") {
+                            newSavedViewName = ""
+                            showSaveViewPrompt = true
+                        }
+
+                        if !viewModel.watchlistSavedViews.isEmpty {
+                            Button("Saved Views") {
+                                showSavedViewsSheet = true
                             }
                         }
 
@@ -210,6 +232,49 @@ struct WatchlistView: View {
                 title: "Add Watchlist Domains",
                 availableDomains: viewModel.filteredTrackedDomains.map(\.domain)
             )
+        }
+        .alert("Save Current View", isPresented: $showSaveViewPrompt) {
+            TextField("View name", text: $newSavedViewName)
+            Button("Save") {
+                viewModel.saveCurrentWatchlistView(name: newSavedViewName)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Saves the current tag, filter, and sort as a reusable preset.")
+        }
+        .sheet(isPresented: $showSavedViewsSheet) {
+            NavigationStack {
+                List {
+                    ForEach(viewModel.watchlistSavedViews) { view in
+                        Button {
+                            viewModel.applyWatchlistSavedView(view)
+                            showSavedViewsSheet = false
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(view.name)
+                                    .foregroundStyle(.primary)
+                                Text([view.tag, view.filter.title, view.sort.title].compactMap { $0 }.joined(separator: " • "))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .onDelete { offsets in
+                        viewModel.deleteWatchlistSavedViews(at: offsets)
+                    }
+                }
+                .navigationTitle("Saved Views")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            showSavedViewsSheet = false
+                        }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        EditButton()
+                    }
+                }
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -480,6 +545,8 @@ struct TrackedDomainDetailView: View {
 
     @State private var noteDraft = ""
     @State private var isEditingNote = false
+    @State private var tagsDraft = ""
+    @State private var isEditingTags = false
     @State private var showRerunOptions = false
     @State private var shareEntity: ShareableEntity?
     @State private var showingAuditTimeline = false
@@ -567,12 +634,27 @@ struct TrackedDomainDetailView: View {
                 .disabled(!viewModel.canEdit(liveTrackedDomain))
 
                 Button {
+                    tagsDraft = liveTrackedDomain.tags.joined(separator: ", ")
+                    isEditingTags = true
+                } label: {
+                    Label(liveTrackedDomain.tags.isEmpty ? "Add Tags" : "Edit Tags", systemImage: "tag")
+                }
+                .disabled(!viewModel.canEdit(liveTrackedDomain))
+
+                Button {
                     shareEntity = .trackedDomain(liveTrackedDomain.domain)
                 } label: {
                     Label(liveTrackedDomain.collaboration?.isShared == true ? "Manage Share" : "Share Domain", systemImage: "person.2")
                 }
             }
             .listRowBackground(Color(.systemGray6).opacity(0.5))
+
+            if !liveTrackedDomain.tags.isEmpty {
+                Section("Tags") {
+                    TagChipRowView(tags: liveTrackedDomain.tags)
+                }
+                .listRowBackground(Color(.systemGray6).opacity(0.5))
+            }
 
             Section("Monitoring Status") {
                 LabeledContent("State", value: viewModel.monitoringStatusLabel(for: liveTrackedDomain))
@@ -672,6 +754,31 @@ struct TrackedDomainDetailView: View {
                         Button("Save") {
                             viewModel.updateNote(noteDraft, for: liveTrackedDomain)
                             isEditingNote = false
+                        }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $isEditingTags) {
+            NavigationStack {
+                Form {
+                    Section("Tags") {
+                        TextField("comma, separated, tags", text: $tagsDraft)
+                            .textInputAutocapitalization(.never)
+                    }
+                }
+                .navigationTitle("Edit Tags")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            isEditingTags = false
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            let tags = tagsDraft.components(separatedBy: ",")
+                            viewModel.updateTags(tags, for: liveTrackedDomain)
+                            isEditingTags = false
                         }
                     }
                 }

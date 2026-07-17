@@ -332,3 +332,57 @@ struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
         }
     }
 }
+
+/// A horizontally scrolling row of read-only tag chips, e.g. for a tracked
+/// domain's detail view.
+struct TagChipRowView: View {
+    let tags: [String]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(tags, id: \.self) { tag in
+                    Text(tag)
+                        .font(.caption)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color(.systemGray5).opacity(0.6), in: Capsule())
+                }
+            }
+        }
+    }
+}
+
+/// A horizontally scrolling row of selectable tag chips used to filter a list,
+/// with an "All" chip to clear the selection.
+struct TagFilterChipRowView: View {
+    let tags: [String]
+    @Binding var selection: String?
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                filterChip(title: "All", isSelected: selection == nil) {
+                    selection = nil
+                }
+                ForEach(tags, id: \.self) { tag in
+                    filterChip(title: tag, isSelected: selection == tag) {
+                        selection = (selection == tag) ? nil : tag
+                    }
+                }
+            }
+        }
+    }
+
+    private func filterChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(isSelected ? Color.cyan.opacity(0.3) : Color(.systemGray5).opacity(0.6), in: Capsule())
+                .foregroundStyle(isSelected ? Color.cyan : Color.primary)
+        }
+        .buttonStyle(.plain)
+    }
+}
