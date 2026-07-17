@@ -6,34 +6,31 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.4.1`.
+Current version: `v4.5.0`.
 
-## v4.4.1 Patch: Release Readiness (in progress)
+## v4.4.1 Patch: Release Readiness — ✅ shipped
 
-Finish the audit-mode consolidation already on the working tree, then ship a
-clean release candidate.
+- Consolidated Audit Mode onto the single `DomainDig/DomainDig/Audit*`
+  implementation and retired the prototype files.
+- Aligned `AppVersion.current`, Xcode marketing version, and build number.
+- Included audit sessions in backup/restore counts, summaries, and merge behavior.
+- Removed the retired `DomainDigCLI` target and refreshed README/architecture docs.
 
-- Resolve duplicate Audit Mode implementations; retire the prototype
-  `AuditMode.swift` / `AuditModeView.swift` and keep the `DomainDig/DomainDig/Audit*`
-  path as the single active implementation.
-- Align `AppVersion.current`, Xcode marketing version, and build number.
-- Confirm audit sessions are included in backup/restore counts, summaries, and
-  merge behavior.
-- Refresh README and architecture docs to match the shipping surface.
-
-Gate: clean Xcode build/archive before tagging.
-
-## v4.5.0 Minor: Home Screen & Shortcuts Reach
+## v4.5.0 Minor: Home Screen & Shortcuts Reach — ✅ shipped
 
 Goal: put DomainDig data and actions where the user already is.
 
-- **WidgetKit widgets** (Home Screen + Lock Screen) for pinned/watchlist domains:
-  certificate expiry countdown, monitoring status, last-change indicator.
-- **App Intents / Shortcuts**: "Inspect domain", "Add to watchlist", "Run sweep"
-  as intents usable from Shortcuts, Spotlight, and the Action button.
-- Deep links from widgets and intents into the relevant domain detail screen.
-- Polished audit-mode ergonomics carried over from the prior roadmap (timeline
-  presentation, checklist/finding editing, markdown/json/pdf export affordances).
+- **App Intents / Shortcuts** — `InspectDomainIntent`, `AddToWatchlistIntent`, and
+  `RunSweepIntent`, exposed via `DomainDigShortcuts` for Shortcuts, Spotlight, the
+  Action button, and Siri.
+- **`domaindig://` deep links** — `inspect`, `watch`, `domain` (detail), and
+  `sweep`, routed in `RootTabView`.
+- **WidgetKit portfolio widget** (Home Screen small/medium/large) — per-domain
+  health, certificate countdowns, and portfolio health counts, shared from the app
+  via an App Group; tapping a domain deep-links into its detail.
+
+Deferred to a later minor: **Lock Screen accessory widget families** and a richer
+per-widget "last change" indicator.
 
 ## v4.6.0 Minor: Alerts, Glances & iPad
 

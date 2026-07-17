@@ -3,13 +3,15 @@
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
 
+[![App Store Badge](https://zerolabs.sh/storebutton.svg)](https://apps.apple.com/us/app/domaindig/id6760368004)
+
 DomainDig is a local-first iOS domain inspection toolkit for DNS, web, ownership, monitoring, reporting, and audit workflows. The app gathers a point-in-time domain snapshot, normalizes it into a canonical `DomainReport`, and keeps user data on device unless the user exports, shares, or syncs it.
 
 ## Current Release Target
 
-Immediate release target: `v4.4.1`.
+Current release: `v4.5.0`.
 
-This patch release focuses on release readiness: resolving duplicate Audit Mode implementations, aligning app/project version metadata, preserving audit persistence and backup/restore coverage, and refreshing docs for the current app surface.
+This minor release adds Home Screen and Shortcuts reach: App Intents for inspect, add-to-watchlist, and watchlist sweep; a `domaindig://` URL scheme with deep links; and a WidgetKit portfolio widget that shares tracked-domain state with the app through an App Group.
 
 ## Features
 
