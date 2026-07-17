@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.5.0`.
+Current version: `v4.6.0`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -32,17 +32,23 @@ Goal: put DomainDig data and actions where the user already is.
 Deferred to a later minor: **Lock Screen accessory widget families** and a richer
 per-widget "last change" indicator.
 
-## v4.6.0 Minor: Alerts, Glances & iPad
+## v4.6.0 Minor: Alerts, Glances & iPad — ✅ shipped
 
 Goal: make monitoring and results feel first-class across contexts.
 
-- **Live Activities** for in-flight sweeps and active monitoring alerts
-  (cert-expiry and change events at a glance).
-- **Share extension**: "Dig this domain" from Safari and the system share sheet.
-- **iPad-optimized layout** using `NavigationSplitView` (the app currently ships
-  an iPhone-style stack on iPad); adapt watchlist/detail as a two-column layout.
-- Richer, actionable notification content building on the existing
-  `LocalNotificationService` triggers.
+- **Sweep Live Activity** — a batch/watchlist sweep drives a Live Activity with a
+  progress bar, current domain, and change/warning counts on the Lock Screen and
+  in the Dynamic Island (`SweepActivityController` around the batch pipeline).
+- **Share extension** (`DomainDigShareExtension`) — "Dig Domain" accepts a web URL
+  from the system share sheet, extracts the host, and hands it to the app via the
+  App Group inbox; the app inspects it on next activation.
+- **iPad-optimized layout** — `RootTabView` renders a `NavigationSplitView`
+  (sidebar + detail) in the regular size class and the tab bar in compact.
+- **Actionable notifications** — per-domain `threadIdentifier` grouping, a
+  "Re-inspect" action, and taps that route into the domain's detail.
+
+Deferred: monitoring-alert Live Activities (only the sweep activity shipped) and
+Lock Screen accessory widget families (carried over from v4.5.0).
 
 ## v4.7.0 Minor: Intelligence & Comparison
 
