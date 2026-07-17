@@ -572,10 +572,20 @@ struct ContentView: View {
                         Button("Export JSON") {
                             shareSingleResults(format: .json)
                         }
+                        Button("Export Markdown") {
+                            shareSingleResults(format: .markdown)
+                        }
+                        Button("Export PDF") {
+                            shareSingleResults(format: .pdf)
+                        }
                     } else {
                         Button("CSV Export • Available in Pro") {}
                             .disabled(true)
                         Button("JSON Export • Available in Pro") {}
+                            .disabled(true)
+                        Button("Markdown Export • Available in Pro") {}
+                            .disabled(true)
+                        Button("PDF Export • Available in Pro") {}
                             .disabled(true)
                     }
                 } label: {
@@ -614,10 +624,20 @@ struct ContentView: View {
                             Button("Export Batch JSON") {
                                 shareBatchResults(format: .json)
                             }
+                            Button("Export Batch Markdown") {
+                                shareBatchResults(format: .markdown)
+                            }
+                            Button("Export Batch PDF") {
+                                shareBatchResults(format: .pdf)
+                            }
                         } else {
                             Button("Batch CSV • Available in Pro") {}
                                 .disabled(true)
                             Button("Batch JSON • Available in Pro") {}
+                                .disabled(true)
+                            Button("Batch Markdown • Available in Pro") {}
+                                .disabled(true)
+                            Button("Batch PDF • Available in Pro") {}
                                 .disabled(true)
                         }
                     } label: {
