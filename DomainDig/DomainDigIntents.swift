@@ -28,6 +28,7 @@ struct InspectDomainIntent: AppIntent {
         Summary("Inspect \(\.$domain)")
     }
 
+    @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
         let requested = domain.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !requested.isEmpty else {
