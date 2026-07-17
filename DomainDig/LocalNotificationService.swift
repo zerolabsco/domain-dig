@@ -7,8 +7,27 @@ final class LocalNotificationService {
 
     private init() {}
 
+    static let domainUserInfoKey = "domain"
+    static let domainCategoryIdentifier = "domain-event"
+    static let reinspectActionIdentifier = "reinspect"
+
     func configureForegroundPresentation() {
-        UNUserNotificationCenter.current().delegate = NotificationCenterDelegate.shared
+        let center = UNUserNotificationCenter.current()
+        center.delegate = NotificationCenterDelegate.shared
+
+        let reinspect = UNNotificationAction(
+            identifier: Self.reinspectActionIdentifier,
+            title: "Re-inspect",
+            options: []
+        )
+        center.setNotificationCategories([
+            UNNotificationCategory(
+                identifier: Self.domainCategoryIdentifier,
+                actions: [reinspect],
+                intentIdentifiers: [],
+                options: []
+            )
+        ])
     }
 
     func requestAuthorizationIfNeeded() async -> Bool {
@@ -44,7 +63,8 @@ final class LocalNotificationService {
             identifier: "domain-change-\(domain)",
             title: domain,
             body: message,
-            interruptionLevel: severity == .high ? .timeSensitive : .active
+            interruptionLevel: severity == .high ? .timeSensitive : .active,
+            domain: domain
         )
     }
 
@@ -53,7 +73,8 @@ final class LocalNotificationService {
             identifier: "cert-warning-\(domain)",
             title: domain,
             body: "Certificate expires in \(daysRemaining) days",
-            interruptionLevel: .timeSensitive
+            interruptionLevel: .timeSensitive,
+            domain: domain
         )
     }
 
@@ -74,7 +95,8 @@ final class LocalNotificationService {
             identifier: "monitoring-\(domain)-\(UUID().uuidString)",
             title: domain,
             body: message,
-            interruptionLevel: interruptionLevel
+            interruptionLevel: interruptionLevel,
+            domain: domain
         )
     }
 
@@ -103,7 +125,8 @@ final class LocalNotificationService {
             identifier: "monitoring-summary-\(domain)-\(UUID().uuidString)",
             title: domain,
             body: body,
-            interruptionLevel: interruptionLevel
+            interruptionLevel: interruptionLevel,
+            domain: domain
         )
     }
 
@@ -127,13 +150,20 @@ final class LocalNotificationService {
         identifier: String,
         title: String,
         body: String,
-        interruptionLevel: UNNotificationInterruptionLevel
+        interruptionLevel: UNNotificationInterruptionLevel,
+        domain: String? = nil
     ) async {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
         content.interruptionLevel = interruptionLevel
+        if let domain {
+            // Group alerts per domain and let taps/actions route back into it.
+            content.threadIdentifier = domain
+            content.userInfo = [Self.domainUserInfoKey: domain]
+            content.categoryIdentifier = Self.domainCategoryIdentifier
+        }
 
         let request = UNNotificationRequest(
             identifier: identifier,
@@ -153,5 +183,28 @@ private final class NotificationCenterDelegate: NSObject, UNUserNotificationCent
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound]
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let userInfo = response.notification.request.content.userInfo
+        guard let domain = userInfo[LocalNotificationService.domainUserInfoKey] as? String,
+              !domain.isEmpty
+        else { return }
+
+        let action: DomainDigDeepLink.Action
+        switch response.actionIdentifier {
+        case LocalNotificationService.reinspectActionIdentifier:
+            action = .inspect(domain)
+        default:
+            // Default tap: open the tracked domain's detail.
+            action = .detail(domain)
+        }
+
+        await MainActor.run {
+            DomainDigIntentRouter.shared.pendingAction = action
+        }
     }
 }

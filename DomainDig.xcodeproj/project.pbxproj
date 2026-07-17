@@ -13,8 +13,9 @@
 		8BBFEF0C2F9874AE00E8E144 /* LookupSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */; };
 		8BCA3CC02F9C8D57004B742C /* LocalAPIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */; };
 		8BCA3CC12F9C8D57004B742C /* LocalAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */; };
-		8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
 		8BDA00010000000000000002 /* DomainDigWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8BDB00010000000000000002 /* DomainDigShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BDB00010000000000000001 /* DomainDigShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,6 +25,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 8BDA00010000000000000006;
 			remoteInfo = DomainDigWidgetExtension;
+		};
+		8BDB00010000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8B7800612F6090E300933221 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8BDB00010000000000000006;
+			remoteInfo = DomainDigShareExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -35,6 +43,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				8BDA00010000000000000002 /* DomainDigWidgetExtension.appex in Embed Foundation Extensions */,
+				8BDB00010000000000000002 /* DomainDigShareExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -49,8 +58,9 @@
 		8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LookupSnapshot.swift; sourceTree = "<group>"; };
 		8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAPIModels.swift; sourceTree = "<group>"; };
 		8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAPIService.swift; sourceTree = "<group>"; };
-		8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityService.swift; sourceTree = "<group>"; };
 		8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DomainDigWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BDB00010000000000000001 /* DomainDigShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DomainDigShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -69,6 +79,13 @@
 				Info.plist,
 			);
 			target = 8BDA00010000000000000006 /* DomainDigWidgetExtension */;
+		};
+		8BDB0001000000000000000F /* Exceptions for "DomainDigShareExtension" folder in "DomainDigShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8BDB00010000000000000006 /* DomainDigShareExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -94,6 +111,14 @@
 			path = DomainDigWidget;
 			sourceTree = "<group>";
 		};
+		8BDB0001000000000000000E /* DomainDigShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8BDB0001000000000000000F /* Exceptions for "DomainDigShareExtension" folder in "DomainDigShareExtension" target */,
+			);
+			path = DomainDigShareExtension;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,6 +136,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8BDB00010000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -120,6 +152,7 @@
 				8B78006B2F6090E300933221 /* DomainDig */,
 				8BDA0001000000000000000D /* Shared */,
 				8BDA0001000000000000000E /* DomainDigWidget */,
+				8BDB0001000000000000000E /* DomainDigShareExtension */,
 				8B78006A2F6090E300933221 /* Products */,
 				8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */,
 				8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */,
@@ -136,6 +169,7 @@
 			children = (
 				8B7800692F6090E300933221 /* DomainDig.app */,
 				8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */,
+				8BDB00010000000000000001 /* DomainDigShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -156,6 +190,7 @@
 			);
 			dependencies = (
 				8BDA00010000000000000004 /* PBXTargetDependency */,
+				8BDB00010000000000000004 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8B78006B2F6090E300933221 /* DomainDig */,
@@ -191,15 +226,30 @@
 			productReference = 8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-/* End PBXNativeTarget section */
-
-/* Begin PBXTargetDependency section */
-		8BDA00010000000000000004 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 8BDA00010000000000000006 /* DomainDigWidgetExtension */;
-			targetProxy = 8BDA00010000000000000003 /* PBXContainerItemProxy */;
+		8BDB00010000000000000006 /* DomainDigShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8BDB0001000000000000000A /* Build configuration list for PBXNativeTarget "DomainDigShareExtension" */;
+			buildPhases = (
+				8BDB00010000000000000007 /* Sources */,
+				8BDB00010000000000000008 /* Frameworks */,
+				8BDB00010000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8BDA0001000000000000000D /* Shared */,
+				8BDB0001000000000000000E /* DomainDigShareExtension */,
+			);
+			name = DomainDigShareExtension;
+			packageProductDependencies = (
+			);
+			productName = DomainDigShareExtension;
+			productReference = 8BDB00010000000000000001 /* DomainDigShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
-/* End PBXTargetDependency section */
+/* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		8B7800612F6090E300933221 /* Project object */ = {
@@ -220,6 +270,9 @@
 					8BDA00010000000000000006 = {
 						CreatedOnToolsVersion = 26.3;
 					};
+					8BDB00010000000000000006 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 				};
 			};
 			buildConfigurationList = 8B7800642F6090E300933221 /* Build configuration list for PBXProject "DomainDig" */;
@@ -238,6 +291,7 @@
 			targets = (
 				8B7800682F6090E300933221 /* DomainDig */,
 				8BDA00010000000000000006 /* DomainDigWidgetExtension */,
+				8BDB00010000000000000006 /* DomainDigShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -251,6 +305,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		8BDA00010000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BDB00010000000000000009 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -281,7 +342,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8BDB00010000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		8BDA00010000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8BDA00010000000000000006 /* DomainDigWidgetExtension */;
+			targetProxy = 8BDA00010000000000000003 /* PBXContainerItemProxy */;
+		};
+		8BDB00010000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8BDB00010000000000000006 /* DomainDigShareExtension */;
+			targetProxy = 8BDB00010000000000000003 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		8B7800722F6090E400933221 /* Debug */ = {
@@ -414,7 +495,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DomainDig/DomainDig.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -431,7 +512,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.5.0;
+				MARKETING_VERSION = 4.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -451,7 +532,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DomainDig/DomainDig.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -468,7 +549,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.5.0;
+				MARKETING_VERSION = 4.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -487,7 +568,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DomainDigWidget/DomainDigWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DomainDigWidget/Info.plist;
@@ -497,7 +578,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 4.5.0;
+				MARKETING_VERSION = 4.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -515,7 +596,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DomainDigWidget/DomainDigWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DomainDigWidget/Info.plist;
@@ -525,8 +606,64 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 4.5.0;
+				MARKETING_VERSION = 4.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8BDB0001000000000000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = DomainDigShareExtension/DomainDigShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 38;
+				DEVELOPMENT_TEAM = ZCNAX3VL9D;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DomainDigShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 4.6.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8BDB0001000000000000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = DomainDigShareExtension/DomainDigShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 38;
+				DEVELOPMENT_TEAM = ZCNAX3VL9D;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DomainDigShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 4.6.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -563,6 +700,15 @@
 			buildConfigurations = (
 				8BDA0001000000000000000B /* Debug */,
 				8BDA0001000000000000000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8BDB0001000000000000000A /* Build configuration list for PBXNativeTarget "DomainDigShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8BDB0001000000000000000B /* Debug */,
+				8BDB0001000000000000000C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

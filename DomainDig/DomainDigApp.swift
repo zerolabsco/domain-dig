@@ -40,6 +40,7 @@ struct DomainDigApp: App {
                     viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
                     IntegrationService.shared.processQueueNow()
                     viewModel.refreshWidgetData()
+                    consumeShareInbox()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .cloudSyncDidApplyChanges)) { _ in
                     viewModel.refreshPersistedData()
@@ -59,6 +60,14 @@ struct DomainDigApp: App {
             viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
             IntegrationService.shared.processQueueNow()
             viewModel.refreshWidgetData()
+            consumeShareInbox()
         }
+    }
+
+    /// Picks up a domain shared via the share extension and routes it into an
+    /// inspection through the intent router (consumed by `RootTabView`).
+    private func consumeShareInbox() {
+        guard let domain = DomainDigShareInbox.consume() else { return }
+        DomainDigIntentRouter.shared.pendingAction = .inspect(domain)
     }
 }

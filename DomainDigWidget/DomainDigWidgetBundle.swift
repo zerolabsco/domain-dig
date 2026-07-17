@@ -5,5 +5,6 @@ import WidgetKit
 struct DomainDigWidgetBundle: WidgetBundle {
     var body: some Widget {
         DomainDigPortfolioWidget()
+        SweepLiveActivity()
     }
 }
