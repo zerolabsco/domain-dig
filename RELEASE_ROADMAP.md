@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.6.0`.
+Current version: `v4.7.0`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -50,15 +50,23 @@ Goal: make monitoring and results feel first-class across contexts.
 Deferred: monitoring-alert Live Activities (only the sweep activity shipped) and
 Lock Screen accessory widget families (carried over from v4.5.0).
 
-## v4.7.0 Minor: Intelligence & Comparison
+## v4.7.0 Minor: Intelligence & Comparison — ✅ shipped
 
 Goal: help users interpret and organize, not just collect.
 
-- **Domain-vs-domain comparison** (side-by-side), extending the existing
-  time-based `DiffService` to compare two distinct domains.
-- **Reputation / blocklist signals** as a new optional data source (currently
-  absent); surfaced in the report and available to monitoring alerts.
-- **Tags / folders and saved views** for the watchlist to organize large sets.
+- **Domain-vs-domain comparison** — `DiffService.compare(domainA:domainB:)`
+  reuses the existing section-diff builders; `DomainCompareView` (Watchlist
+  toolbar → "Compare Domains") picks two tracked domains and renders the result
+  with the existing diff section UI.
+- **Reputation / blocklist signals** — a new pluggable data source
+  (`ExternalDataService.reputation(domain:)`, Pro+) mirroring the existing
+  ownership/DNS-history/pricing enrichment pattern. Ships with no bundled
+  third-party endpoint; folds a listed status into risk score/factors and
+  insights, so it rides the existing report and monitoring change-severity
+  pipeline rather than needing bespoke monitoring wiring.
+- **Tags and saved views** for the watchlist — freeform tags per tracked
+  domain, tag filter chips, and named saved filter/sort/tag presets
+  (UserDefaults-backed; not yet part of backup/restore).
 
 ## v4.8.0 Minor: Reporting & Sharing
 
@@ -88,6 +96,9 @@ feature releases above will accumulate.
 ## Cross-cutting note
 
 New feature surfaces (widgets, intents, extensions) each add a target and a
-persistence/entitlement seam. Add at least characterization tests for
-`DomainDataPortabilityService` and the report builders **before** v4.7.0, so the
-v5.0.0 contract and refactor work has a safety net rather than starting from zero.
+persistence/entitlement seam. This project still has **no XCTest target** —
+v4.5.0 through v4.7.0 all shipped without the characterization-test safety net
+originally recommended before v4.7.0. That gap is now larger (comparison,
+reputation, and tags/saved-views all touch persisted models with hand-written
+backward-compatible decoders) and should be the very first thing v5.0.0 does,
+not a later item within it.
