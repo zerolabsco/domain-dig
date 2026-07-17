@@ -383,15 +383,8 @@ struct WorkflowDetailView: View {
         formatter.dateFormat = "yyyyMMdd_HHmmss"
         let timestamp = formatter.string(from: Date())
         let filename = "\(timestamp)_workflow_\(latestSummary.workflowName.replacingOccurrences(of: " ", with: "_").lowercased()).\(format.fileExtension)"
-        let data: Data
-
-        switch format {
-        case .text:
-            data = Data(viewModel.exportWorkflowText(summary: latestSummary, changedOnly: changedOnly).utf8)
-        case .csv:
-            data = Data(viewModel.exportWorkflowCSV(summary: latestSummary, changedOnly: changedOnly).utf8)
-        case .json:
-            data = viewModel.exportWorkflowJSONData(summary: latestSummary, changedOnly: changedOnly) ?? Data("[]".utf8)
+        guard let data = viewModel.exportWorkflowData(summary: latestSummary, changedOnly: changedOnly, format: format) else {
+            return
         }
 
         ExportPresenter.share(filename: filename, data: data)
@@ -586,15 +579,8 @@ struct WorkflowRunSummaryView: View {
         formatter.dateFormat = "yyyyMMdd_HHmmss"
         let timestamp = formatter.string(from: Date())
         let filename = "\(timestamp)_workflow_summary.\(format.fileExtension)"
-        let data: Data
-
-        switch format {
-        case .text:
-            data = Data(viewModel.exportWorkflowText(summary: summary, changedOnly: changedOnly).utf8)
-        case .csv:
-            data = Data(viewModel.exportWorkflowCSV(summary: summary, changedOnly: changedOnly).utf8)
-        case .json:
-            data = viewModel.exportWorkflowJSONData(summary: summary, changedOnly: changedOnly) ?? Data("[]".utf8)
+        guard let data = viewModel.exportWorkflowData(summary: summary, changedOnly: changedOnly, format: format) else {
+            return
         }
 
         ExportPresenter.share(filename: filename, data: data)

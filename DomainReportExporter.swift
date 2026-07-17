@@ -1,11 +1,28 @@
 import Foundation
 
-enum DomainExportFormat: String {
+#if canImport(UIKit)
+import UIKit
+#endif
+
+enum DomainExportFormat: String, CaseIterable, Identifiable {
     case text = "txt"
     case csv = "csv"
     case json = "json"
+    case markdown = "md"
+    case pdf = "pdf"
 
+    var id: String { rawValue }
     var fileExtension: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .text: return "TXT"
+        case .csv: return "CSV"
+        case .json: return "JSON"
+        case .markdown: return "Markdown"
+        case .pdf: return "PDF"
+        }
+    }
 }
 
 enum DomainReportExporter {
@@ -17,6 +34,10 @@ enum DomainReportExporter {
             return Data(csv(for: [report]).utf8)
         case .json:
             return try jsonEncoder.encode(report)
+        case .markdown:
+            return Data(markdown(for: report).utf8)
+        case .pdf:
+            return pdfData(fromMarkdown: markdown(for: report))
         }
     }
 
@@ -28,7 +49,86 @@ enum DomainReportExporter {
             return Data(csv(for: reports).utf8)
         case .json:
             return try jsonEncoder.encode(reports)
+        case .markdown:
+            return Data(batchMarkdown(for: reports, title: title).utf8)
+        case .pdf:
+            return pdfData(fromMarkdown: batchMarkdown(for: reports, title: title))
         }
+    }
+
+    /// Renders `text(for:)`'s content as Markdown: the leading title becomes an
+    /// H1, `appendSection`'s "Title\n----" underlines become H2 headers, and
+    /// other non-empty lines that aren't already list items become bullets.
+    /// This reuses the exact same section content as the text export rather
+    /// than re-deriving it, so the two formats never drift.
+    static func markdown(for report: DomainReport) -> String {
+        markdown(fromPlainText: text(for: report), title: "DomainDig Report")
+    }
+
+    static func batchMarkdown(for reports: [DomainReport], title: String) -> String {
+        markdown(fromPlainText: batchText(for: reports, title: title), title: title)
+    }
+
+    private static func markdown(fromPlainText text: String, title: String) -> String {
+        let lines = text.components(separatedBy: "\n")
+        var output: [String] = ["# \(title)", ""]
+        var index = 0
+        while index < lines.count {
+            let line = lines[index]
+            if index == 0, line == title {
+                index += 1
+                continue
+            }
+            if index + 1 < lines.count, !line.isEmpty, lines[index + 1] == String(repeating: "-", count: line.count) {
+                output.append("")
+                output.append("## \(line)")
+                index += 2
+                continue
+            }
+            if line.isEmpty || line.hasPrefix("-") || line.hasPrefix("  ") {
+                output.append(line)
+            } else {
+                output.append("- \(line)")
+            }
+            index += 1
+        }
+        return output.joined(separator: "\n")
+    }
+
+    /// Renders Markdown as a simple monospaced multi-page PDF. Foundation-only
+    /// consumers (no UIKit available) get the Markdown bytes back instead.
+    static func pdfData(fromMarkdown markdown: String) -> Data {
+        #if canImport(UIKit)
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792))
+        return renderer.pdfData { context in
+            let lines = markdown.components(separatedBy: .newlines)
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.lineBreakMode = .byWordWrapping
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+                .paragraphStyle: paragraphStyle
+            ]
+
+            var yOffset: CGFloat = 36
+            context.beginPage()
+
+            for line in lines {
+                if yOffset > 744 {
+                    context.beginPage()
+                    yOffset = 36
+                }
+
+                let renderedLine = NSString(string: line.isEmpty ? " " : line)
+                renderedLine.draw(
+                    in: CGRect(x: 36, y: yOffset, width: 540, height: 22),
+                    withAttributes: attributes
+                )
+                yOffset += 16
+            }
+        }
+        #else
+        return Data(markdown.utf8)
+        #endif
     }
 
     static func text(for report: DomainReport) -> String {
