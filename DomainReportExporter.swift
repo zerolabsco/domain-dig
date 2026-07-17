@@ -4,7 +4,7 @@ import Foundation
 import UIKit
 #endif
 
-enum DomainExportFormat: String, CaseIterable, Identifiable {
+enum DomainExportFormat: String, CaseIterable, Identifiable, Codable {
     case text = "txt"
     case csv = "csv"
     case json = "json"

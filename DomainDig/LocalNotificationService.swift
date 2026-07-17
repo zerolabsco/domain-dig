@@ -140,6 +140,15 @@ final class LocalNotificationService {
         )
     }
 
+    func notifyScheduledReportReady(domainCount: Int) async {
+        await schedule(
+            identifier: "scheduled-report-\(UUID().uuidString)",
+            title: "Scheduled Report Ready",
+            body: "Report generated for \(domainCount) domain\(domainCount == 1 ? "" : "s").",
+            interruptionLevel: .active
+        )
+    }
+
     func clearAllNotifications() async {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()

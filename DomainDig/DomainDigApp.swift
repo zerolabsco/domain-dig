@@ -20,6 +20,7 @@ struct DomainDigApp: App {
     init() {
         LocalNotificationService.shared.configureForegroundPresentation()
         DomainMonitoringScheduler.shared.registerBackgroundTask()
+        ScheduledReportScheduler.shared.registerBackgroundTask()
     }
 
     var body: some Scene {
@@ -38,6 +39,7 @@ struct DomainDigApp: App {
                     localAPIService.refresh()
                     cloudSyncService.scheduleSyncIfNeeded(trigger: .launch)
                     viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
+                    ScheduledReportScheduler.shared.syncSchedule()
                     IntegrationService.shared.processQueueNow()
                     viewModel.refreshWidgetData()
                     consumeShareInbox()
@@ -58,6 +60,7 @@ struct DomainDigApp: App {
             localAPIService.refresh()
             cloudSyncService.scheduleSyncIfNeeded(trigger: .launch)
             viewModel.monitoringStatusMessage = DomainMonitoringScheduler.shared.syncSchedule()
+            ScheduledReportScheduler.shared.syncSchedule()
             IntegrationService.shared.processQueueNow()
             viewModel.refreshWidgetData()
             consumeShareInbox()
