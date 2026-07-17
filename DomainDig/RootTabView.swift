@@ -11,6 +11,7 @@ private enum RootTab: Hashable {
 struct RootTabView: View {
     @Bindable var viewModel: DomainViewModel
     @State private var purchaseService = PurchaseService.shared
+    @State private var intentRouter = DomainDigIntentRouter.shared
     @State private var selectedTab: RootTab = FeatureAccessService.currentTier == .free ? .inspect : .dashboard
 
     var body: some View {
@@ -79,6 +80,37 @@ struct RootTabView: View {
         }
         .onChange(of: purchaseService.currentTier) { _, newValue in
             if newValue != .free, selectedTab == .inspect, viewModel.trackedDomains.isEmpty == false {
+                selectedTab = .dashboard
+            }
+        }
+        .onOpenURL { url in
+            guard let action = DomainDigDeepLink.action(from: url) else { return }
+            perform(action)
+        }
+        .onChange(of: intentRouter.pendingAction) { _, action in
+            consume(action)
+        }
+        .task {
+            consume(intentRouter.pendingAction)
+        }
+    }
+
+    private func consume(_ action: DomainDigDeepLink.Action?) {
+        guard let action else { return }
+        intentRouter.pendingAction = nil
+        perform(action)
+    }
+
+    private func perform(_ action: DomainDigDeepLink.Action) {
+        switch action {
+        case let .inspect(domain):
+            viewModel.domain = domain
+            selectedTab = .inspect
+            viewModel.run()
+        case let .watch(domain):
+            // On success show the dashboard (where tracked domains live); on
+            // failure stay put so the upgrade/paywall alert surfaces in place.
+            if viewModel.trackDomain(domain: domain, availabilityStatus: nil) {
                 selectedTab = .dashboard
             }
         }

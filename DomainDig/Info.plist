@@ -10,6 +10,17 @@
 	<array>
 		<string>net.cleberg.DomainDig.monitor.refresh</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>net.cleberg.DomainDig</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>domaindig</string>
+			</array>
+		</dict>
+	</array>
 	<key>CKSharingSupported</key>
 	<true/>
 	<key>UIBackgroundModes</key>
