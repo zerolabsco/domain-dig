@@ -105,6 +105,32 @@ struct DomainDiff: Identifiable, Equatable, Codable {
 typealias DomainDiffItem = DiffItem
 typealias DomainDiffSection = DiffSection
 
+/// Result of comparing two distinct domains' latest reports side by side, as
+/// opposed to `DomainDiff`, which compares the same domain across time.
+struct DomainComparisonResult: Identifiable, Equatable {
+    let domainA: String
+    let domainB: String
+    let generatedAt: Date
+    let sections: [DiffSection]
+    let contextNote: String?
+
+    var id: String {
+        "\(domainA)-\(domainB)-\(generatedAt.timeIntervalSince1970)"
+    }
+
+    var changedSections: [DiffSection] {
+        sections.filter(\.hasChanges)
+    }
+
+    var changeCount: Int {
+        sections.reduce(0) { $0 + $1.changeCount }
+    }
+
+    var severity: ChangeSeverity {
+        sections.map(\.severity).max() ?? .low
+    }
+}
+
 enum DiffService {
     static func compare(from oldReport: DomainReport, to newReport: DomainReport) -> DomainDiff {
         let sections = [
@@ -178,6 +204,31 @@ enum DiffService {
             riskAssessment: currentRiskAssessment,
             insights: currentInsights,
             riskScoreDelta: riskScoreDelta
+        )
+    }
+
+    /// Compares two distinct domains' reports section by section. Reuses the same
+    /// field-level diff logic as time-based comparison; the two reports are simply
+    /// unrelated domains rather than the same domain at different times.
+    static func compare(domainA: DomainReport, domainB: DomainReport) -> DomainComparisonResult {
+        let sections = [
+            availabilitySection(from: domainA, to: domainB),
+            ownershipSection(from: domainA, to: domainB),
+            dnsSection(from: domainA, to: domainB),
+            webSection(from: domainA, to: domainB),
+            emailSection(from: domainA, to: domainB),
+            networkSection(from: domainA, to: domainB),
+            subdomainsSection(from: domainA, to: domainB),
+            intelligenceSection(from: domainA, to: domainB),
+            riskSection(from: domainA, to: domainB)
+        ]
+
+        return DomainComparisonResult(
+            domainA: domainA.domain,
+            domainB: domainB.domain,
+            generatedAt: Date(),
+            sections: sections,
+            contextNote: comparisonContextNote(from: domainA, to: domainB)
         )
     }
 

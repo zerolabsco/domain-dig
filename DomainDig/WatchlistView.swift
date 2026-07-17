@@ -120,6 +120,12 @@ struct WatchlistView: View {
                             showWorkflowAddSheet = true
                         }
 
+                        if viewModel.trackedDomains.count >= 2 {
+                            NavigationLink("Compare Domains") {
+                                DomainCompareView(viewModel: viewModel)
+                            }
+                        }
+
                         Button("Export TXT") {
                             shareTrackedDomains(format: .text)
                         }
