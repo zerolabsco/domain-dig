@@ -710,50 +710,20 @@ struct ContentView: View {
     }
 
     private func shareSingleResults(format: DomainExportFormat) {
-        let (filename, data) = exportPayload(
-            prefix: "domaindig_single",
-            format: format,
-            text: viewModel.exportText(),
-            csv: viewModel.exportCSV(),
-            json: viewModel.exportJSONData()
-        )
-        ExportPresenter.share(filename: filename, data: data)
+        guard let data = viewModel.exportSingleReportData(format: format) else { return }
+        ExportPresenter.share(filename: exportFilename(prefix: "domaindig_single", format: format), data: data)
     }
 
     private func shareBatchResults(format: DomainExportFormat) {
-        let (filename, data) = exportPayload(
-            prefix: "domaindig_batch",
-            format: format,
-            text: viewModel.exportBatchText(),
-            csv: viewModel.exportBatchCSV(),
-            json: viewModel.exportBatchJSONData()
-        )
-        ExportPresenter.share(filename: filename, data: data)
+        guard let data = viewModel.exportBatchReportData(format: format) else { return }
+        ExportPresenter.share(filename: exportFilename(prefix: "domaindig_batch", format: format), data: data)
     }
 
-    private func exportPayload(
-        prefix: String,
-        format: DomainExportFormat,
-        text: String,
-        csv: String,
-        json: Data?
-    ) -> (String, Data) {
+    private func exportFilename(prefix: String, format: DomainExportFormat) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd_HHmmss"
         let timestamp = formatter.string(from: Date())
-        let filename = "\(timestamp)_\(prefix).\(format.fileExtension)"
-        let data: Data
-
-        switch format {
-        case .text:
-            data = Data(text.utf8)
-        case .csv:
-            data = Data(csv.utf8)
-        case .json:
-            data = json ?? Data("[]".utf8)
-        }
-
-        return (filename, data)
+        return "\(timestamp)_\(prefix).\(format.fileExtension)"
     }
 
     private var defaultCollapsedSections: Set<ResultSection> {

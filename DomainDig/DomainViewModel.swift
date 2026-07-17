@@ -1521,16 +1521,6 @@ final class DomainViewModel {
         }
     }
 
-    func exportText() -> String {
-        guard let currentReport else { return "No results available." }
-        return DomainReportExporter.text(for: currentReport)
-    }
-
-    func exportCSV() -> String {
-        guard let currentReport else { return DomainReportExporter.csv(for: []) }
-        return DomainReportExporter.csv(for: [currentReport])
-    }
-
     func exportJSONData() -> Data? {
         guard let currentReport else { return nil }
         return try? DomainReportExporter.data(for: currentReport, format: .json)
@@ -1539,6 +1529,11 @@ final class DomainViewModel {
     func exportJSONString() -> String? {
         guard let data = exportJSONData() else { return nil }
         return String(data: data, encoding: .utf8)
+    }
+
+    func exportSingleReportData(format: DomainExportFormat) -> Data? {
+        guard let currentReport else { return nil }
+        return try? DomainReportExporter.data(for: currentReport, format: format)
     }
 
     func audits(for domain: String) -> [AuditSession] {
@@ -1792,40 +1787,18 @@ final class DomainViewModel {
         usageCredits = Dictionary(uniqueKeysWithValues: statuses.map { ($0.feature, $0) })
     }
 
-    func exportBatchText() -> String {
-        DomainReportExporter.batchText(
+    func exportBatchReportData(format: DomainExportFormat) -> Data? {
+        try? DomainReportExporter.data(
             for: currentBatchReports(),
+            format: format,
             title: batchLookupSource == .watchlistRefresh ? "Tracked Domains Export" : "Batch Results Export"
         )
     }
 
-    func exportBatchCSV() -> String {
-        DomainReportExporter.csv(for: currentBatchReports())
-    }
-
-    func exportBatchJSONData() -> Data? {
-        try? DomainReportExporter.data(
-            for: currentBatchReports(),
-            format: .json,
-            title: batchLookupSource == .watchlistRefresh ? "Tracked Domains Export" : "Batch Results Export"
-        )
-    }
-
-    func exportTrackedDomainsCSV(domains: [TrackedDomain]) -> String {
-        DomainReportExporter.csv(for: reports(for: domains))
-    }
-
-    func exportTrackedDomainsText(domains: [TrackedDomain]) -> String {
-        DomainReportExporter.batchText(
-            for: reports(for: domains),
-            title: "Tracked Domains Export"
-        )
-    }
-
-    func exportTrackedDomainsJSONData(domains: [TrackedDomain]) -> Data? {
+    func exportTrackedDomainsData(domains: [TrackedDomain], format: DomainExportFormat) -> Data? {
         try? DomainReportExporter.data(
             for: reports(for: domains),
-            format: .json,
+            format: format,
             title: "Tracked Domains Export"
         )
     }
@@ -1932,6 +1905,31 @@ final class DomainViewModel {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         return try? encoder.encode(payload)
+    }
+
+    func exportWorkflowMarkdown(summary: WorkflowRunSummary, changedOnly: Bool) -> String {
+        let reports = workflowReports(from: summary, changedOnly: changedOnly)
+        let base = DomainReportExporter.batchMarkdown(for: reports, title: "\(summary.workflowName) Workflow Export")
+        guard !summary.workflowInsights.isEmpty else { return base }
+        let insightLines = summary.workflowInsights.map {
+            "- \($0.description): \($0.domainsInvolved.joined(separator: ", "))"
+        }
+        return (["## \(summary.workflowName) Workflow Insights"] + insightLines + ["", base]).joined(separator: "\n")
+    }
+
+    func exportWorkflowData(summary: WorkflowRunSummary, changedOnly: Bool, format: DomainExportFormat) -> Data? {
+        switch format {
+        case .text:
+            return Data(exportWorkflowText(summary: summary, changedOnly: changedOnly).utf8)
+        case .csv:
+            return Data(exportWorkflowCSV(summary: summary, changedOnly: changedOnly).utf8)
+        case .json:
+            return exportWorkflowJSONData(summary: summary, changedOnly: changedOnly)
+        case .markdown:
+            return Data(exportWorkflowMarkdown(summary: summary, changedOnly: changedOnly).utf8)
+        case .pdf:
+            return DomainReportExporter.pdfData(fromMarkdown: exportWorkflowMarkdown(summary: summary, changedOnly: changedOnly))
+        }
     }
 
     private func performLookup(domain: String, lookupID: UUID) async -> HistoryEntry? {

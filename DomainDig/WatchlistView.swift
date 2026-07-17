@@ -388,15 +388,8 @@ struct WatchlistView: View {
         formatter.dateFormat = "yyyyMMdd_HHmmss"
         let timestamp = formatter.string(from: Date())
         let filename = "\(timestamp)_domaindig_watchlist.\(format.fileExtension)"
-        let data: Data
-
-        switch format {
-        case .text:
-            data = Data(viewModel.exportTrackedDomainsText(domains: viewModel.filteredTrackedDomains).utf8)
-        case .csv:
-            data = Data(viewModel.exportTrackedDomainsCSV(domains: viewModel.filteredTrackedDomains).utf8)
-        case .json:
-            data = viewModel.exportTrackedDomainsJSONData(domains: viewModel.filteredTrackedDomains) ?? Data("[]".utf8)
+        guard let data = viewModel.exportTrackedDomainsData(domains: viewModel.filteredTrackedDomains, format: format) else {
+            return
         }
 
         ExportPresenter.share(filename: filename, data: data)
