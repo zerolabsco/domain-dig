@@ -312,6 +312,8 @@ final class DomainViewModel {
     var watchlistSearchText = ""
     var watchlistFilter: WatchlistFilterOption = .all
     var watchlistSortOption: WatchlistSortOption = .pinned
+    var watchlistTagFilter: String?
+    var watchlistSavedViews: [WatchlistSavedView] = DomainViewModel.loadWatchlistSavedViews()
     var dashboardSearchText = ""
     var dashboardFilter: PortfolioFilterOption = .all
     var monitoringSettings: MonitoringSettings = MonitoringStorage.loadSettings()
@@ -429,6 +431,10 @@ final class DomainViewModel {
         let query = watchlistSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let filtered = trackedDomains.filter { trackedDomain in
             if !query.isEmpty, !trackedDomain.domain.localizedCaseInsensitiveContains(query) {
+                return false
+            }
+
+            if let watchlistTagFilter, !trackedDomain.tags.contains(watchlistTagFilter) {
                 return false
             }
 
@@ -886,6 +892,69 @@ final class DomainViewModel {
         trackedDomains[index].updatedAt = Date()
         CloudSyncService.shared.markNoteChanged(for: trackedDomains[index].domain, updatedAt: trackedDomains[index].updatedAt)
         persistTrackedDomains()
+    }
+
+    func updateTags(_ tags: [String], for trackedDomain: TrackedDomain) {
+        guard canEdit(trackedDomain) else { return }
+        guard let index = trackedDomains.firstIndex(where: { $0.id == trackedDomain.id }) else { return }
+        let normalized = Self.normalizedTags(tags)
+        trackedDomains[index].tags = normalized
+        trackedDomains[index].updatedAt = Date()
+        persistTrackedDomains()
+    }
+
+    /// All tags currently in use across the watchlist, sorted for stable display.
+    var allWatchlistTags: [String] {
+        Array(Set(trackedDomains.flatMap(\.tags))).sorted()
+    }
+
+    func saveCurrentWatchlistView(name: String) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        let view = WatchlistSavedView(
+            name: trimmedName,
+            tag: watchlistTagFilter,
+            filter: watchlistFilter,
+            sort: watchlistSortOption
+        )
+        watchlistSavedViews.append(view)
+        persistWatchlistSavedViews()
+    }
+
+    func applyWatchlistSavedView(_ view: WatchlistSavedView) {
+        watchlistTagFilter = view.tag
+        watchlistFilter = view.filter
+        watchlistSortOption = view.sort
+    }
+
+    func deleteWatchlistSavedViews(at offsets: IndexSet) {
+        watchlistSavedViews.remove(atOffsets: offsets)
+        persistWatchlistSavedViews()
+    }
+
+    private static let watchlistSavedViewsKey = "watchlistSavedViews"
+
+    private static func loadWatchlistSavedViews() -> [WatchlistSavedView] {
+        guard let data = UserDefaults.standard.data(forKey: watchlistSavedViewsKey),
+              let views = try? JSONDecoder().decode([WatchlistSavedView].self, from: data)
+        else { return [] }
+        return views
+    }
+
+    private func persistWatchlistSavedViews() {
+        guard let data = try? JSONEncoder().encode(watchlistSavedViews) else { return }
+        UserDefaults.standard.set(data, forKey: Self.watchlistSavedViewsKey)
+    }
+
+    private static func normalizedTags(_ tags: [String]) -> [String] {
+        var seen = Set<String>()
+        var normalized: [String] = []
+        for tag in tags {
+            let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed.lowercased()).inserted else { continue }
+            normalized.append(trimmed)
+        }
+        return normalized.sorted()
     }
 
     func removeHistoryEntries(at offsets: IndexSet) {

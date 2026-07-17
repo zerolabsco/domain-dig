@@ -882,7 +882,7 @@ struct TimelineSection: Identifiable, Equatable {
     let entries: [SnapshotSummary]
 }
 
-enum WatchlistFilterOption: String, CaseIterable, Identifiable {
+enum WatchlistFilterOption: String, CaseIterable, Identifiable, Codable {
     case all
     case pinnedOnly
     case changedOnly
@@ -901,7 +901,7 @@ enum WatchlistFilterOption: String, CaseIterable, Identifiable {
     }
 }
 
-enum WatchlistSortOption: String, CaseIterable, Identifiable {
+enum WatchlistSortOption: String, CaseIterable, Identifiable, Codable {
     case pinned
     case recentlyUpdated
     case alphabetical
@@ -917,6 +917,30 @@ enum WatchlistSortOption: String, CaseIterable, Identifiable {
         case .alphabetical:
             return "Alphabetical"
         }
+    }
+}
+
+/// A named watchlist filter preset (tag, filter, sort) the user can save and
+/// reapply. Stored locally in UserDefaults; not included in backup/restore.
+struct WatchlistSavedView: Codable, Identifiable, Equatable {
+    let id: UUID
+    var name: String
+    var tag: String?
+    var filter: WatchlistFilterOption
+    var sort: WatchlistSortOption
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        tag: String?,
+        filter: WatchlistFilterOption,
+        sort: WatchlistSortOption
+    ) {
+        self.id = id
+        self.name = name
+        self.tag = tag
+        self.filter = filter
+        self.sort = sort
     }
 }
 
@@ -1258,6 +1282,7 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
     var monitoringState: MonitoringState
     var pendingMonitoringAlerts: [MonitoringPendingAlert]
     var collaboration: CollaborationMetadata?
+    var tags: [String]
 
     init(
         id: UUID = UUID(),
@@ -1277,7 +1302,8 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         lastAlertAt: Date? = nil,
         monitoringState: MonitoringState = MonitoringState(),
         pendingMonitoringAlerts: [MonitoringPendingAlert] = [],
-        collaboration: CollaborationMetadata? = nil
+        collaboration: CollaborationMetadata? = nil,
+        tags: [String] = []
     ) {
         self.id = id
         self.domain = domain
@@ -1297,6 +1323,7 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         self.monitoringState = monitoringState
         self.pendingMonitoringAlerts = pendingMonitoringAlerts
         self.collaboration = collaboration
+        self.tags = tags
     }
 
     init(from decoder: Decoder) throws {
@@ -1319,6 +1346,7 @@ struct TrackedDomain: Codable, Identifiable, Equatable {
         monitoringState = try container.decodeIfPresent(MonitoringState.self, forKey: .monitoringState) ?? MonitoringState()
         pendingMonitoringAlerts = try container.decodeIfPresent([MonitoringPendingAlert].self, forKey: .pendingMonitoringAlerts) ?? []
         collaboration = try container.decodeIfPresent(CollaborationMetadata.self, forKey: .collaboration)
+        tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
     }
 }
 
