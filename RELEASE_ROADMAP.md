@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.7.0`.
+Current version: `v4.8.0`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -68,13 +68,33 @@ Goal: help users interpret and organize, not just collect.
   domain, tag filter chips, and named saved filter/sort/tag presets
   (UserDefaults-backed; not yet part of backup/restore).
 
-## v4.8.0 Minor: Reporting & Sharing
+## v4.8.0 Minor: Reporting & Sharing — ✅ shipped
 
 Goal: turn point-in-time snapshots into shareable, scheduled deliverables.
 
-- Scheduled report generation (markdown/json/pdf) for tracked domains.
-- Stronger share affordances for reports and audit evidence.
-- Export polish and consistency across app and local API output.
+- **Markdown and PDF export formats** — `DomainExportFormat` gains `.markdown`
+  and `.pdf` alongside text/csv/json. Markdown reuses the existing text-export
+  content via a line-based transform (never drifts from the text export); PDF
+  renders that Markdown via `UIGraphicsPDFRenderer`, mirroring the approach
+  `AuditExporter` already used for audit sessions.
+- **Scheduled report generation** — `ScheduledReportService` /
+  `ScheduledReportScheduler` (Settings → Scheduled Reports): a BGTaskScheduler-
+  driven daily/weekly job that builds a markdown/PDF/JSON report bundle for all
+  tracked domains, writes it locally, logs the run, and notifies when ready.
+  Mirrors `DomainMonitoringService`'s headless, storage-backed design; gated
+  behind the same Pro `.automatedMonitoring` capability.
+- **Stronger share affordances** — "Export Markdown"/"Export PDF" added to the
+  single-result, batch, watchlist, and workflow export menus; generated
+  scheduled reports are individually shareable from their log.
+- **Export consistency verified** — the local API already serves the canonical
+  `DomainReport` directly (no field allowlist), so `reputation`, `domainPricing`,
+  and every other field added since v4.7.0 already flow through automatically.
+  No code change was needed there.
+
+Deferred/scoped out: scheduled-report settings and logs are UserDefaults-only
+(not part of `DomainDataPortabilityService` backup/restore), same reasoning as
+v4.7.0's watchlist saved views — this is local automation config, not
+user-authored content.
 
 ## v5.0.0 Major: Contract Stabilization & Engineering Health
 
