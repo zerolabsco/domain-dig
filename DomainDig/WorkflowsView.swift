@@ -246,10 +246,20 @@ struct WorkflowDetailView: View {
                                     Button("Export JSON") {
                                         shareWorkflowResults(format: .json)
                                     }
+                                    Button("Export Markdown") {
+                                        shareWorkflowResults(format: .markdown)
+                                    }
+                                    Button("Export PDF") {
+                                        shareWorkflowResults(format: .pdf)
+                                    }
                                 } else {
                                     Button("CSV Export • Available in Pro") {}
                                         .disabled(true)
                                     Button("JSON Export • Available in Pro") {}
+                                        .disabled(true)
+                                    Button("Markdown Export • Available in Pro") {}
+                                        .disabled(true)
+                                    Button("PDF Export • Available in Pro") {}
                                         .disabled(true)
                                 }
                             } label: {
@@ -537,10 +547,20 @@ struct WorkflowRunSummaryView: View {
                             Button("Export JSON") {
                                 share(format: .json)
                             }
+                            Button("Export Markdown") {
+                                share(format: .markdown)
+                            }
+                            Button("Export PDF") {
+                                share(format: .pdf)
+                            }
                         } else {
                             Button("CSV Export • Available in Pro") {}
                                 .disabled(true)
                             Button("JSON Export • Available in Pro") {}
+                                .disabled(true)
+                            Button("Markdown Export • Available in Pro") {}
+                                .disabled(true)
+                            Button("PDF Export • Available in Pro") {}
                                 .disabled(true)
                         }
                     } label: {

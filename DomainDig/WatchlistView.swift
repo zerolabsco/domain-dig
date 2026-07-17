@@ -160,10 +160,22 @@ struct WatchlistView: View {
                             Button("Export JSON") {
                                 shareTrackedDomains(format: .json)
                             }
+
+                            Button("Export Markdown") {
+                                shareTrackedDomains(format: .markdown)
+                            }
+
+                            Button("Export PDF") {
+                                shareTrackedDomains(format: .pdf)
+                            }
                         } else {
                             Button("CSV Export • Available in Pro") {}
                                 .disabled(true)
                             Button("JSON Export • Available in Pro") {}
+                                .disabled(true)
+                            Button("Markdown Export • Available in Pro") {}
+                                .disabled(true)
+                            Button("PDF Export • Available in Pro") {}
                                 .disabled(true)
                         }
                     } label: {
