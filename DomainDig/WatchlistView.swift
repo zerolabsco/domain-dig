@@ -476,6 +476,8 @@ struct TrackedDomainDetailView: View {
     @State private var isEditingNote = false
     @State private var showRerunOptions = false
     @State private var shareEntity: ShareableEntity?
+    @State private var showingAuditTimeline = false
+    @State private var auditStartInFlight = false
 
     private var liveTrackedDomain: TrackedDomain {
         viewModel.trackedDomains.first(where: { $0.id == trackedDomain.id }) ?? trackedDomain
@@ -510,6 +512,27 @@ struct TrackedDomainDetailView: View {
                     showRerunOptions = true
                 } label: {
                     Label("Re-run Inspection", systemImage: "magnifyingglass")
+                }
+
+                Button {
+                    Task {
+                        auditStartInFlight = true
+                        if await viewModel.startAudit(for: liveTrackedDomain.domain) != nil {
+                            showingAuditTimeline = true
+                        }
+                        auditStartInFlight = false
+                    }
+                } label: {
+                    Label(auditStartInFlight ? "Starting Audit…" : "Start Audit", systemImage: "checklist")
+                }
+                .disabled(auditStartInFlight)
+
+                if !viewModel.audits(for: liveTrackedDomain.domain).isEmpty {
+                    Button {
+                        showingAuditTimeline = true
+                    } label: {
+                        Label("View Audits", systemImage: "clock.badge.checkmark")
+                    }
                 }
 
                 Button {
@@ -650,6 +673,11 @@ struct TrackedDomainDetailView: View {
         }
         .sheet(item: $shareEntity) { entity in
             CloudSharingSheet(entity: entity, title: liveTrackedDomain.domain)
+        }
+        .sheet(isPresented: $showingAuditTimeline) {
+            NavigationStack {
+                AuditDomainTimelineView(viewModel: viewModel, domain: liveTrackedDomain.domain)
+            }
         }
     }
 }

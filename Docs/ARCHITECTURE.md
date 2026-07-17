@@ -1,48 +1,93 @@
-# DomainDig v3.0.0 Architecture
+# DomainDig v4.4.1 Architecture
 
 ## Overview
 
-DomainDig is a local-first inspection platform built around one canonical output model: `DomainReport`.
+DomainDig is a local-first inspection and audit app built around one canonical output model: `DomainReport`.
 
 Inspection flow:
 
-1. `DomainInspectionService.inspect(domain:)` gathers live and cached section data into `LookupSnapshot`.
-2. `DomainReportBuilder` converts the snapshot into a canonical `DomainReport`.
-3. UI, exports, and CLI rendering derive from `DomainReport`.
+1. `LookupRuntime` coordinates the section services that gather DNS, web, TLS, ownership, reachability, redirect, email, port, and enrichment data.
+2. `DomainInspectionService` normalizes live and cached results into `LookupSnapshot`.
+3. `DomainReportBuilder` converts each snapshot into the canonical `DomainReport`.
+4. SwiftUI screens, exports, and the local API render from `DomainReport` or data derived from it.
 
-`LookupSnapshot` remains an internal collection and persistence shape. `DomainReport` is the stable presentation and export contract.
+`LookupSnapshot` remains the internal persistence shape for raw inspection state. `DomainReport` is the stable presentation/export contract.
 
-## Canonical Report Lifecycle
+## App Layers
 
-- `LookupRuntime` coordinates section services.
-- `DomainInspectionService` normalizes failures, provenance, cache state, and section metadata.
-- `DomainReportBuilder` adds summaries, insights, risk scoring, change analysis, workflow context, and report metadata.
-- `DomainReportExporter` renders TXT, CSV, and JSON from the same report payload.
-- `DomainDigCLI` prints exporter output directly so CLI output matches the app.
+- Section services: network collection and local normalization only.
+- `LookupRuntime`: orchestrates section services for a single inspection.
+- `DomainInspectionService`: builds inspection snapshots with provenance, cache state, and failure metadata.
+- `DomainReportBuilder`: assembles summaries, insights, risk scoring, workflow context, and report metadata.
+- `DomainReportExporter`: renders TXT, CSV, and JSON output for app and local API use.
+- `DomainViewModel`: coordinates SwiftUI state, persistence, audit sessions, monitoring, workflows, batch operations, imports, and exports.
+- SwiftUI views: render screens and invoke view-model actions.
+
+## Audit Mode
+
+The app has one active Audit Mode implementation:
+
+- Models live in `DomainDig/DomainDig/AuditModels.swift`.
+- UI lives in `DomainDig/DomainDig/AuditViews.swift`.
+- Export rendering lives in `DomainDig/DomainDig/AuditExporter.swift`.
+- Persistence is owned by `DomainViewModel` through `DomainDataPortabilityService`.
+
+An audit session captures:
+
+- Domain and reviewer metadata
+- Session status
+- Point-in-time `HistoryEntry` and `DomainReport`
+- Historical snapshot context
+- Evidence asset references
+- Checklist progress
+- Findings with severity, status, evidence references, notes, and checklist areas
+- Reviewer notes
+
+Audit sessions are stored under the same local portability service as the rest of app data and are included in full backup/restore flows.
+
+The older standalone prototype files, `DomainDig/AuditMode.swift` and `DomainDig/AuditModeView.swift`, are preserved in the repository for reference but excluded from synchronized target membership. They are not the release audit path.
+
+## Data Portability
+
+`DomainDataPortabilityService` owns backup, import, validation, lifecycle counts, and merge/replace behavior for:
+
+- Tracked domains
+- History snapshots
+- Audit sessions
+- Workflows
+- Monitoring settings and logs
+- App settings
+- Local feature metadata
+
+Backup imports support merge and replace modes. Merge mode deduplicates by stable IDs or normalized domain keys, keeps local data where appropriate, and merges audit-session reviewer notes when the same audit session appears in multiple backups.
 
 ## Feature Tiers
 
-The app now uses `FeatureAccessService` as the single feature gating surface.
+`FeatureAccessService`, `PremiumAccessService`, `PurchaseService`, and `UsageCreditService` provide the app's feature-gating surfaces.
 
-- `Free`: single lookup, basic history, limited tracking
-- `Pro`: workflows, batch operations, advanced exports
-- `Data+`: future historical datasets and extended enrichment
+The app remains local-first. Purchase and entitlement code is local app infrastructure and does not introduce a hosted DomainDig backend.
 
-Current release behavior is static scaffolding only. There are no purchases, backend checks, or remote entitlements.
+## Local API
 
-## Data Boundaries
+`LocalAPIService` is an automation surface over the same inspection/reporting pipeline:
 
-- Inspection services: network collection only
-- `DomainReportBuilder`: canonical model assembly
-- `FeatureAccessService`: tier and capability checks
-- `DomainViewModel`: UI orchestration, persistence, batch coordination
-- Views: rendering and interaction only
+- `DomainInspectionService`
+- `DomainReportBuilder`
+- `DomainReportExporter`
+- `LocalAPIModels`
 
-## Adding a New Data Source
+The major-version roadmap calls for a stronger compatibility promise around this local API contract in `v5.0.0`.
 
-1. Add the raw collection call to `LookupRuntime`.
+## Xcode Project Structure
+
+`DomainDig.xcodeproj` uses filesystem-synchronized groups for the `DomainDig` folder. Target membership exclusions are therefore important release metadata. Files that should remain in the tree but not compile, such as retired prototypes, must be listed in the appropriate synchronized build file exception set.
+
+## Adding A New Data Source
+
+1. Add the raw collection call to `LookupRuntime` or an existing section service.
 2. Integrate it in `DomainInspectionService` with provenance, cache source, and normalized failures.
 3. Extend `LookupSnapshot` only if the raw result must persist.
-4. Add the summarized representation to `DomainReportBuilder`.
-5. Expose it through `DomainReportExporter` if it should appear in TXT, CSV, JSON, or CLI.
-6. Render the new summary in SwiftUI using `DomainReport` fields.
+4. Add summarized representation to `DomainReportBuilder`.
+5. Expose it through `DomainReportExporter` or `LocalAPIModels` when it is part of the external contract.
+6. Render it in SwiftUI from `DomainReport` fields or view-model state.
+7. Update backup/restore only when the data is user-authored state or long-lived app state.

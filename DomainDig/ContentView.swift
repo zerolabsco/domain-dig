@@ -44,6 +44,8 @@ struct ContentView: View {
     @State private var showingCurrentDomainWorkflowSheet = false
     @State private var showingBatchWorkflowSheet = false
     @State private var showingTimeline = false
+    @State private var showingAuditTimeline = false
+    @State private var auditStartInFlight = false
 
     var body: some View {
         let _ = purchaseService.currentTier
@@ -272,6 +274,11 @@ struct ContentView: View {
         .sheet(isPresented: $showingTimeline) {
             NavigationStack {
                 TimelineView(viewModel: viewModel, domain: viewModel.searchedDomain)
+            }
+        }
+        .sheet(isPresented: $showingAuditTimeline) {
+            NavigationStack {
+                AuditDomainTimelineView(viewModel: viewModel, domain: viewModel.searchedDomain)
             }
         }
     }
@@ -507,6 +514,21 @@ struct ContentView: View {
                     }
                     Button("Add to workflow") {
                         showingCurrentDomainWorkflowSheet = true
+                    }
+                    Button(auditStartInFlight ? "Starting audit…" : "Start audit") {
+                        Task {
+                            auditStartInFlight = true
+                            if await viewModel.startAudit(for: viewModel.searchedDomain) != nil {
+                                showingAuditTimeline = true
+                            }
+                            auditStartInFlight = false
+                        }
+                    }
+                    .disabled(auditStartInFlight)
+                    if !viewModel.audits(for: viewModel.searchedDomain).isEmpty {
+                        Button("View audits") {
+                            showingAuditTimeline = true
+                        }
                     }
                     if !viewModel.historyEntries(for: viewModel.searchedDomain).isEmpty {
                         Button("Open timeline") {
@@ -3301,6 +3323,7 @@ private struct DataPortabilitySettingsView: View {
             Section("Local Data") {
                 LabeledContent("Tracked Domains", value: "\(viewModel.dataLifecycleSummary.trackedDomains)")
                 LabeledContent("History Snapshots", value: "\(viewModel.dataLifecycleSummary.historySnapshots)")
+                LabeledContent("Audit Sessions", value: "\(viewModel.dataLifecycleSummary.auditSessions)")
                 LabeledContent("Workflows", value: "\(viewModel.dataLifecycleSummary.workflows)")
                 LabeledContent("Cached Items", value: "\(viewModel.dataLifecycleSummary.cachedItems)")
                 LabeledContent("Monitoring Logs", value: "\(viewModel.dataLifecycleSummary.monitoringLogs)")
@@ -3702,6 +3725,7 @@ private struct DataImportPreviewSheet: View {
                 Section("Projected Counts") {
                     LabeledContent("Tracked Domains", value: "\(preview.projectedCounts.trackedDomains)")
                     LabeledContent("History Snapshots", value: "\(preview.projectedCounts.historySnapshots)")
+                    LabeledContent("Audit Sessions", value: "\(preview.projectedCounts.auditSessions)")
                     LabeledContent("Workflows", value: "\(preview.projectedCounts.workflows)")
                     LabeledContent("Cached Items", value: "\(preview.projectedCounts.cachedItems)")
                     LabeledContent("Monitoring Logs", value: "\(preview.projectedCounts.monitoringLogs)")

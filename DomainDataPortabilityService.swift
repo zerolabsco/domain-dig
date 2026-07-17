@@ -9,6 +9,7 @@ struct DomainDigBackup: Codable {
     let appVersion: String
     let trackedDomains: [TrackedDomain]
     let historyEntries: [HistoryEntry]
+    let auditSessions: [AuditSession]?
     let workflows: [DomainWorkflow]
     let monitoringSettings: MonitoringSettings?
     let monitoringLogs: [MonitoringLog]
@@ -88,6 +89,7 @@ enum DataPortabilityImportKind: String {
 struct DataLifecycleSummary: Equatable {
     let trackedDomains: Int
     let historySnapshots: Int
+    let auditSessions: Int
     let workflows: Int
     let cachedItems: Int
     let monitoringLogs: Int
@@ -352,6 +354,9 @@ enum DataMigrationService {
         let historyEntries = DomainDataPortabilityService.loadHistoryEntries(defaults: defaults)
         DomainDataPortabilityService.saveHistoryEntries(historyEntries, defaults: defaults)
 
+        let auditSessions = DomainDataPortabilityService.loadAuditSessions(defaults: defaults)
+        DomainDataPortabilityService.saveAuditSessions(auditSessions, defaults: defaults)
+
         let workflows = DomainDataPortabilityService.loadWorkflows(defaults: defaults)
         DomainDataPortabilityService.saveWorkflows(workflows, defaults: defaults)
 
@@ -378,6 +383,7 @@ enum DataValidationService {
 
         messages.append(contentsOf: validateTrackedDomains(backup.trackedDomains))
         messages.append(contentsOf: validateHistoryEntries(backup.historyEntries))
+        messages.append(contentsOf: validateAuditSessions(backup.auditSessions ?? []))
         messages.append(contentsOf: validateWorkflows(backup.workflows))
 
         if backup.appSettings.resolverURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -430,6 +436,23 @@ enum DataValidationService {
         return messages
     }
 
+    private static func validateAuditSessions(_ auditSessions: [AuditSession]) -> [DataValidationMessage] {
+        var messages: [DataValidationMessage] = []
+        var seen = Set<UUID>()
+
+        for session in auditSessions {
+            if normalizeDomain(session.domain).isEmpty {
+                messages.append(.init(text: "An audit session is missing its domain name.", isError: true))
+            }
+
+            if !seen.insert(session.id).inserted {
+                messages.append(.init(text: "Duplicate audit session found for \(session.domain). Merge rules will consolidate it.", isError: false))
+            }
+        }
+
+        return messages
+    }
+
     private static func validateWorkflows(_ workflows: [DomainWorkflow]) -> [DataValidationMessage] {
         var messages: [DataValidationMessage] = []
         for workflow in workflows {
@@ -479,6 +502,7 @@ enum DomainDataPortabilityService {
         static let trackedDomains = "trackedDomains"
         static let legacyWatchedDomains = "watchedDomains"
         static let history = "lookupHistory"
+        static let audits = "domainAudits"
         static let workflows = "domainWorkflows"
         static let monitoringSettings = "monitoring.settings"
         static let monitoringLogs = "monitoring.logs"
@@ -562,6 +586,21 @@ enum DomainDataPortabilityService {
     static func saveHistoryEntries(_ historyEntries: [HistoryEntry], defaults: UserDefaults = .standard) {
         if let data = try? JSONEncoder().encode(deduplicatedHistoryEntries(historyEntries)) {
             defaults.set(data, forKey: StorageKey.history)
+        }
+    }
+
+    static func loadAuditSessions(defaults: UserDefaults = .standard) -> [AuditSession] {
+        guard let data = defaults.data(forKey: StorageKey.audits),
+              let sessions = try? JSONDecoder().decode([AuditSession].self, from: data) else {
+            return []
+        }
+        return sessions.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    static func saveAuditSessions(_ auditSessions: [AuditSession], defaults: UserDefaults = .standard) {
+        let sessions = auditSessions.sorted { $0.createdAt > $1.createdAt }
+        if let data = try? JSONEncoder().encode(sessions) {
+            defaults.set(data, forKey: StorageKey.audits)
         }
     }
 
@@ -662,6 +701,7 @@ enum DomainDataPortabilityService {
             appVersion: AppVersion.current,
             trackedDomains: loadTrackedDomains(defaults: defaults),
             historyEntries: loadHistoryEntries(defaults: defaults),
+            auditSessions: loadAuditSessions(defaults: defaults),
             workflows: loadWorkflows(defaults: defaults),
             monitoringSettings: loadMonitoringSettings(defaults: defaults),
             monitoringLogs: loadMonitoringLogs(defaults: defaults),
@@ -750,7 +790,7 @@ enum DomainDataPortabilityService {
             return DataImportResult(
                 kind: .backup,
                 mode: mode,
-                summary: "Imported backup with \(backup.trackedDomains.count) tracked domains, \(backup.historyEntries.count) history snapshots, and \(backup.workflows.count) workflows.",
+                summary: "Imported backup with \(backup.trackedDomains.count) tracked domains, \(backup.historyEntries.count) history snapshots, \(backup.auditSessions?.count ?? 0) audit sessions, and \(backup.workflows.count) workflows.",
                 warnings: report.warnings
             )
         case .trackedDomains(let trackedDomains, let report):
@@ -794,6 +834,7 @@ enum DomainDataPortabilityService {
         return DataLifecycleSummary(
             trackedDomains: loadTrackedDomains(defaults: defaults).count,
             historySnapshots: loadHistoryEntries(defaults: defaults).count,
+            auditSessions: loadAuditSessions(defaults: defaults).count,
             workflows: loadWorkflows(defaults: defaults).count,
             cachedItems: cachedItems,
             monitoringLogs: loadMonitoringLogs(defaults: defaults).count
@@ -897,6 +938,7 @@ enum DomainDataPortabilityService {
             appVersion: AppVersion.current,
             trackedDomains: legacy.trackedDomains ?? [],
             historyEntries: legacy.historyEntries ?? [],
+            auditSessions: nil,
             workflows: legacy.workflows ?? [],
             monitoringSettings: legacy.monitoringSettings,
             monitoringLogs: legacy.monitoringLogs ?? [],
@@ -918,6 +960,7 @@ enum DomainDataPortabilityService {
         if mode == .replace {
             saveTrackedDomains(deduplicatedTrackedDomains(backup.trackedDomains), defaults: defaults)
             saveHistoryEntries(deduplicatedHistoryEntries(backup.historyEntries), defaults: defaults)
+            saveAuditSessions(backup.auditSessions ?? [], defaults: defaults)
             saveWorkflows(deduplicatedWorkflows(backup.workflows), defaults: defaults)
             saveMonitoringSettings(
                 MonitoringStorage.sanitizeSettings(
@@ -942,6 +985,10 @@ enum DomainDataPortabilityService {
             mergeHistoryEntries(existing: existingHistoryEntries, incoming: remappedIncomingHistory),
             defaults: defaults
         )
+
+        let existingAuditSessions = loadAuditSessions(defaults: defaults)
+        let mergedAuditSessions = mergeAuditSessions(existing: existingAuditSessions, incoming: backup.auditSessions ?? [])
+        saveAuditSessions(mergedAuditSessions, defaults: defaults)
 
         let existingWorkflows = loadWorkflows(defaults: defaults)
         saveWorkflows(mergeWorkflows(existing: existingWorkflows, incoming: backup.workflows), defaults: defaults)
@@ -1012,6 +1059,7 @@ enum DomainDataPortabilityService {
                 return DataLifecycleSummary(
                     trackedDomains: backup.trackedDomains.count,
                     historySnapshots: backup.historyEntries.count,
+                    auditSessions: backup.auditSessions?.count ?? 0,
                     workflows: backup.workflows.count,
                     cachedItems: backup.appSettings.recentSearches.count + backup.appSettings.savedDomains.count + ((backup.featureMetadata?.cachedEntitlement == nil ? 0 : 1) + (backup.featureMetadata?.usageCredits == nil ? 0 : 1)),
                     monitoringLogs: backup.monitoringLogs.count
@@ -1021,6 +1069,7 @@ enum DomainDataPortabilityService {
             return DataLifecycleSummary(
                 trackedDomains: mergeTrackedDomains(existing: loadTrackedDomains(defaults: defaults), incoming: backup.trackedDomains).domains.count,
                 historySnapshots: mergeHistoryEntries(existing: loadHistoryEntries(defaults: defaults), incoming: backup.historyEntries).count,
+                auditSessions: mergeAuditSessions(existing: loadAuditSessions(defaults: defaults), incoming: backup.auditSessions ?? []).count,
                 workflows: mergeWorkflows(existing: loadWorkflows(defaults: defaults), incoming: backup.workflows).count,
                 cachedItems: max(current.cachedItems, backup.appSettings.recentSearches.count + backup.appSettings.savedDomains.count),
                 monitoringLogs: mergeMonitoringLogs(existing: loadMonitoringLogs(defaults: defaults), incoming: backup.monitoringLogs).count
@@ -1032,6 +1081,7 @@ enum DomainDataPortabilityService {
             return DataLifecycleSummary(
                 trackedDomains: total,
                 historySnapshots: current.historySnapshots,
+                auditSessions: current.auditSessions,
                 workflows: current.workflows,
                 cachedItems: current.cachedItems,
                 monitoringLogs: current.monitoringLogs
@@ -1043,6 +1093,7 @@ enum DomainDataPortabilityService {
             return DataLifecycleSummary(
                 trackedDomains: current.trackedDomains,
                 historySnapshots: current.historySnapshots,
+                auditSessions: current.auditSessions,
                 workflows: total,
                 cachedItems: current.cachedItems,
                 monitoringLogs: current.monitoringLogs
@@ -1130,6 +1181,39 @@ enum DomainDataPortabilityService {
             }
             return lhs.domain.localizedCaseInsensitiveCompare(rhs.domain) == .orderedAscending
         }
+    }
+
+    private static func mergeAuditSessions(existing: [AuditSession], incoming: [AuditSession]) -> [AuditSession] {
+        var merged = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+
+        for session in incoming {
+            if let existingSession = merged[session.id] {
+                let winner = existingSession.findings.count >= session.findings.count ? existingSession : session
+                let candidateNotes = [existingSession.notes, session.notes]
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                let notes = candidateNotes.reduce(into: [String]()) { result, note in
+                    if !result.contains(note) {
+                        result.append(note)
+                    }
+                }.joined(separator: "\n\n")
+                merged[session.id] = AuditSession(
+                    id: existingSession.id,
+                    domain: existingSession.domain,
+                    createdAt: min(existingSession.createdAt, session.createdAt),
+                    reviewer: winner.reviewer,
+                    status: winner.status,
+                    evidence: winner.evidence,
+                    findings: winner.findings,
+                    notes: notes,
+                    checklist: winner.checklist
+                )
+            } else {
+                merged[session.id] = session
+            }
+        }
+
+        return merged.values.sorted { $0.createdAt > $1.createdAt }
     }
 
     private static func mergeWorkflows(existing: [DomainWorkflow], incoming: [DomainWorkflow]) -> [DomainWorkflow] {
@@ -1394,6 +1478,7 @@ private enum ImportPayload {
                 "Full backup import",
                 "\(backup.trackedDomains.count) tracked domains",
                 "\(backup.historyEntries.count) history snapshots",
+                "\(backup.auditSessions?.count ?? 0) audit sessions",
                 "\(backup.workflows.count) workflows",
                 "\(backup.monitoringLogs.count) monitoring logs",
                 mode == .replace ? "Replace mode will overwrite local backupable data." : "Merge mode will keep local data and consolidate duplicates."

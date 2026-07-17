@@ -2,9 +2,9 @@ import SwiftUI
 
 private enum RootTab: Hashable {
     case dashboard
+    case audit
     case history
     case inspect
-    case audit
     case settings
 }
 
@@ -26,6 +26,14 @@ struct RootTabView: View {
             .tag(RootTab.dashboard)
 
             NavigationStack {
+                AuditListView(viewModel: viewModel)
+            }
+            .tabItem {
+                Label("Audit", systemImage: "checklist")
+            }
+            .tag(RootTab.audit)
+
+            NavigationStack {
                 HistoryView(viewModel: viewModel)
             }
             .tabItem {
@@ -38,14 +46,6 @@ struct RootTabView: View {
                     Label("Inspect", systemImage: "magnifyingglass")
                 }
                 .tag(RootTab.inspect)
-
-            NavigationStack {
-                AuditModeView(viewModel: viewModel)
-            }
-            .tabItem {
-                Label("Audit", systemImage: "checklist")
-            }
-            .tag(RootTab.audit)
 
             NavigationStack {
                 SettingsView(viewModel: viewModel)

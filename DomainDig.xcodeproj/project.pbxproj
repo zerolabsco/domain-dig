@@ -7,33 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		8BBFEF082F9874AE00E8E144 /* DomainDigCLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF022F9874AE00E8E144 /* DomainDigCLI.swift */; };
 		8BBFEF092F9874AE00E8E144 /* DomainInspectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */; };
 		8BBFEF0A2F9874AE00E8E144 /* DomainReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */; };
 		8BBFEF0B2F9874AE00E8E144 /* DomainReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */; };
 		8BBFEF0C2F9874AE00E8E144 /* LookupSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */; };
-		8BBFEFCA2F987E8700E8E144 /* DomainInspectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */; };
-		8BBFEFCB2F987E8700E8E144 /* DomainReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */; };
-		8BBFEFCC2F987E8700E8E144 /* DomainReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */; };
-		8BBFEFCD2F987E8700E8E144 /* LookupSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */; };
-		8BCA3CBE2F9C8D57004B742C /* LocalAPIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */; };
-		8BCA3CBF2F9C8D57004B742C /* LocalAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */; };
 		8BCA3CC02F9C8D57004B742C /* LocalAPIModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */; };
 		8BCA3CC12F9C8D57004B742C /* LocalAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */; };
-		8BF9DA862F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
 		8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		8B7800692F6090E300933221 /* DomainDig.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DomainDig.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		8BBFEF022F9874AE00E8E144 /* DomainDigCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDigCLI.swift; sourceTree = "<group>"; };
 		8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainInspectionService.swift; sourceTree = "<group>"; };
 		8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainReportBuilder.swift; sourceTree = "<group>"; };
 		8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainReportExporter.swift; sourceTree = "<group>"; };
 		8BBFEF062F9874AE00E8E144 /* LookupSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LookupSnapshot.swift; sourceTree = "<group>"; };
 		8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAPIModels.swift; sourceTree = "<group>"; };
 		8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAPIService.swift; sourceTree = "<group>"; };
-		8BF124F92F70000100933221 /* domaindig */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = domaindig; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -41,26 +31,11 @@
 		8B1B506D2F666F64005C246F /* Exceptions for "DomainDig" folder in "DomainDig" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				DomainDigCLI.swift,
+				AuditMode.swift,
+				AuditModeView.swift,
 				Info.plist,
 			);
 			target = 8B7800682F6090E300933221 /* DomainDig */;
-		};
-		8BF124FA2F70000100933221 /* Exceptions for "DomainDig" folder in "DomainDigCLI" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				BatchResultsView.swift,
-				BatchSweepSummaryView.swift,
-				ContentView.swift,
-				DomainDigApp.swift,
-				DomainViewModel.swift,
-				ExportPresenter.swift,
-				HistoryView.swift,
-				LocalNotificationService.swift,
-				SavedDomainsView.swift,
-				WatchlistView.swift,
-			);
-			target = 8BF124FB2F70000100933221 /* DomainDigCLI */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -69,7 +44,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				8B1B506D2F666F64005C246F /* Exceptions for "DomainDig" folder in "DomainDig" target */,
-				8BF124FA2F70000100933221 /* Exceptions for "DomainDig" folder in "DomainDigCLI" target */,
 			);
 			path = DomainDig;
 			sourceTree = "<group>";
@@ -78,13 +52,6 @@
 
 /* Begin PBXFrameworksBuildPhase section */
 		8B7800662F6090E300933221 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		8BF124FD2F70000100933221 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -103,7 +70,6 @@
 				8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */,
 				8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */,
 				8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */,
-				8BBFEF022F9874AE00E8E144 /* DomainDigCLI.swift */,
 				8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */,
 				8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */,
 				8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */,
@@ -114,7 +80,6 @@
 			isa = PBXGroup;
 			children = (
 				8B7800692F6090E300933221 /* DomainDig.app */,
-				8BF124F92F70000100933221 /* domaindig */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -143,27 +108,6 @@
 			productName = DomainDig;
 			productReference = 8B7800692F6090E300933221 /* DomainDig.app */;
 			productType = "com.apple.product-type.application";
-		};
-		8BF124FB2F70000100933221 /* DomainDigCLI */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 8BBFF0292F987EF700E8E144 /* Build configuration list for PBXNativeTarget "DomainDigCLI" */;
-			buildPhases = (
-				8BF124FC2F70000100933221 /* Sources */,
-				8BF124FD2F70000100933221 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				8B78006B2F6090E300933221 /* DomainDig */,
-			);
-			name = DomainDigCLI;
-			packageProductDependencies = (
-			);
-			productName = domaindig;
-			productReference = 8BF124F92F70000100933221 /* domaindig */;
-			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -200,7 +144,6 @@
 			projectRoot = "";
 			targets = (
 				8B7800682F6090E300933221 /* DomainDig */,
-				8BF124FB2F70000100933221 /* DomainDigCLI */,
 			);
 		};
 /* End PBXProject section */
@@ -227,21 +170,6 @@
 				8BBFEF0B2F9874AE00E8E144 /* DomainReportExporter.swift in Sources */,
 				8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */,
 				8BBFEF0C2F9874AE00E8E144 /* LookupSnapshot.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		8BF124FC2F70000100933221 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				8BBFEF082F9874AE00E8E144 /* DomainDigCLI.swift in Sources */,
-				8BF9DA862F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */,
-				8BBFEFCA2F987E8700E8E144 /* DomainInspectionService.swift in Sources */,
-				8BBFEFCB2F987E8700E8E144 /* DomainReportBuilder.swift in Sources */,
-				8BBFEFCC2F987E8700E8E144 /* DomainReportExporter.swift in Sources */,
-				8BBFEFCD2F987E8700E8E144 /* LookupSnapshot.swift in Sources */,
-				8BCA3CBE2F9C8D57004B742C /* LocalAPIModels.swift in Sources */,
-				8BCA3CBF2F9C8D57004B742C /* LocalAPIService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -378,7 +306,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DomainDig/DomainDig.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 35;
+				CURRENT_PROJECT_VERSION = 36;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -395,7 +323,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.3.0;
+				MARKETING_VERSION = 4.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -415,7 +343,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DomainDig/DomainDig.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 35;
+				CURRENT_PROJECT_VERSION = 36;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -432,7 +360,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.3.0;
+				MARKETING_VERSION = 4.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -442,27 +370,6 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		8BBFF0272F987E8700E8E144 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = NO;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
-				PRODUCT_NAME = domaindig;
-			};
-			name = Debug;
-		};
-		8BBFF0282F987E8700E8E144 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
-				PRODUCT_NAME = domaindig;
 			};
 			name = Release;
 		};
@@ -483,15 +390,6 @@
 			buildConfigurations = (
 				8B7800752F6090E400933221 /* Debug */,
 				8B7800762F6090E400933221 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		8BBFF0292F987EF700E8E144 /* Build configuration list for PBXNativeTarget "DomainDigCLI" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				8BBFF0272F987E8700E8E144 /* Debug */,
-				8BBFF0282F987E8700E8E144 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
