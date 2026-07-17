@@ -1,0 +1,78 @@
+name: Build
+
+# Compile gate for the GitHub mirror. builds.sr.ht is the primary remote for
+# this project but has no macOS images, so xcodebuild cannot run there; this job
+# compiles the app on a GitHub-hosted macOS runner instead.
+#
+# This runs `xcodebuild build`, not `test`: the project has no test target yet
+# (planned for v5.0.0 in RELEASE_ROADMAP.md). When a test target and test plan
+# exist, switch the final step to `xcodebuild test -testPlan <name>` and rename
+# this workflow — the rest of the setup already matches a test run.
+#
+# pull_request only, plus manual dispatch. GitHub builds the merge result (PR
+# merged into main), so a green PR validates exactly what will land on main.
+# Note: this repo currently also pushes directly to main for releases, and those
+# pushes are NOT gated here — add a `push: { branches: [main] }` trigger below if
+# you want direct-to-main commits covered too.
+#
+# paths-ignore skips prose-only changes. Both globs are single-star, so they
+# match the repo root and Docs/ but nothing deeper — a .md that ever lands inside
+# a source directory still builds.
+on:
+  pull_request:
+    paths-ignore: ['*.md', 'Docs/*.md']
+  workflow_dispatch:
+
+# The job only reads code; drop the default read-write GITHUB_TOKEN scope.
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: xcodebuild build
+    # macos-latest still points at macOS 15, which lacks the iOS 26 SDK this app
+    # targets (deployment target 26.2).
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Select simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          udid=$(xcrun simctl list devices available --json \
+            | jq -r '[.devices[][] | select(.name | startswith("iPhone"))] | first | .udid')
+          if [ -z "$udid" ] || [ "$udid" = "null" ]; then
+            echo "No available iPhone simulator on this image" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project DomainDig.xcodeproj \
+            -scheme DomainDig \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -resultBundlePath BuildResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-results
+          path: BuildResults.xcresult
+          retention-days: 7
