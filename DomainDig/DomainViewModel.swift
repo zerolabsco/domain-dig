@@ -2582,6 +2582,7 @@ final class DomainViewModel {
         DomainDataPortabilityService.saveTrackedDomains(trackedDomains)
         CloudSyncService.shared.scheduleSyncIfNeeded()
         refreshDataLifecycleSummary()
+        refreshWidgetData()
     }
 
     private func beginBulkPersistenceDeferral() {
