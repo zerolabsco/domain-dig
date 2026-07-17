@@ -9,6 +9,7 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>net.cleberg.DomainDig.monitor.refresh</string>
+		<string>net.cleberg.DomainDig.report.schedule</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>

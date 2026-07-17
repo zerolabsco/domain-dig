@@ -2716,6 +2716,10 @@ struct SettingsView: View {
                 NavigationLink("Monitoring") {
                     MonitoringSettingsView(viewModel: viewModel)
                 }
+
+                NavigationLink("Scheduled Reports") {
+                    ScheduledReportsView()
+                }
             }
 
             Section("Data") {
