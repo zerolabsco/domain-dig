@@ -114,6 +114,15 @@ Goal: fix what UAT of v4.8.0 turned up.
   records without dedup, listing every value twice on domains with wildcard DNS.
 - **Inspect tab keyboard behavior** — removed the "Dismiss Keyboard" toolbar
   button and the launch-time focus that raised the keyboard on app open.
+- **In-app purchases were unbuyable** — none of the four product ID constants in
+  `PurchaseService` matched the auto-renewable subscriptions configured in App
+  Store Connect, so `Product.products(for:)` returned nothing and `tier(for:)`
+  resolved every purchase to `.free`. Product IDs are permanent once created, so
+  the constants were corrected to match the store rather than the reverse.
+- **Local StoreKit testing** — added `DomainDig.storekit` mirroring the App Store
+  Connect group (Pro+ at level 1, Pro at level 2) and wired it into the Run
+  action, so the purchase and entitlement paths can be exercised without the
+  `DOMAIN_DIG_FORCE_PRO_PLUS` launch argument that bypasses StoreKit entirely.
 
 Known open follow-ups filed during UAT: integration events to a disabled target
 vanish with no delivery-log row (#8), "Process Queue Now" does not force a
