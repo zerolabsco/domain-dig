@@ -75,7 +75,7 @@ struct PaywallView: View {
                     if let errorMessage = purchaseService.errorMessage {
                         Text(errorMessage)
                             .font(appDensity.font(.caption, design: .default))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color(.statusCritical))
                     }
                 }
 

@@ -25,7 +25,7 @@ struct HistoryView: View {
                     systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90",
                     showsCardBackground: false
                 )
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
             } else {
                 Section("Domains") {
                     ForEach(domainSummaries, id: \.domain) { item in
@@ -55,21 +55,21 @@ struct HistoryView: View {
                                             model: .init(
                                                 title: severity.title,
                                                 systemImage: "arrow.triangle.2.circlepath",
-                                                foregroundColor: severity == .high ? .red : .yellow,
-                                                backgroundColor: (severity == .high ? Color.red : .yellow).opacity(0.16)
+                                                foregroundColor: severity == .high ? Color(.statusCritical) : Color(.statusWarning),
+                                                backgroundColor: (severity == .high ? Color(.statusCritical) : Color(.statusWarning)).opacity(0.16)
                                             )
                                         )
                                     }
                                 }
                             }
                         }
-                        .listRowBackground(Color(.systemGray6).opacity(0.5))
+                        .listRowBackground(Color(.appSurface))
                     }
                 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("History")
         .searchable(text: $viewModel.timelineDomainFilter, prompt: "Search domains")
         .toolbar {
@@ -321,7 +321,7 @@ struct HistoryDetailView: View {
             .padding(.horizontal)
             .padding(.bottom, 32)
         }
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle(entry.domain)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -390,12 +390,12 @@ struct HistoryDetailView: View {
             if let mismatchNote = viewModel.resolverMismatchNote(for: entry) {
                 Text(mismatchNote)
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color(.statusWarning))
             }
             if entry.isPartialSnapshot {
                 Text("Partial snapshot: \(entry.validationIssues.joined(separator: " | "))")
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(Color(.statusWarning))
             }
             if let note = entry.note, !note.isEmpty {
                 Text(note)
@@ -406,7 +406,7 @@ struct HistoryDetailView: View {
         .foregroundStyle(.secondary)
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Color(.appSurface))
         .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
         .padding(.vertical, 12)
     }

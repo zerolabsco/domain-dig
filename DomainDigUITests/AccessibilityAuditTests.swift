@@ -17,7 +17,20 @@ final class AccessibilityAuditTests: XCTestCase {
     // MARK: Per-screen audits
 
     func testInspectScreen() throws {
-        try auditRootTab("Inspect")
+        let app = AccessibilityAuditHarness.launch()
+        app.selectRootTab("Inspect")
+
+        // Type a domain so the Run button is enabled. A disabled control has no
+        // contrast requirement under WCAG 1.4.3, but the audit still flags it,
+        // so auditing the empty state would report a false positive forever.
+        let field = app.textFields.firstMatch
+        if field.waitForExistence(timeout: 5) {
+            field.tap()
+            field.typeText("example.com")
+        }
+
+        let audited = try AccessibilityAuditHarness.audit(app, screen: "inspect", test: self)
+        try XCTSkipUnless(audited, "Audit did not complete in time for Inspect")
     }
 
     func testDashboardScreen() throws {

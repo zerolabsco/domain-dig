@@ -10,7 +10,7 @@ struct SavedDomainsView: View {
                 Text("No saved domains")
                     .font(.system(.callout, design: .monospaced))
                     .foregroundStyle(.secondary)
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
             } else {
                 ForEach(viewModel.savedDomains, id: \.self) { domain in
                     Button {
@@ -22,7 +22,7 @@ struct SavedDomainsView: View {
                             .font(.system(.callout, design: .monospaced))
                             .foregroundStyle(.primary)
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
                 }
                 .onDelete { offsets in
                     viewModel.removeSavedDomains(at: offsets)
@@ -30,7 +30,7 @@ struct SavedDomainsView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("Saved Domains")
         .toolbar {
             if !viewModel.savedDomains.isEmpty {

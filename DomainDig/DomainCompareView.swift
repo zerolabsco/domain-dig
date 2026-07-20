@@ -63,11 +63,11 @@ struct DomainCompareView: View {
                         showsCardBackground: false
                     )
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("Compare Domains")
     }
 

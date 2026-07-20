@@ -87,7 +87,13 @@ enum AccessibilityAuditHarness {
                 try app.performAccessibilityAudit { issue in
                     let isEnforced = !enforcedAuditTypes.intersection(issue.auditType).isEmpty
                     let marker = isEnforced ? "FAIL" : "report"
-                    findings.append("[\(marker)][\(name(for: issue.auditType))] \(issue.compactDescription)")
+                    // Include the element so the burndown says *what* to fix, not
+                    // just that something is wrong.
+                    let element = issue.element.map { el -> String in
+                        let label = el.label.isEmpty ? el.identifier : el.label
+                        return label.isEmpty ? "\(el.elementType)" : "\"\(label)\""
+                    } ?? "unknown element"
+                    findings.append("[\(marker)][\(name(for: issue.auditType))] \(issue.compactDescription) — \(element)")
                     // true suppresses the finding, false reports it as a test failure.
                     return !isEnforced
                 }

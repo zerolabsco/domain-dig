@@ -91,9 +91,9 @@ struct DomainDigWidgetView: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                countPill(data.healthyCount, .green)
-                countPill(data.warningCount, .orange)
-                countPill(data.criticalCount, .red)
+                countPill(data.healthyCount, Color(.statusPositive))
+                countPill(data.warningCount, Color(.statusWarning))
+                countPill(data.criticalCount, Color(.statusCritical))
             }
         }
     }
@@ -121,10 +121,10 @@ struct DomainDigWidgetView: View {
             }
 
             HStack(spacing: 12) {
-                summaryStat(data.healthyCount, "Healthy", .green)
-                summaryStat(data.warningCount, "Warning", .orange)
-                summaryStat(data.criticalCount, "Critical", .red)
-                summaryStat(data.expiringSoonCount, "Expiring", .yellow)
+                summaryStat(data.healthyCount, "Healthy", Color(.statusPositive))
+                summaryStat(data.warningCount, "Warning", Color(.statusWarning))
+                summaryStat(data.criticalCount, "Critical", Color(.statusCritical))
+                summaryStat(data.expiringSoonCount, "Expiring", Color(.statusWarning))
             }
 
             Divider()
@@ -180,9 +180,9 @@ struct DomainDigWidgetView: View {
 
     private func color(for status: DomainDigWidgetStatus) -> Color {
         switch status {
-        case .healthy: return .green
-        case .warning: return .orange
-        case .critical: return .red
+        case .healthy: return Color(.statusPositive)
+        case .warning: return Color(.statusWarning)
+        case .critical: return Color(.statusCritical)
         }
     }
 }

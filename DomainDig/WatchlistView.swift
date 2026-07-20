@@ -38,7 +38,7 @@ struct WatchlistView: View {
                 Section("Refresh Progress") {
                     VStack(alignment: .leading, spacing: 8) {
                         ProgressView(value: Double(viewModel.batchCompletedCount), total: Double(max(viewModel.batchTotalCount, 1)))
-                            .tint(.cyan)
+                            .tint(Color(.statusInfo))
                         HStack {
                             Text(viewModel.batchProgressLabel)
                                 .font(appDensity.font(.caption))
@@ -59,7 +59,7 @@ struct WatchlistView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
 
             if viewModel.filteredTrackedDomains.isEmpty {
@@ -72,7 +72,7 @@ struct WatchlistView: View {
                         showsCardBackground: false
                     )
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             } else {
                 if let limitMessage = FeatureAccessService.trackedDomainLimitMessage(currentCount: viewModel.trackedDomains.count) {
                     Section {
@@ -80,7 +80,7 @@ struct WatchlistView: View {
                             .font(appDensity.font(.caption))
                             .foregroundStyle(.secondary)
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
                 }
 
                 if !pinnedDomains.isEmpty {
@@ -94,7 +94,7 @@ struct WatchlistView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.filteredTrackedDomains.map(\.id))
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("Watchlist")
         .searchable(text: $viewModel.watchlistSearchText, prompt: "Search tracked domains")
         .toolbar {
@@ -215,7 +215,7 @@ struct WatchlistView: View {
                         Section {
                             Text(addDomainError)
                                 .font(appDensity.font(.caption))
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Color(.statusCritical))
                         }
                     }
                 }
@@ -317,14 +317,14 @@ struct WatchlistView: View {
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
-            .tint(.cyan)
+            .tint(Color(.statusInfo))
 
             Button {
                 viewModel.togglePinned(for: trackedDomain)
             } label: {
                 Label(trackedDomain.isPinned ? "Unpin" : "Pin", systemImage: trackedDomain.isPinned ? "pin.slash" : "pin")
             }
-            .tint(.yellow)
+            .tint(Color(.statusWarning))
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button {
@@ -333,7 +333,7 @@ struct WatchlistView: View {
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
             }
-            .tint(.cyan)
+            .tint(Color(.statusInfo))
 
             if viewModel.canDelete(trackedDomain) {
                 Button(role: .destructive) {
@@ -380,7 +380,7 @@ struct WatchlistView: View {
                 }
             }
         }
-        .listRowBackground(Color(.systemGray6).opacity(0.5))
+        .listRowBackground(Color(.appSurface))
     }
 
     private var batchSummaryBinding: Binding<BatchSweepSummary?> {
@@ -437,7 +437,7 @@ struct WatchlistRowView: View {
                 if trackedDomain.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.caption2)
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(Color(.statusWarning))
                 }
                 Text(trackedDomain.domain)
                     .font(appDensity.font(.callout))
@@ -502,7 +502,7 @@ struct WatchlistRowView: View {
     @ViewBuilder
     private var statusBadge: some View {
         if isRefreshing {
-            AppStatusBadgeView(model: .init(title: "Refreshing", systemImage: "arrow.clockwise", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.6)))
+            AppStatusBadgeView(model: .init(title: "Refreshing", systemImage: "arrow.clockwise", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated)))
         } else {
             AppStatusBadgeView(model: AppStatusFactory.availability(trackedDomain.lastKnownAvailability))
         }
@@ -516,8 +516,8 @@ struct WatchlistRowView: View {
                     model: .init(
                         title: "Shared",
                         systemImage: "person.2.fill",
-                        foregroundColor: .cyan,
-                        backgroundColor: .cyan.opacity(0.16)
+                        foregroundColor: Color(.statusInfo),
+                        backgroundColor: Color(.statusInfo).opacity(0.16)
                     )
                 )
             }
@@ -534,11 +534,11 @@ struct WatchlistRowView: View {
         let days = trackedDomain.certificateDaysRemaining.map { "\($0)d" } ?? "Soon"
         switch trackedDomain.certificateWarningLevel {
         case .critical:
-            return .init(title: "Invalid \(days)", systemImage: "xmark.octagon.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+            return .init(title: "Invalid \(days)", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         case .warning:
-            return .init(title: "Expiring \(days)", systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: "Expiring \(days)", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .none:
-            return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         }
     }
 }
@@ -577,7 +577,7 @@ struct TrackedDomainDetailView: View {
                     isRefreshing: viewModel.refreshingTrackedDomainID == liveTrackedDomain.id
                 )
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
 
             Section {
                 Button {
@@ -652,13 +652,13 @@ struct TrackedDomainDetailView: View {
                     Label(liveTrackedDomain.collaboration?.isShared == true ? "Manage Share" : "Share Domain", systemImage: "person.2")
                 }
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
 
             if !liveTrackedDomain.tags.isEmpty {
                 Section("Tags") {
                     TagChipRowView(tags: liveTrackedDomain.tags)
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
 
             Section("Monitoring Status") {
@@ -672,7 +672,7 @@ struct TrackedDomainDetailView: View {
                     LabeledContent("Queued Alerts", value: "\(liveTrackedDomain.pendingMonitoringAlerts.count)")
                 }
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
 
             if let summary = viewModel.latestChangeSummary(for: liveTrackedDomain) {
                 Section("Latest Change Summary") {
@@ -718,10 +718,10 @@ struct TrackedDomainDetailView: View {
                     }
                 }
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle(liveTrackedDomain.domain)
         .preferredColorScheme(.dark)
         .onChange(of: viewModel.rerunNavigationToken) { _, _ in

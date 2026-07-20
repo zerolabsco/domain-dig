@@ -6,6 +6,58 @@ large Dynamic Type, element descriptions, trait correctness, and Dynamic Type
 support — the same ground the accessibility pass tracked in
 [issue #21](https://github.com/zerolabsco/domain-dig/issues/21) covers.
 
+## The colour palette
+
+Semantic colours live in `Shared/Colors.xcassets`, which is inside the `Shared`
+file-system-synchronized group and therefore reaches the app, the widget, and
+the share extension automatically. `AccentColor` stays in
+`DomainDig/Assets.xcassets` because it is the system-wide tint resolved via
+`ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME`.
+
+Use the generated asset symbols — `Color(.statusCritical)`, `Color(.appSurface)`
+— never a literal. `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`
+is on, so these are compile-time checked; a typo will not build.
+
+Every value clears WCAG AA (4.5:1) as text on its page, on its card, **and on
+its own 16% badge tint** — the way `AppStatusBadgeView` actually draws it. The
+worst of those three is shown:
+
+| Role | Light | Dark | Worst light | Worst dark |
+| --- | --- | --- | --- | --- |
+| `StatusInfo` / `AccentColor` | `#0000FF` | `#4DA3FF` | 5.50 | 5.85 |
+| `StatusPositive` | `#146C2E` | `#30D158` | 4.65 | 7.32 |
+| `StatusWarning` | `#7A5600` | `#FFD60A` | 4.74 | 9.61 |
+| `StatusCritical` | `#B3261E` | `#FF6961` | 4.51 | 5.54 |
+| `StatusNeutral` | `#5A5A5F` | `#A1A1A6` | 4.92 | 5.88 |
+
+High Contrast variants push further in the same direction. Surfaces
+(`AppBackground`, `AppSurface`, `AppSurfaceElevated`, `AppSeparator`) carry no
+meaning, so they get Any/Dark and, where useful, High Contrast — but no status
+semantics.
+
+Why custom values instead of the system palette: **every** system colour fails
+in light mode. Measured on white — systemYellow 1.51:1, systemOrange 2.20:1,
+systemGreen 2.22:1, systemCyan 2.54:1, systemRed 3.55:1. All of them pass in
+dark mode, which is why the dark-locked app looked fine and why unlocking light
+mode is impossible without this work.
+
+### The accent has two roles, and they conflict
+
+An accent used as **text on a dark background** must be light. The same accent
+used as a **fill behind a white label** must be dark. One value cannot do both:
+`#4DA3FF` reads at 8.00:1 as text on black, but only 2.63:1 behind white text.
+
+So there are two colours:
+
+- `StatusInfo` / `AccentColor` — the accent as *foreground*: text, icons,
+  bordered-button labels, tab bar.
+- `AccentFill` — the accent as a *filled background* behind a label, used by
+  `.borderedProminent`. Stays dark in both schemes so a white label clears AA
+  (8.59:1 light, 7.56:1 dark).
+
+`AppOnAccent` is the label colour for a solid accent fill and flips by scheme —
+white on the light accent, black on the dark one.
+
 ## Findings are reported, not enforced
 
 The audit surfaces violations that exist today, so failing on all of them would
@@ -85,6 +137,12 @@ pre-commit that blocks every commit. A hook routinely bypassed with
 
 ## Notes
 
+- **Disabled controls are a false positive.** WCAG 1.4.3 exempts inactive
+  components from contrast requirements, but the audit flags them anyway. The
+  Inspect screen's Run button is disabled until a domain is typed, and auditing
+  the empty state reported a contrast failure that was never a real defect —
+  which is why `testInspectScreen` types a domain before auditing. Watch for
+  this before "fixing" a contrast finding on a disabled control.
 - Audits retry up to three times. Slower machines can miss the audit's internal
   deadline (`Audit failed to complete in time`, code `-56`), which is a tooling
   timeout, not an app defect. A screen that still cannot be audited is reported

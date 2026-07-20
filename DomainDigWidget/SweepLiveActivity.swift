@@ -24,7 +24,7 @@ struct SweepLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 4) {
                         ProgressView(value: context.state.fractionComplete)
-                            .tint(.cyan)
+                            .tint(Color(.statusInfo))
                         if let current = context.state.currentDomain {
                             Text(current)
                                 .font(.caption2)
@@ -35,7 +35,7 @@ struct SweepLiveActivity: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "arrow.trianglehead.2.clockwise")
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(Color(.statusInfo))
             } compactTrailing: {
                 Text("\(context.state.completed)/\(context.state.total)")
                     .font(.caption2)
@@ -43,7 +43,7 @@ struct SweepLiveActivity: Widget {
             } minimal: {
                 ProgressView(value: context.state.fractionComplete)
                     .progressViewStyle(.circular)
-                    .tint(.cyan)
+                    .tint(Color(.statusInfo))
             }
         }
     }
@@ -66,7 +66,7 @@ private struct SweepActivityBannerView: View {
             }
 
             ProgressView(value: context.state.fractionComplete)
-                .tint(.cyan)
+                .tint(Color(.statusInfo))
 
             HStack {
                 if let current = context.state.currentDomain {
@@ -83,12 +83,12 @@ private struct SweepActivityBannerView: View {
                 if context.state.changed > 0 {
                     Text("\(context.state.changed) changed")
                         .font(.caption2)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color(.statusWarning))
                 }
                 if context.state.warnings > 0 {
                     Text("\(context.state.warnings) warnings")
                         .font(.caption2)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color(.statusCritical))
                 }
             }
         }
