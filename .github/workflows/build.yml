@@ -1,13 +1,37 @@
 name: Build
 
-# Compile gate for the GitHub mirror. builds.sr.ht is the primary remote for
-# this project but has no macOS images, so xcodebuild cannot run there; this job
-# compiles the app on a GitHub-hosted macOS runner instead.
+# Compile gate and accessibility audit for the GitHub mirror. builds.sr.ht is the
+# primary remote for this project but has no macOS images, so xcodebuild cannot
+# run there; this job builds and tests on a GitHub-hosted macOS runner instead.
 #
-# This runs `xcodebuild build`, not `test`: the project has no test target yet
-# (planned for v5.0.0 in RELEASE_ROADMAP.md). When a test target and test plan
-# exist, switch the final step to `xcodebuild test -testPlan <name>` and rename
-# this workflow — the rest of the setup already matches a test run.
+# This runs `xcodebuild test`, which also compiles the app, the widget, and the
+# share extension (the DomainDig scheme's build action pulls both in as
+# dependencies). The test target is DomainDigUITests — an accessibility audit
+# suite; see DomainDigUITests/AccessibilityAuditHarness.swift.
+#
+# The audit REPORTS but does not FAIL by default. It surfaces violations that
+# exist today, so gating on it would block every unrelated PR until the
+# accessibility pass in issue #21 completes. Findings land in the job log and in
+# the uploaded .xcresult bundle, tagged [report] or [FAIL].
+#
+# Enforcement is a committed constant, not a CI setting: widen
+# `AccessibilityAuditHarness.enforcedAuditTypes` as each phase clears a category.
+# (Env vars were tried first — neither a plain xcodebuild env var nor a
+# TEST_RUNNER_-prefixed build setting reaches the UI test process.)
+#
+# The matrix runs two simulators because audit coverage is NOT nested — each
+# runtime reports findings the other misses, in both directions. Measured on the
+# Tracked Domains screen, iOS 18.6 reported 2 issues and iOS 27.0 reported 6
+# (including contrast and element-detection issues 18.6 never raised); at
+# accessibility text sizes the Dashboard produced a hit-region finding on 18.6
+# that 27.0 did not. Testing only the newest image would leave the oldest
+# supported OS unchecked; testing only the floor would miss newer audit checks.
+#
+# Runtimes are resolved dynamically rather than pinned: the deployment target is
+# 17.6, but no 17.6 simulator runtime ships, so "floor" means the oldest
+# available runtime at or above the deployment target (18.6 at time of writing).
+# The previous selector took the first iPhone from any runtime, which could pick
+# a simulator BELOW the deployment target, where the app cannot install.
 #
 # pull_request only, plus manual dispatch. GitHub builds the merge result (PR
 # merged into main), so a green PR validates exactly what will land on main.
@@ -31,12 +55,24 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Keep in sync with IPHONEOS_DEPLOYMENT_TARGET in DomainDig.xcodeproj.
+  DEPLOYMENT_TARGET_MAJOR: '17'
+  DEPLOYMENT_TARGET_MINOR: '6'
+
 jobs:
-  build:
-    name: xcodebuild build
-    # macos-latest still points at macOS 15, which lacks the iOS 26 SDK this app
-    # targets (deployment target 26.2).
+  test:
+    name: xcodebuild test (${{ matrix.tier }})
+    # macos-latest still points at macOS 15, which lacks the iOS 26+ SDK this app
+    # is built against.
     runs-on: macos-26
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # floor   = oldest runtime the app actually supports
+        # current = newest runtime available on the image
+        tier: [floor, current]
 
     steps:
       - uses: actions/checkout@v7
@@ -50,29 +86,51 @@ jobs:
         id: sim
         run: |
           set -euo pipefail
-          udid=$(xcrun simctl list devices available --json \
-            | jq -r '[.devices[][] | select(.name | startswith("iPhone"))] | first | .udid')
-          if [ -z "$udid" ] || [ "$udid" = "null" ]; then
-            echo "No available iPhone simulator on this image" >&2
+          floor=$(( DEPLOYMENT_TARGET_MAJOR * 1000 + DEPLOYMENT_TARGET_MINOR ))
+
+          selected=$(xcrun simctl list devices available --json \
+            | jq -c --argjson floor "$floor" --arg tier "${{ matrix.tier }}" '
+                [ .devices | to_entries[]
+                  | (.key | capture("SimRuntime\\.iOS-(?<maj>[0-9]+)-(?<min>[0-9]+)$")) as $v
+                  | (($v.maj | tonumber) * 1000 + ($v.min | tonumber)) as $rank
+                  | select($rank >= $floor)
+                  | .value[]
+                  | select(.name | startswith("iPhone"))
+                  | { rank: $rank, udid: .udid, name: .name, os: "\($v.maj).\($v.min)" }
+                ]
+                | sort_by(.rank, .name)
+                | if length == 0 then empty
+                  elif $tier == "floor" then .[0]
+                  else .[-1] end
+              ')
+
+          if [ -z "$selected" ]; then
+            echo "::error::No iPhone simulator at or above iOS ${DEPLOYMENT_TARGET_MAJOR}.${DEPLOYMENT_TARGET_MINOR} on this image"
             xcrun simctl list devices available >&2
             exit 1
           fi
-          echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
-      - name: Build
+          label=$(echo "$selected" | jq -r '"\(.name) (iOS \(.os))"')
+          echo "Selected $label"
+          echo "udid=$(echo "$selected" | jq -r .udid)" >> "$GITHUB_OUTPUT"
+          echo "label=$label" >> "$GITHUB_OUTPUT"
+
+      - name: Test on ${{ steps.sim.outputs.label }}
         run: |
           set -o pipefail
-          xcodebuild build \
+          xcodebuild test \
             -project DomainDig.xcodeproj \
             -scheme DomainDig \
             -destination "id=${{ steps.sim.outputs.udid }}" \
-            -resultBundlePath BuildResults.xcresult \
+            -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Upload results
-        if: failure()
+        # Always upload: on success the bundle carries the accessibility burndown
+        # list, which is the reason this suite exists.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-results
-          path: BuildResults.xcresult
+          name: test-results-${{ matrix.tier }}
+          path: TestResults.xcresult
           retention-days: 7
