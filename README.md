@@ -53,6 +53,30 @@ xcodebuild -project DomainDig.xcodeproj -scheme DomainDig -destination 'platform
 
 The app and local API share the canonical report pipeline through `DomainInspectionService`, `DomainReportBuilder`, and `DomainReportExporter`.
 
+### Accessibility Audit
+
+`DomainDigUITests` runs `performAccessibilityAudit()` over every primary screen,
+at default and at the largest accessibility text size.
+
+```sh
+./Scripts/audit-a11y.sh            # oldest supported + newest runtime
+./Scripts/audit-a11y.sh floor      # oldest supported runtime only (~85s)
+```
+
+Findings are **reported, not enforced** — they are the burndown list for the
+accessibility pass. Widen `AccessibilityAuditHarness.enforcedAuditTypes` to turn
+a category into a build failure as each phase lands.
+
+Optional pre-push hook, which runs the floor audit when Swift or project files
+change:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+See [Docs/ACCESSIBILITY.md](Docs/ACCESSIBILITY.md) for why coverage is split
+between this script and CI.
+
 ## Release Planning
 
 See `RELEASE_ROADMAP.md` for the semver release plan from `v4.4.1` through the planned `v5.0.0` stabilization milestone.
