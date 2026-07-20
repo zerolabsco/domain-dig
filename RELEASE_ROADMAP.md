@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.8.1`.
+Current version: `v4.8.2`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -124,10 +124,35 @@ Goal: fix what UAT of v4.8.0 turned up.
   action, so the purchase and entitlement paths can be exercised without the
   `DOMAIN_DIG_FORCE_PRO_PLUS` launch argument that bypasses StoreKit entirely.
 
-Known open follow-ups filed during UAT: integration events to a disabled target
-vanish with no delivery-log row (#8), "Process Queue Now" does not force a
-backed-off retry (#9), and a monitoring snapshot fallback silently reports "No
-meaningful changes" (#10).
+Follow-ups filed during UAT (#8, #9, #10) were all resolved in v4.8.2.
+
+## v4.8.2 Patch: Delivery Visibility & Build Health — ✅ shipped
+
+Goal: close the UAT follow-ups and make failures legible instead of silent.
+
+- **Disabled integrations no longer swallow events** (#8) — `enqueue(events:)`
+  filtered to enabled targets before writing any `DeliveryRecord`, so events
+  routed to a disabled integration vanished entirely. They now log a `.skipped`
+  entry with a reason. `sendTest` also respects `isEnabled`, which previously
+  delivered against targets that dropped every real event.
+- **"Process Queue Now" forces backed-off retries** (#9) — it only restarted the
+  processing task, never moving `nextAttemptAt`, so an item in backoff (up to an
+  hour) stayed undue and the button appeared inert. It now pulls queued items
+  forward, and reports an empty queue instead of doing nothing silently.
+- **Unreachable domains report as unreachable** (#10) — when the snapshot
+  fallback fired, the run compared old data against itself and claimed "No
+  meaningful changes" for a domain it never reached. `MonitoringDomainResult`
+  now carries `unreachableReason`, the summary says so, and a warning-severity
+  `monitoringFailure` reaches configured integrations.
+- **Swift 6 concurrency warnings cleared** — `SweepActivityAttributes` is
+  explicitly `nonisolated` (the app target sets
+  `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` while the widget target does not),
+  and `LocalAPIService`'s logger closures capture `self` coherently. Build is
+  warning-free.
+- **StoreKit configuration corrected and synced** — the scheme's path was wrong,
+  and the hand-authored file has been replaced by `SyncedProducts.storekit`,
+  synced against App Store Connect. Registered in the project without target
+  membership so it is not bundled into shipping builds.
 
 ## v5.0.0 Major: Contract Stabilization & Engineering Health
 
