@@ -9,7 +9,7 @@
       }
     ]
   },
-  "identifier" : "A1B2C3D4",
+  "identifier" : "6118B84A",
   "nonRenewingSubscriptions" : [
 
   ],
@@ -17,14 +17,14 @@
 
   ],
   "settings" : {
-    "_applicationInternalID" : "",
+    "_applicationInternalID" : "6760368004",
     "_askToBuyEnabled" : false,
     "_billingGracePeriodEnabled" : false,
     "_billingIssuesEnabled" : false,
     "_developerTeamID" : "ZCNAX3VL9D",
     "_disableDialogs" : false,
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 0,
+    "_lastSynchronizedDate" : 806272934.47084999,
     "_locale" : "en_US",
     "_renewalBillingIssuesEnabled" : false,
     "_storefront" : "USA",
@@ -33,11 +33,18 @@
     ],
     "_timeRate" : 0
   },
+  "subscriptionBundleGroups" : [
+
+  ],
   "subscriptionGroups" : [
     {
-      "id" : "20250720",
+      "id" : "22051301",
       "localizations" : [
-
+        {
+          "description" : "",
+          "displayName" : "DomainDig Pro",
+          "locale" : "en_US"
+        }
       ],
       "name" : "DomainDig Pro",
       "subscriptions" : [
@@ -45,67 +52,28 @@
           "adHocOffers" : [
 
           ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "49.99",
-          "familyShareable" : true,
-          "groupNumber" : 1,
-          "internalID" : "6763610682",
-          "introductoryOffer" : null,
-          "localizations" : [
+          "billingPlans" : [
             {
-              "description" : "Everything in Pro, plus ownership history, DNS history, extended subdomains, domain pricing, and reputation data.",
-              "displayName" : "DomainDig Pro+ (Annually)",
-              "locale" : "en_US"
+              "billingPlanType" : "BILLED_UPFRONT",
+              "commitmentDisplayPrice" : "59.99",
+              "displayPrice" : "59.99",
+              "internalID" : "6763609513_BILLED_UPFRONT",
+              "isEnabled" : true
             }
           ],
-          "productID" : "domaindig.proplus.annually",
-          "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "DomainDig Pro+ (Annually)",
-          "subscriptionGroupID" : "20250720",
-          "type" : "RecurringSubscription"
-        },
-        {
-          "adHocOffers" : [
-
-          ],
           "codeOffers" : [
 
           ],
-          "displayPrice" : "4.99",
-          "familyShareable" : true,
-          "groupNumber" : 1,
-          "internalID" : "2000000002",
-          "introductoryOffer" : null,
-          "localizations" : [
-            {
-              "description" : "Everything in Pro, plus ownership history, DNS history, extended subdomains, domain pricing, and reputation data.",
-              "displayName" : "DomainDig Pro+ (Monthly)",
-              "locale" : "en_US"
-            }
-          ],
-          "productID" : "domaindig.proplus.monthly",
-          "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "DomainDig Pro+ (Monthly)",
-          "subscriptionGroupID" : "20250720",
-          "type" : "RecurringSubscription"
-        },
-        {
-          "adHocOffers" : [
-
-          ],
-          "codeOffers" : [
-
-          ],
-          "displayPrice" : "29.99",
+          "displayPrice" : "59.99",
           "familyShareable" : true,
           "groupNumber" : 2,
-          "internalID" : "2000000003",
-          "introductoryOffer" : null,
+          "internalID" : "6763609513",
+          "introductoryOffers" : [
+
+          ],
           "localizations" : [
             {
-              "description" : "Unlimited tracked domains, automated monitoring, local alerts, workflows, and advanced exports.",
+              "description" : "Monitoring, alerts, workflows, and domain scale",
               "displayName" : "DomainDig Pro (Annually)",
               "locale" : "en_US"
             }
@@ -113,24 +81,38 @@
           "productID" : "domaindig.pro.annually",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "DomainDig Pro (Annually)",
-          "subscriptionGroupID" : "20250720",
-          "type" : "RecurringSubscription"
+          "subscriptionGroupID" : "22051301",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
         },
         {
           "adHocOffers" : [
 
           ],
+          "billingPlans" : [
+            {
+              "billingPlanType" : "BILLED_UPFRONT",
+              "commitmentDisplayPrice" : "7.99",
+              "displayPrice" : "7.99",
+              "internalID" : "6763609831_BILLED_UPFRONT",
+              "isEnabled" : true
+            }
+          ],
           "codeOffers" : [
 
           ],
-          "displayPrice" : "2.99",
+          "displayPrice" : "7.99",
           "familyShareable" : true,
           "groupNumber" : 2,
-          "internalID" : "2000000004",
-          "introductoryOffer" : null,
+          "internalID" : "6763609831",
+          "introductoryOffers" : [
+
+          ],
           "localizations" : [
             {
-              "description" : "Unlimited tracked domains, automated monitoring, local alerts, workflows, and advanced exports.",
+              "description" : "Monitoring, alerts, workflows, and domain scale",
               "displayName" : "DomainDig Pro (Monthly)",
               "locale" : "en_US"
             }
@@ -138,14 +120,98 @@
           "productID" : "domaindig.pro.month",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "DomainDig Pro (Monthly)",
-          "subscriptionGroupID" : "20250720",
-          "type" : "RecurringSubscription"
+          "subscriptionGroupID" : "22051301",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "billingPlans" : [
+            {
+              "billingPlanType" : "BILLED_UPFRONT",
+              "commitmentDisplayPrice" : "119.99",
+              "displayPrice" : "119.99",
+              "internalID" : "6763610682_BILLED_UPFRONT",
+              "isEnabled" : true
+            }
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "119.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "6763610682",
+          "introductoryOffers" : [
+
+          ],
+          "localizations" : [
+            {
+              "description" : "Advanced domain intelligence and history data",
+              "displayName" : "DomainDig Pro+ (Annually)",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "domaindig.proplus.annually",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "DomainDig Pro+ (Annually)",
+          "subscriptionGroupID" : "22051301",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "billingPlans" : [
+            {
+              "billingPlanType" : "BILLED_UPFRONT",
+              "commitmentDisplayPrice" : "14.99",
+              "displayPrice" : "14.99",
+              "internalID" : "6763610379_BILLED_UPFRONT",
+              "isEnabled" : true
+            }
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "14.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "6763610379",
+          "introductoryOffers" : [
+
+          ],
+          "localizations" : [
+            {
+              "description" : "Advanced domain intelligence and history data",
+              "displayName" : "DomainDig Pro+ (Monthly)",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "domaindig.proplus.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "DomainDig Pro+ (Monthly)",
+          "subscriptionGroupID" : "22051301",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
         }
       ]
     }
   ],
+  "subscriptionSuiteGroups" : [
+
+  ],
   "version" : {
-    "major" : 5,
-    "minor" : 0
+    "major" : 6,
+    "minor" : 3
   }
 }
