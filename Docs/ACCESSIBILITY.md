@@ -137,12 +137,19 @@ pre-commit that blocks every commit. A hook routinely bypassed with
 
 ## Notes
 
-- **Disabled controls are a false positive.** WCAG 1.4.3 exempts inactive
-  components from contrast requirements, but the audit flags them anyway. The
-  Inspect screen's Run button is disabled until a domain is typed, and auditing
-  the empty state reported a contrast failure that was never a real defect —
-  which is why `testInspectScreen` types a domain before auditing. Watch for
-  this before "fixing" a contrast finding on a disabled control.
+- **Disabled controls are a false positive, and are suppressed.** WCAG 1.4.3
+  exempts inactive components from contrast requirements, but the audit flags
+  them anyway — Inspect's Run button is disabled until a domain is typed, and
+  auditing the empty state reported a contrast failure that was never a real
+  defect. The harness now drops contrast findings whose element reports
+  `isEnabled == false`. Suppressing on the rule beats driving the UI to enable
+  the control: typing raises the keyboard, which then follows the audit onto
+  later screens and flags the system emoji picker's category buttons.
+- **A dirty simulator inflates the burndown.** Keyboard state persists across
+  runs, so a simulator left with the emoji picker open reports ~9 phantom
+  hit-region findings per screen. If findings appear that name system UI
+  ("Flags category", "Frequently Used category"), erase the simulator
+  (`xcrun simctl erase <udid>`) and re-run before believing them.
 - Audits retry up to three times. Slower machines can miss the audit's internal
   deadline (`Audit failed to complete in time`, code `-56`), which is a tooling
   timeout, not an app defect. A screen that still cannot be audited is reported
