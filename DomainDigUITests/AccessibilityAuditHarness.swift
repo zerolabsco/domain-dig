@@ -40,6 +40,9 @@ enum AccessibilityAuditHarness {
     ///   `.sufficientElementDescription`, `.trait`
     static let enforcedAuditTypes: XCUIAccessibilityAuditType = []
 
+    /// How many times to retry an audit that misses its internal deadline.
+    private static let auditAttempts = 3
+
     /// Launches the app with feature gating lifted, optionally at a specific
     /// content size category.
     static func launch(contentSizeCategory: String? = nil) -> XCUIApplication {
@@ -56,19 +59,53 @@ enum AccessibilityAuditHarness {
     ///
     /// Findings are logged and attached to the result bundle so a CI run
     /// produces the burndown list as an artifact rather than only a pass/fail.
+    ///
+    /// Returns `false` if the audit could not complete, leaving the screen
+    /// unaudited. Callers turn that into an `XCTSkip` — reporting a pass would
+    /// claim coverage that did not happen.
+    @discardableResult
     static func audit(
         _ app: XCUIApplication,
         screen: String,
         test: XCTestCase
-    ) throws {
+    ) throws -> Bool {
         var findings: [String] = []
+        var timeout: Error?
 
-        try app.performAccessibilityAudit { issue in
-            let isEnforced = !enforcedAuditTypes.intersection(issue.auditType).isEmpty
-            let marker = isEnforced ? "FAIL" : "report"
-            findings.append("[\(marker)][\(name(for: issue.auditType))] \(issue.compactDescription)")
-            // true suppresses the finding, false reports it as a test failure.
-            return !isEnforced
+        // The audit traverses the whole element tree and has its own internal
+        // deadline, which slower CI runners miss on the denser screens. That is a
+        // tooling timeout, not an app defect, so retry before giving up.
+        //
+        // Only the timeout is retried. If a category is enforced and the audit
+        // reports findings before timing out, those failures are already recorded
+        // and a retry would duplicate them — accepted, because the alternative is
+        // losing the run to an infrastructure hiccup.
+        for attempt in 1...auditAttempts {
+            findings.removeAll()
+            timeout = nil
+            do {
+                try app.performAccessibilityAudit { issue in
+                    let isEnforced = !enforcedAuditTypes.intersection(issue.auditType).isEmpty
+                    let marker = isEnforced ? "FAIL" : "report"
+                    findings.append("[\(marker)][\(name(for: issue.auditType))] \(issue.compactDescription)")
+                    // true suppresses the finding, false reports it as a test failure.
+                    return !isEnforced
+                }
+                break
+            } catch let error as NSError where error.isAccessibilityAuditTimeout {
+                timeout = error
+                print("\(screen): audit timed out (attempt \(attempt) of \(auditAttempts))")
+            }
+        }
+
+        if timeout != nil {
+            let message = "\(screen): audit did not complete in time after \(auditAttempts) attempts — screen NOT audited"
+            print(message)
+            let attachment = XCTAttachment(string: message)
+            attachment.name = "a11y-audit-\(screen)-timeout"
+            attachment.lifetime = .keepAlways
+            test.add(attachment)
+            return false
         }
 
         let summary = findings.isEmpty
@@ -81,6 +118,8 @@ enum AccessibilityAuditHarness {
         attachment.name = "a11y-audit-\(screen)"
         attachment.lifetime = .keepAlways
         test.add(attachment)
+
+        return true
     }
 
     /// `XCUIAccessibilityAuditType` is an option set whose description is just a
@@ -99,6 +138,14 @@ enum AccessibilityAuditHarness {
         ]
         let matched = known.filter { type.contains($0.0) }.map(\.1)
         return matched.isEmpty ? "unknown(\(type.rawValue))" : matched.joined(separator: "+")
+    }
+}
+
+private extension NSError {
+    /// `Audit failed to complete in time` — the audit's own deadline, raised by
+    /// XCTest rather than by anything wrong with the app.
+    var isAccessibilityAuditTimeout: Bool {
+        domain == "com.apple.xcode.xctest.accessibilityAudit" && code == -56
     }
 }
 

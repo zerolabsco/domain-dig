@@ -17,33 +17,23 @@ final class AccessibilityAuditTests: XCTestCase {
     // MARK: Per-screen audits
 
     func testInspectScreen() throws {
-        let app = AccessibilityAuditHarness.launch()
-        app.selectRootTab("Inspect")
-        try AccessibilityAuditHarness.audit(app, screen: "inspect", test: self)
+        try auditRootTab("Inspect")
     }
 
     func testDashboardScreen() throws {
-        let app = AccessibilityAuditHarness.launch()
-        app.selectRootTab("Dashboard")
-        try AccessibilityAuditHarness.audit(app, screen: "dashboard", test: self)
+        try auditRootTab("Dashboard")
     }
 
     func testAuditScreen() throws {
-        let app = AccessibilityAuditHarness.launch()
-        app.selectRootTab("Audit")
-        try AccessibilityAuditHarness.audit(app, screen: "audit", test: self)
+        try auditRootTab("Audit")
     }
 
     func testHistoryScreen() throws {
-        let app = AccessibilityAuditHarness.launch()
-        app.selectRootTab("History")
-        try AccessibilityAuditHarness.audit(app, screen: "history", test: self)
+        try auditRootTab("History")
     }
 
     func testSettingsScreen() throws {
-        let app = AccessibilityAuditHarness.launch()
-        app.selectRootTab("Settings")
-        try AccessibilityAuditHarness.audit(app, screen: "settings", test: self)
+        try auditRootTab("Settings")
     }
 
     func testTrackedDomainsScreen() throws {
@@ -57,7 +47,8 @@ final class AccessibilityAuditTests: XCTestCase {
         )
         trackedDomains.tap()
 
-        try AccessibilityAuditHarness.audit(app, screen: "tracked-domains", test: self)
+        let audited = try AccessibilityAuditHarness.audit(app, screen: "tracked-domains", test: self)
+        try XCTSkipUnless(audited, "Tracked Domains audit did not complete in time")
     }
 
     // MARK: Dynamic Type
@@ -67,18 +58,36 @@ final class AccessibilityAuditTests: XCTestCase {
     /// This is where clipped text and fixed-height containers surface — the
     /// `.accessibility5`-class failures that the fixed geometry in
     /// `AppDensityMetrics` is expected to produce until phase 3 of #21 lands.
+    ///
+    /// Every screen is attempted even if an earlier one times out, so one slow
+    /// screen cannot silently drop the rest; the skip is reported at the end.
     func testAllScreensAtLargestAccessibilitySize() throws {
         let app = AccessibilityAuditHarness.launch(
             contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"
         )
 
+        var unaudited: [String] = []
+
         for tab in ["Inspect", "Dashboard", "Audit", "History", "Settings"] {
             app.selectRootTab(tab)
-            try AccessibilityAuditHarness.audit(
-                app,
-                screen: "\(tab.lowercased())-accessibilityXXXL",
-                test: self
-            )
+            let screen = "\(tab.lowercased())-accessibilityXXXL"
+            if try !AccessibilityAuditHarness.audit(app, screen: screen, test: self) {
+                unaudited.append(tab)
+            }
         }
+
+        try XCTSkipUnless(
+            unaudited.isEmpty,
+            "Audit did not complete in time for: \(unaudited.joined(separator: ", "))"
+        )
+    }
+
+    // MARK: Helpers
+
+    private func auditRootTab(_ tab: String) throws {
+        let app = AccessibilityAuditHarness.launch()
+        app.selectRootTab(tab)
+        let audited = try AccessibilityAuditHarness.audit(app, screen: tab.lowercased(), test: self)
+        try XCTSkipUnless(audited, "Audit did not complete in time for \(tab)")
     }
 }

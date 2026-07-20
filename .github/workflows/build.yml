@@ -20,18 +20,28 @@ name: Build
 # TEST_RUNNER_-prefixed build setting reaches the UI test process.)
 #
 # The matrix runs two simulators because audit coverage is NOT nested — each
-# runtime reports findings the other misses, in both directions. Measured on the
-# Tracked Domains screen, iOS 18.6 reported 2 issues and iOS 27.0 reported 6
-# (including contrast and element-detection issues 18.6 never raised); at
-# accessibility text sizes the Dashboard produced a hit-region finding on 18.6
-# that 27.0 did not. Testing only the newest image would leave the oldest
-# supported OS unchecked; testing only the floor would miss newer audit checks.
+# runtime reports findings the other misses, in both directions. Measured
+# locally on the Tracked Domains screen, iOS 18.6 reported 2 issues and iOS 27.0
+# reported 6 (including contrast and element-detection issues 18.6 never
+# raised); at accessibility text sizes the Dashboard produced a hit-region
+# finding on 18.6 that 27.0 did not.
 #
-# Runtimes are resolved dynamically rather than pinned: the deployment target is
-# 17.6, but no 17.6 simulator runtime ships, so "floor" means the oldest
-# available runtime at or above the deployment target (18.6 at time of writing).
-# The previous selector took the first iPhone from any runtime, which could pick
-# a simulator BELOW the deployment target, where the app cannot install.
+# CAVEAT — this image cannot test the real support floor. The app's deployment
+# target is 17.6, but the macos-26 runner ships only iOS 26.x simulator
+# runtimes, so "floor" resolves to ~26.2 here rather than an 18.x image. CI
+# therefore compares two 26.x runtimes; genuine oldest-supported-OS coverage has
+# to come from a local run or a self-hosted runner with older runtimes
+# installed. The "Select simulator" step emits a warning annotation when the
+# resolved floor sits well above the deployment target, so this gap stays
+# visible instead of being silently assumed away.
+#
+# Installing an older runtime in CI (xcodebuild -downloadPlatform iOS
+# -buildVersion 18.6) is possible but costs several GB and minutes per job; not
+# done by default.
+#
+# Runtimes are resolved dynamically rather than pinned. The previous selector
+# took the first iPhone from any runtime, which could pick a simulator BELOW the
+# deployment target, where the app cannot install.
 #
 # pull_request only, plus manual dispatch. GitHub builds the merge result (PR
 # merged into main), so a green PR validates exactly what will land on main.
@@ -114,6 +124,15 @@ jobs:
           echo "Selected $label"
           echo "udid=$(echo "$selected" | jq -r .udid)" >> "$GITHUB_OUTPUT"
           echo "label=$label" >> "$GITHUB_OUTPUT"
+
+          # Surface the floor-coverage gap rather than letting the matrix imply
+          # coverage it does not have. One major version of slack is tolerated.
+          if [ "${{ matrix.tier }}" = "floor" ]; then
+            rank=$(echo "$selected" | jq -r .rank)
+            if [ "$rank" -ge $(( (DEPLOYMENT_TARGET_MAJOR + 1) * 1000 )) ]; then
+              echo "::warning::Floor tier resolved to $label, well above the ${DEPLOYMENT_TARGET_MAJOR}.${DEPLOYMENT_TARGET_MINOR} deployment target. This image has no older runtime, so the oldest supported OS is NOT covered by this run."
+            fi
+          fi
 
       - name: Test on ${{ steps.sim.outputs.label }}
         run: |
