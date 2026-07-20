@@ -15,10 +15,10 @@ final class PurchaseService {
     }
 
     static let shared = PurchaseService()
-    static let monthlyProductID = "domaindig.pro.monthly"
-    static let yearlyProductID = "domaindig.pro.yearly"
-    static let proPlusMonthlyProductID = "domaindig.dataplus.monthly"
-    static let proPlusYearlyProductID = "domaindig.dataplus.yearly"
+    static let monthlyProductID = "domaindig.pro.month"
+    static let yearlyProductID = "domaindig.pro.annually"
+    static let proPlusMonthlyProductID = "domaindig.proplus.monthly"
+    static let proPlusYearlyProductID = "domaindig.proplus.annually"
     static let productIDs = [
         monthlyProductID,
         yearlyProductID,
