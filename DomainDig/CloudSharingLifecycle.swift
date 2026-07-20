@@ -3,9 +3,9 @@ import UIKit
 
 final class DomainDigAppDelegate: NSObject, UIApplicationDelegate {
     func application(
-        _ application: UIApplication,
+        _: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
-        options: UIScene.ConnectionOptions
+        options _: UIScene.ConnectionOptions
     ) -> UISceneConfiguration {
         let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
         configuration.delegateClass = DomainDigSceneDelegate.self
@@ -14,12 +14,12 @@ final class DomainDigAppDelegate: NSObject, UIApplicationDelegate {
 }
 
 final class DomainDigSceneDelegate: NSObject, UIWindowSceneDelegate {
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    func scene(_: UIScene, willConnectTo _: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let metadata = connectionOptions.cloudKitShareMetadata else { return }
         accept(metadata: metadata)
     }
 
-    func windowScene(_ windowScene: UIWindowScene, userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata) {
+    func windowScene(_: UIWindowScene, userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata) {
         accept(metadata: cloudKitShareMetadata)
     }
 

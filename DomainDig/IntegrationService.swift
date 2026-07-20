@@ -768,9 +768,7 @@ private final class SMTPChannel {
             connection.stateUpdateHandler = { [weak self] state in
                 switch state {
                 case .ready:
-                    DispatchQueue.global(qos: .utility).async {
-                        self?.startReceiveLoop()
-                    }
+                    self?.scheduleReceiveLoop()
                     continuation.resume()
                 case .failed(let error):
                     continuation.resume(throwing: error)
@@ -779,6 +777,12 @@ private final class SMTPChannel {
                 }
             }
             connection.start(queue: .global(qos: .utility))
+        }
+    }
+
+    private func scheduleReceiveLoop() {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            self?.startReceiveLoop()
         }
     }
 

@@ -115,7 +115,7 @@ struct HistoryView: View {
             Button("Clear All", role: .destructive) {
                 viewModel.clearHistory()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text("This will delete all saved history entries. This cannot be undone.")
         }
@@ -314,7 +314,7 @@ struct HistoryDetailView: View {
                     isCloudflareProxied: snapshot.httpHeaders.contains(where: { $0.name.lowercased() == "cf-ray" }),
                     customPortsExpanded: .constant(false),
                     customPortInput: .constant(""),
-                    onScanCustomPorts: {}
+                    onScanCustomPorts: { /* Historical snapshot; re-scanning is not offered here. */ }
                 )
                 .padding(.top, appDensity.metrics.sectionSpacing)
             }
@@ -344,7 +344,7 @@ struct HistoryDetailView: View {
             Button("Run with Snapshot Resolver") {
                 viewModel.rerunLookup(from: entry, useSnapshotResolver: true)
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text(viewModel.resolverMismatchNote(for: entry) ?? "Choose how to reproduce this snapshot.")
         }

@@ -47,6 +47,7 @@ struct DomainAvailabilityService {
                 return .registered
             }
         } catch {
+            // No A record (or the lookup failed); fall through to the NS probe.
         }
 
         do {

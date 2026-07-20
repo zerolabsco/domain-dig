@@ -106,10 +106,10 @@ struct ScheduledReportOutcome {
 final class ScheduledReportService {
     static let shared = ScheduledReportService()
 
-    private init() {}
+    private init() { /* Singleton; use the shared instance. */ }
 
     @discardableResult
-    func generateReport(trigger: MonitoringRunTrigger, requireEnabledSetting: Bool) async -> ScheduledReportOutcome {
+    func generateReport(trigger _: MonitoringRunTrigger, requireEnabledSetting: Bool) async -> ScheduledReportOutcome {
         var settings = ScheduledReportStorage.loadSettings()
 
         guard FeatureAccessService.hasAccess(to: .automatedMonitoring) else {
@@ -191,7 +191,7 @@ final class ScheduledReportScheduler {
 
     private var isRegistered = false
 
-    private init() {}
+    private init() { /* Singleton; use the shared instance. */ }
 
     func registerBackgroundTask() {
         #if canImport(BackgroundTasks)

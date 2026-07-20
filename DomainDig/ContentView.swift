@@ -569,13 +569,13 @@ struct ContentView: View {
                             shareSingleResults(format: .pdf)
                         }
                     } else {
-                        Button("CSV Export • Available in Pro") {}
+                        Button("CSV Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                             .disabled(true)
-                        Button("JSON Export • Available in Pro") {}
+                        Button("JSON Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                             .disabled(true)
-                        Button("Markdown Export • Available in Pro") {}
+                        Button("Markdown Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                             .disabled(true)
-                        Button("PDF Export • Available in Pro") {}
+                        Button("PDF Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                             .disabled(true)
                     }
                 } label: {
@@ -621,13 +621,13 @@ struct ContentView: View {
                                 shareBatchResults(format: .pdf)
                             }
                         } else {
-                            Button("Batch CSV • Available in Pro") {}
+                            Button("Batch CSV • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("Batch JSON • Available in Pro") {}
+                            Button("Batch JSON • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("Batch Markdown • Available in Pro") {}
+                            Button("Batch Markdown • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("Batch PDF • Available in Pro") {}
+                            Button("Batch PDF • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
                         }
                     } label: {
@@ -1040,10 +1040,10 @@ struct DomainChangeSummaryView: View {
                     .clipShape(Capsule())
                 Text(summary.impactClassification.title.uppercased())
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(impactColor(summary.impactClassification))
+                    .foregroundStyle(summary.impactClassification.color)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(impactColor(summary.impactClassification).opacity(0.16))
+                    .background(summary.impactClassification.color.opacity(0.16))
                     .clipShape(Capsule())
                 Text(summary.generatedAt, style: .time)
                     .font(appDensity.font(.caption2))
@@ -1107,16 +1107,6 @@ struct DomainChangeSummaryView: View {
         }
     }
 
-    private func impactColor(_ impact: ChangeImpactClassification) -> Color {
-        switch impact {
-        case .informational:
-            return .secondary
-        case .warning:
-            return .yellow
-        case .critical:
-            return .red
-        }
-    }
 }
 
 struct DomainDiffView: View {
@@ -2008,7 +1998,7 @@ struct WebSectionView: View {
                 }
                 SectionTrustMetadataView(provenance: tlsProvenance, confidence: nil)
                 if !sslLoading, let tlsSummary {
-                    LabeledValueRow(row: InfoRowViewData(label: "TLS Grade", value: tlsSummary.tlsGrade.rawValue, tone: tlsSummary.tlsGrade == .a ? .success : (tlsSummary.tlsGrade == .f ? .failure : .warning)))
+                    LabeledValueRow(row: InfoRowViewData(label: "TLS Grade", value: tlsSummary.tlsGrade.rawValue, tone: tlsSummary.tlsGrade.tone))
                     ForEach(Array(tlsSummary.tlsHighlights.enumerated()), id: \.offset) { _, highlight in
                         MessageRowView(text: highlight, isError: isTLSHighlightError(highlight))
                     }
@@ -2153,7 +2143,7 @@ struct EmailSectionView: View {
                         .opacity(loading ? 0 : 1)
                 }
                 if let assessment, let grade = assessment.grade {
-                    LabeledValueRow(row: InfoRowViewData(label: "Grade", value: grade.rawValue, tone: grade == .a ? .success : (grade == .f ? .failure : .warning)))
+                    LabeledValueRow(row: InfoRowViewData(label: "Grade", value: grade.rawValue, tone: grade.tone))
                     if !assessment.reasons.isEmpty {
                         Text(assessment.reasons.joined(separator: " | "))
                             .font(appDensity.font(.caption2))
@@ -2897,6 +2887,11 @@ private struct LocalAPISettingsView: View {
     @State private var localAPIService = LocalAPIService.shared
     @State private var portText = ""
 
+    private var statusText: String {
+        if localAPIService.isRunning { return "Running" }
+        return localAPIService.config.isEnabled ? "Stopped" : "Disabled"
+    }
+
     var body: some View {
         Form {
             Section("Local API") {
@@ -2923,7 +2918,7 @@ private struct LocalAPISettingsView: View {
                 .keyboardType(.numberPad)
 
                 LabeledContent("Address", value: localAPIService.address)
-                LabeledContent("Status", value: localAPIService.isRunning ? "Running" : (localAPIService.config.isEnabled ? "Stopped" : "Disabled"))
+                LabeledContent("Status", value: statusText)
                 LabeledContent("Token", value: localAPIService.maskedToken)
 
                 if let statusMessage = localAPIService.statusMessage {
@@ -3339,7 +3334,7 @@ private struct DataPortabilitySettingsView: View {
             Button("Replace", role: .destructive) {
                 applyPendingImport()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text("Replace mode overwrites local data covered by the imported file and may remove items that are only on this device.")
         }
@@ -3347,7 +3342,7 @@ private struct DataPortabilitySettingsView: View {
             get: { pendingImportError != nil },
             set: { if !$0 { pendingImportError = nil } }
         )) {
-            Button("OK", role: .cancel) {}
+            Button("OK", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text(pendingImportError ?? "The import could not be completed.")
         }
@@ -3585,7 +3580,7 @@ private struct DataManagementSettingsView: View {
             Button("Clear", role: .destructive) {
                 viewModel.clearHistory()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text("This removes saved lookup snapshots and clears monitoring run history on this device.")
         }
@@ -3593,7 +3588,7 @@ private struct DataManagementSettingsView: View {
             Button("Clear", role: .destructive) {
                 viewModel.clearLookupCache()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text("This clears the in-memory lookup cache and cancels any cached in-flight work.")
         }
@@ -3601,7 +3596,7 @@ private struct DataManagementSettingsView: View {
             Button("Clear", role: .destructive) {
                 viewModel.clearWorkflows()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text("This removes saved workflows only. History, tracked domains, and saved reports stay intact.")
         }
@@ -3609,12 +3604,12 @@ private struct DataManagementSettingsView: View {
             Button("Clear", role: .destructive) {
                 viewModel.clearTrackedDomains()
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text("This removes the watchlist and clears monitoring run history. History and workflows stay intact.")
         }
         .alert("Delete All Data?", isPresented: $showDeleteAllConfirmation) {
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
             Button("Delete All Data", role: .destructive) {
                 deleteAllData()
             }
@@ -3625,7 +3620,7 @@ private struct DataManagementSettingsView: View {
             get: { deleteAllErrorMessage != nil },
             set: { if !$0 { deleteAllErrorMessage = nil } }
         )) {
-            Button("OK", role: .cancel) {}
+            Button("OK", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text(deleteAllErrorMessage ?? "The local data reset could not be completed.")
         }
@@ -3741,6 +3736,36 @@ private struct DataImportPreviewSheet: View {
                     }
                 }
             }
+        }
+    }
+}
+
+extension ChangeImpactClassification {
+    var color: Color {
+        switch self {
+        case .informational: return .secondary
+        case .warning: return .yellow
+        case .critical: return .red
+        }
+    }
+}
+
+extension TLSGrade {
+    var tone: ResultTone {
+        switch self {
+        case .a: return .success
+        case .f: return .failure
+        default: return .warning
+        }
+    }
+}
+
+extension EmailSecurityGrade {
+    var tone: ResultTone {
+        switch self {
+        case .a: return .success
+        case .f: return .failure
+        default: return .warning
         }
     }
 }

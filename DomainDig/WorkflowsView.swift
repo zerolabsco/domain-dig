@@ -253,13 +253,13 @@ struct WorkflowDetailView: View {
                                         shareWorkflowResults(format: .pdf)
                                     }
                                 } else {
-                                    Button("CSV Export • Available in Pro") {}
+                                    Button("CSV Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                         .disabled(true)
-                                    Button("JSON Export • Available in Pro") {}
+                                    Button("JSON Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                         .disabled(true)
-                                    Button("Markdown Export • Available in Pro") {}
+                                    Button("Markdown Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                         .disabled(true)
-                                    Button("PDF Export • Available in Pro") {}
+                                    Button("PDF Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                         .disabled(true)
                                 }
                             } label: {
@@ -554,13 +554,13 @@ struct WorkflowRunSummaryView: View {
                                 share(format: .pdf)
                             }
                         } else {
-                            Button("CSV Export • Available in Pro") {}
+                            Button("CSV Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("JSON Export • Available in Pro") {}
+                            Button("JSON Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("Markdown Export • Available in Pro") {}
+                            Button("Markdown Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("PDF Export • Available in Pro") {}
+                            Button("PDF Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
                         }
                     } label: {

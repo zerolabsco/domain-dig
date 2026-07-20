@@ -57,7 +57,7 @@ struct AuditModeView: View {
             }
         }
         .alert("Audit Export", isPresented: Binding(get: { exportMessage != nil }, set: { if !$0 { exportMessage = nil } })) {
-            Button("OK", role: .cancel) {}
+            Button("OK", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text(exportMessage ?? "")
         }
