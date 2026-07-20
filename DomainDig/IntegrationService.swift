@@ -40,6 +40,7 @@ final class IntegrationService {
         switch updatedTarget.configuration {
         case .webhook(var configuration):
             if let webhookURL {
+                try Self.validateHTTPS(webhookURL)
                 let reference = configuration.credentialReference ?? Self.secretReference(for: updatedTarget.id, suffix: "webhook")
                 try IntegrationSecretStore.save(secret: webhookURL, reference: reference)
                 configuration.credentialReference = reference
@@ -48,6 +49,7 @@ final class IntegrationService {
             }
         case .slack(var configuration):
             if let slackWebhookURL {
+                try Self.validateHTTPS(slackWebhookURL)
                 let reference = configuration.credentialReference ?? Self.secretReference(for: updatedTarget.id, suffix: "slack")
                 try IntegrationSecretStore.save(secret: slackWebhookURL, reference: reference)
                 configuration.credentialReference = reference
@@ -429,6 +431,15 @@ final class IntegrationService {
         "integration.\(integrationID.uuidString).\(suffix)"
     }
 
+    private static func validateHTTPS(_ string: String) throws {
+        guard let url = URL(string: string) else {
+            throw IntegrationError.invalidURL
+        }
+        guard url.scheme?.lowercased() == "https" else {
+            throw IntegrationError.insecureURL
+        }
+    }
+
     private static func loadTargets(defaults: UserDefaults) -> [IntegrationTarget] {
         load([IntegrationTarget].self, key: StorageKey.targets, defaults: defaults) ?? []
     }
@@ -524,6 +535,7 @@ private struct SlackText: Encodable {
 
 private enum IntegrationError: LocalizedError {
     case invalidURL
+    case insecureURL
     case missingSecret
     case invalidResponse(Int)
     case invalidSMTPPort
@@ -534,6 +546,8 @@ private enum IntegrationError: LocalizedError {
         switch self {
         case .invalidURL:
             return "The integration URL is invalid."
+        case .insecureURL:
+            return "The integration URL must use https. A webhook URL is itself a secret, so http would send it in cleartext."
         case .missingSecret:
             return "This integration is missing a saved secret."
         case .invalidResponse(let statusCode):
@@ -555,8 +569,11 @@ private enum HTTPIntegrationClient {
         headers: [String: String],
         timeoutSeconds: Double
     ) async throws {
-        guard let url = URL(string: urlString), url.scheme?.lowercased() == "https" else {
+        guard let url = URL(string: urlString) else {
             throw IntegrationError.invalidURL
+        }
+        guard url.scheme?.lowercased() == "https" else {
+            throw IntegrationError.insecureURL
         }
 
         var request = URLRequest(url: url, timeoutInterval: timeoutSeconds)
