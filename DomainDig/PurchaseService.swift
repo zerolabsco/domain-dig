@@ -288,12 +288,10 @@ final class PurchaseService {
 
     private func storeMessage(for error: Error, fallback: String) -> String {
         if let storeKitError = error as? StoreKitError {
-            switch storeKitError {
-            case .networkError:
+            if case .networkError = storeKitError {
                 return "The App Store is offline right now."
-            default:
-                return fallback
             }
+            return fallback
         }
 
         let message = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -239,22 +239,26 @@ struct DashboardView: View {
         let warningCount = states.filter { $0.health == .warning }.count
         let title: String
         let color: Color
+        let systemImage: String
 
         if criticalCount > 0 {
             title = "\(criticalCount) critical"
             color = .red
+            systemImage = "exclamationmark.octagon.fill"
         } else if warningCount > 0 {
             title = "\(warningCount) warning"
             color = .yellow
+            systemImage = "exclamationmark.triangle.fill"
         } else {
             title = "Healthy"
             color = .green
+            systemImage = "checkmark.circle.fill"
         }
 
         return AppStatusBadgeView(
             model: .init(
                 title: title,
-                systemImage: criticalCount > 0 ? "exclamationmark.octagon.fill" : (warningCount > 0 ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"),
+                systemImage: systemImage,
                 foregroundColor: color,
                 backgroundColor: color.opacity(0.16)
             )

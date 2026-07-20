@@ -85,7 +85,7 @@ final class DomainMonitoringScheduler {
 
     private var isRegistered = false
 
-    private init() {}
+    private init() { /* Singleton; use the shared instance. */ }
 
     func registerBackgroundTask() {
         #if canImport(BackgroundTasks)
@@ -613,8 +613,8 @@ final class DomainMonitoringService {
 
     private func processAdaptiveMonitoringState(
         trackedDomain: TrackedDomain,
-        snapshot: LookupSnapshot,
-        previousSnapshot: LookupSnapshot?,
+        snapshot _: LookupSnapshot,
+        previousSnapshot _: LookupSnapshot?,
         alertDescriptor: MonitoringAlertDescriptor?,
         settings: MonitoringSettings,
         notificationsAuthorized: Bool,

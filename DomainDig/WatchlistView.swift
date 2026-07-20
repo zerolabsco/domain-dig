@@ -169,13 +169,13 @@ struct WatchlistView: View {
                                 shareTrackedDomains(format: .pdf)
                             }
                         } else {
-                            Button("CSV Export • Available in Pro") {}
+                            Button("CSV Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("JSON Export • Available in Pro") {}
+                            Button("JSON Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("Markdown Export • Available in Pro") {}
+                            Button("Markdown Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
-                            Button("PDF Export • Available in Pro") {}
+                            Button("PDF Export • Available in Pro") { /* Inert: disabled Pro upsell affordance. */ }
                                 .disabled(true)
                         }
                     } label: {
@@ -250,7 +250,7 @@ struct WatchlistView: View {
             Button("Save") {
                 viewModel.saveCurrentWatchlistView(name: newSavedViewName)
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text("Saves the current tag, filter, and sort as a reusable preset.")
         }
@@ -736,7 +736,7 @@ struct TrackedDomainDetailView: View {
                     viewModel.rerunInspection(for: liveTrackedDomain, useSnapshotResolver: true)
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) { /* Dismiss only; SwiftUI closes the alert. */ }
         } message: {
             Text(viewModel.resolverMismatchNote(for: liveTrackedDomain) ?? "Choose how to reproduce the most recent snapshot.")
         }

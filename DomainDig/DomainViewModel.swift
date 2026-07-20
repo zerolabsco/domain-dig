@@ -1280,19 +1280,7 @@ final class DomainViewModel {
     }
 
     func clearPresentedResults() {
-        lookupTask?.cancel()
-        customPortScanTask?.cancel()
-        batchTask?.cancel()
-        hasRun = false
-        searchedDomain = ""
-        lastLookupDurationMs = nil
-        currentDiffSections = []
-        currentChangeSummary = nil
-        ownershipDiff = []
-        currentReport = nil
-        refreshingTrackedDomainID = nil
-        clearBatchState()
-        clearLookupState()
+        reset()
     }
 
     func run() {
@@ -1857,7 +1845,7 @@ final class DomainViewModel {
         portabilityStatusMessage = result.summary
         CloudSyncService.shared.markAppSettingsChanged()
         CloudSyncService.shared.markMonitoringSettingsChanged(localActivationConfirmed: monitoringSettings.isEnabled)
-        CloudSyncService.shared.scheduleSyncIfNeeded(trigger: .import)
+        CloudSyncService.shared.scheduleSyncIfNeeded(trigger: .imported)
         return result
     }
 
@@ -2174,10 +2162,7 @@ final class DomainViewModel {
         case let .success(sections):
             dnsSections = sections
             dnsError = nil
-        case let .empty(message):
-            dnsSections = []
-            dnsError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             dnsSections = []
             dnsError = message
         }
@@ -2199,10 +2184,7 @@ final class DomainViewModel {
         case let .success(info):
             sslInfo = info
             sslError = nil
-        case let .empty(message):
-            sslInfo = nil
-            sslError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             sslInfo = nil
             sslError = message
         }
@@ -2228,15 +2210,7 @@ final class DomainViewModel {
             httpProtocol = headersResult.httpProtocol
             http3Advertised = headersResult.http3Advertised
             httpHeadersError = nil
-        case let .empty(message):
-            httpHeaders = []
-            httpSecurityGrade = nil
-            httpStatusCode = nil
-            httpResponseTimeMs = nil
-            httpProtocol = nil
-            http3Advertised = false
-            httpHeadersError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             httpHeaders = []
             httpSecurityGrade = nil
             httpStatusCode = nil
@@ -2255,10 +2229,7 @@ final class DomainViewModel {
         case let .success(results):
             reachabilityResults = results
             reachabilityError = nil
-        case let .empty(message):
-            reachabilityResults = []
-            reachabilityError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             reachabilityResults = []
             reachabilityError = message
         }
@@ -2272,10 +2243,7 @@ final class DomainViewModel {
         case let .success(emailResult):
             emailSecurity = emailResult
             emailSecurityError = nil
-        case let .empty(message):
-            emailSecurity = nil
-            emailSecurityError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             emailSecurity = nil
             emailSecurityError = message
         }
@@ -2289,10 +2257,7 @@ final class DomainViewModel {
         case let .success(ownership):
             ownershipResult = ownership
             ownershipError = nil
-        case let .empty(message):
-            ownershipResult = nil
-            ownershipError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             ownershipResult = nil
             ownershipError = message
         }
@@ -2306,10 +2271,7 @@ final class DomainViewModel {
         case let .success(record):
             ptrRecord = record
             ptrError = nil
-        case let .empty(message):
-            ptrRecord = nil
-            ptrError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             ptrRecord = nil
             ptrError = message
         }
@@ -2323,10 +2285,7 @@ final class DomainViewModel {
         case let .success(hops):
             redirectChain = hops
             redirectChainError = nil
-        case let .empty(message):
-            redirectChain = []
-            redirectChainError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             redirectChain = []
             redirectChainError = message
         }
@@ -2340,10 +2299,7 @@ final class DomainViewModel {
         case let .success(results):
             subdomains = results
             subdomainsError = nil
-        case let .empty(message):
-            subdomains = []
-            subdomainsError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             subdomains = []
             subdomainsError = message
         }
@@ -2358,11 +2314,7 @@ final class DomainViewModel {
             guard !Task.isCancelled, isCurrentLookup(lookupID) else { return }
             portScanResults = enrichedResults
             portScanError = nil
-        case let .empty(message):
-            guard !Task.isCancelled, isCurrentLookup(lookupID) else { return }
-            portScanResults = []
-            portScanError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             guard !Task.isCancelled, isCurrentLookup(lookupID) else { return }
             portScanResults = []
             portScanError = message
@@ -2377,10 +2329,7 @@ final class DomainViewModel {
         case let .success(geolocation):
             ipGeolocation = geolocation
             ipGeolocationError = nil
-        case let .empty(message):
-            ipGeolocation = nil
-            ipGeolocationError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             ipGeolocation = nil
             ipGeolocationError = message
         }
@@ -2408,10 +2357,7 @@ final class DomainViewModel {
             customPortResults = results
             customPortScanError = nil
             _ = saveHistoryEntry(replaceLatest: true)
-        case let .empty(message):
-            customPortResults = []
-            customPortScanError = message
-        case let .error(message):
+        case let .empty(message), let .error(message):
             customPortResults = []
             customPortScanError = message
         }
@@ -4024,7 +3970,7 @@ final class DomainViewModel {
 
     static func summaryFields(from snapshot: LookupSnapshot) -> [SummaryFieldViewData] {
         [
-            SummaryFieldViewData(label: "Domain", value: snapshot.domain.nonEmpty ?? "Unavailable", tone: .primary),
+            SummaryFieldViewData(label: "Domain", value: snapshot.domain.nilIfEmpty ?? "Unavailable", tone: .primary),
             SummaryFieldViewData(label: "Observed IP", value: primaryIPAddress(from: snapshot) ?? "Unavailable", tone: .primary),
             SummaryFieldViewData(label: "Observed Redirect", value: finalRedirectTarget(from: snapshot) ?? "Unavailable", tone: .secondary),
             SummaryFieldViewData(label: "Inference", value: availabilityInference(from: snapshot), tone: availabilityTone(snapshot.availabilityResult?.status)),
@@ -4780,10 +4726,7 @@ final class DomainViewModel {
         case let .success(pricing):
             domainPricing = pricing
             domainPricingError = nil
-        case let .empty(message):
-            domainPricing = nil
-            domainPricingError = conciseExternalMessage(message, fallback: "External pricing unavailable")
-        case let .error(message):
+        case let .empty(message), let .error(message):
             domainPricing = nil
             domainPricingError = conciseExternalMessage(message, fallback: "External pricing unavailable")
         }
@@ -4803,10 +4746,7 @@ final class DomainViewModel {
         case let .success(result):
             reputation = result
             reputationError = nil
-        case let .empty(message):
-            reputation = nil
-            reputationError = conciseExternalMessage(message, fallback: "Reputation check unavailable")
-        case let .error(message):
+        case let .empty(message), let .error(message):
             reputation = nil
             reputationError = conciseExternalMessage(message, fallback: "Reputation check unavailable")
         }
@@ -4865,10 +4805,6 @@ final class DomainViewModel {
 }
 
 private extension String {
-    var nonEmpty: String? {
-        isEmpty ? nil : self
-    }
-
     var nilIfEmpty: String? {
         isEmpty ? nil : self
     }

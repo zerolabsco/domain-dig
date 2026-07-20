@@ -412,7 +412,7 @@ enum DomainInsightEngine {
         if hasMXRecords(snapshot), snapshot.emailSecurity == nil {
             patterns.append("MX records exist without corresponding email security records")
         }
-        if snapshot.sslInfo != nil && !(snapshot.dnsSections.first(where: { $0.recordType == .CAA })?.records.isEmpty == false) {
+        if snapshot.sslInfo != nil, snapshot.dnsSections.first(where: { $0.recordType == .CAA })?.records.isEmpty != false {
             patterns.append("TLS is active but no CAA record was found")
         }
 
@@ -427,9 +427,16 @@ enum DomainInsightEngine {
         let dmarcFound = result.dmarc.found
         let dmarcStrict = isStrictDMARC(result.dmarc.value)
 
+        let dmarcReason: String
+        if !dmarcFound {
+            dmarcReason = "DMARC missing"
+        } else {
+            dmarcReason = dmarcStrict ? "DMARC policy is strict" : "DMARC policy is not strict"
+        }
+
         let reasons = [
             spfFound ? "SPF present" : "SPF missing",
-            dmarcFound ? (dmarcStrict ? "DMARC policy is strict" : "DMARC policy is not strict") : "DMARC missing",
+            dmarcReason,
             dkimFound ? "DKIM present" : "DKIM not detected"
         ]
 

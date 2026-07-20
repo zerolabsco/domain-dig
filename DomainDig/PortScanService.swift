@@ -89,24 +89,7 @@ struct PortScanService {
                 switch state {
                 case .ready:
                     connection.receive(minimumIncompleteLength: 1, maximumLength: 256) { data, _, _, error in
-                        guard error == nil,
-                              let data,
-                              !data.isEmpty,
-                              let rawBanner = String(data: data, encoding: .utf8) else {
-                            context.finish(with: nil)
-                            return
-                        }
-
-                        let printableBanner = rawBanner.filter { character in
-                            guard let scalar = character.unicodeScalars.first,
-                                  character.unicodeScalars.count == 1 else {
-                                return false
-                            }
-                            return (32...126).contains(scalar.value)
-                        }
-
-                        let banner = String(printableBanner.prefix(80))
-                        context.finish(with: banner.isEmpty ? nil : banner)
+                        context.finish(with: printableBanner(from: data, error: error))
                     }
                 case .failed, .cancelled:
                     context.finish(with: nil)
@@ -121,6 +104,26 @@ struct PortScanService {
                 context.finish(with: nil)
             }
         }
+    }
+
+    private static func printableBanner(from data: Data?, error: Error?) -> String? {
+        guard error == nil,
+              let data,
+              !data.isEmpty,
+              let rawBanner = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        let printable = rawBanner.filter { character in
+            guard let scalar = character.unicodeScalars.first,
+                  character.unicodeScalars.count == 1 else {
+                return false
+            }
+            return (32...126).contains(scalar.value)
+        }
+
+        let banner = String(printable.prefix(80))
+        return banner.isEmpty ? nil : banner
     }
 
     private static func probe(domain: String, port: UInt16) async -> PortProbeResult {

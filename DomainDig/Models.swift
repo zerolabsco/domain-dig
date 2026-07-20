@@ -244,8 +244,14 @@ struct DomainChangeSummary: Codable, Equatable {
         changedSections = try container.decodeIfPresent([String].self, forKey: .changedSections) ?? []
         generatedAt = try container.decode(Date.self, forKey: .generatedAt)
         severity = try container.decodeIfPresent(ChangeSeverity.self, forKey: .severity) ?? (hasChanges ? .medium : .low)
+        let defaultImpact: ChangeImpactClassification
+        if severity == .high {
+            defaultImpact = .critical
+        } else {
+            defaultImpact = hasChanges ? .warning : .informational
+        }
         impactClassification = try container.decodeIfPresent(ChangeImpactClassification.self, forKey: .impactClassification)
-            ?? (severity == .high ? .critical : (hasChanges ? .warning : .informational))
+            ?? defaultImpact
         message = try container.decodeIfPresent(String.self, forKey: .message)
             ?? (changedSections.isEmpty ? "No meaningful changes" : changedSections.joined(separator: " • "))
         observedFacts = try container.decodeIfPresent([String].self, forKey: .observedFacts) ?? []
@@ -562,12 +568,10 @@ enum DomainClassificationKind: String, Codable, CaseIterable, Sendable {
     case unknown
 
     var title: String {
-        switch self {
-        case .staticSite:
+        if self == .staticSite {
             return "Static"
-        default:
-            return rawValue.capitalized
         }
+        return rawValue.capitalized
     }
 }
 

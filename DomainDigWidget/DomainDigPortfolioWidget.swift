@@ -7,7 +7,7 @@ struct DomainDigEntry: TimelineEntry {
 }
 
 struct DomainDigProvider: TimelineProvider {
-    func placeholder(in context: Context) -> DomainDigEntry {
+    func placeholder(in _: Context) -> DomainDigEntry {
         DomainDigEntry(date: Date(), data: .placeholder)
     }
 
@@ -16,7 +16,7 @@ struct DomainDigProvider: TimelineProvider {
         completion(DomainDigEntry(date: Date(), data: data))
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<DomainDigEntry>) -> Void) {
+    func getTimeline(in _: Context, completion: @escaping (Timeline<DomainDigEntry>) -> Void) {
         let data = DomainDigWidgetStore.read() ?? .empty
         let entry = DomainDigEntry(date: Date(), data: data)
         // The app reloads timelines on foreground and on watchlist changes; this
@@ -49,10 +49,9 @@ struct DomainDigWidgetView: View {
         if data.totalDomains == 0 {
             emptyState
         } else {
-            switch family {
-            case .systemSmall:
+            if family == .systemSmall {
                 smallView
-            default:
+            } else {
                 mediumOrLargeView
             }
         }

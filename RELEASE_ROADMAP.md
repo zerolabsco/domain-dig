@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.8.2`.
+Current version: `v4.8.3`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -153,6 +153,37 @@ Goal: close the UAT follow-ups and make failures legible instead of silent.
   and the hand-authored file has been replaced by `SyncedProducts.storekit`,
   synced against App Store Connect. Registered in the project without target
   membership so it is not bundled into shipping builds.
+
+## v4.8.3 Patch: Static Analysis Cleanup — ✅ shipped
+
+Goal: clear the SonarCloud new-code backlog without changing behavior.
+
+- **Dead confidence conditionals fixed** (4 bugs) —
+  `DomainInspectionService`'s `confidenceFor*` helpers each returned
+  `error == nil ? .low : .low`. The conditional was inert, so the unused `error`
+  parameter was dropped alongside it.
+- **Identical switch branches merged** — 14 sites in `DomainViewModel` handled
+  `.empty(message)` and `.error(message)` with byte-identical bodies; they now
+  share one `case let .empty(message), let .error(message):`.
+- **Duplicate implementations consolidated** — `clearPresentedResults()` now
+  delegates to `reset()`, `String.nonEmpty` was folded into `nilIfEmpty`, and
+  `ExportFormat.id` derives from `fileExtension`.
+- **Nested ternaries extracted** — grade-to-tone and impact-to-color mappings
+  became `TLSGrade.tone`, `EmailSecurityGrade.tone`, and
+  `ChangeImpactClassification.color`, replacing `ContentView`'s private
+  `impactColor` and the duplicate mapping in `BatchResultsView`.
+- **Remaining smells** — empty closures and singleton inits documented, unused
+  protocol-conformance parameters marked `_`, `CloudSyncTrigger.import` renamed
+  to `imported` (raw value preserved), `_serverTrust`/`_tlsMetadata` renamed,
+  nested `if`s merged in the DER parser, and deep closure nesting flattened in
+  `PortScanService` and `IntegrationService`.
+
+Left open deliberately: `swift:S107` (initializer parameter counts on model
+memberwise inits), `swift:S115` (constants mirroring DoH/ipapi JSON keys),
+`swift:S1075` (false positives on `https://` literals), and two `swift:S117`
+hits on SwiftUI `$binding` shorthand in `AuditModeView`, which cannot be
+renamed. These want a *Won't Fix* / *Safe* resolution in SonarCloud rather than
+a code change.
 
 ## v5.0.0 Major: Contract Stabilization & Engineering Health
 

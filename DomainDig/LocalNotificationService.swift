@@ -5,7 +5,7 @@ import UserNotifications
 final class LocalNotificationService {
     static let shared = LocalNotificationService()
 
-    private init() {}
+    private init() { /* Singleton; use the shared instance. */ }
 
     static let domainUserInfoKey = "domain"
     static let domainCategoryIdentifier = "domain-event"
@@ -188,14 +188,14 @@ private final class NotificationCenterDelegate: NSObject, UNUserNotificationCent
     static let shared = NotificationCenterDelegate()
 
     func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
+        _: UNUserNotificationCenter,
+        willPresent _: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound]
     }
 
     func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
+        _: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
         let userInfo = response.notification.request.content.userInfo
@@ -204,10 +204,9 @@ private final class NotificationCenterDelegate: NSObject, UNUserNotificationCent
         else { return }
 
         let action: DomainDigDeepLink.Action
-        switch response.actionIdentifier {
-        case LocalNotificationService.reinspectActionIdentifier:
+        if response.actionIdentifier == LocalNotificationService.reinspectActionIdentifier {
             action = .inspect(domain)
-        default:
+        } else {
             // Default tap: open the tracked domain's detail.
             action = .detail(domain)
         }

@@ -295,10 +295,10 @@ struct DomainInspectionService {
         let ptrRecord = mapOptionalServiceResult(ptrOutcome.map { normalizeErrors(in: $0.value) }, missingMessage: "No A record available")
         let geolocation = mapOptionalServiceResult(geoOutcome.map { normalizeErrors(in: $0.value) }, missingMessage: "No A record available")
         let availabilityConfidence = confidenceForAvailability(result: availability.value, provenance: provenanceBySection[.availability])
-        let ownershipConfidence = confidenceForOwnership(result: ownership.value, error: ownership.message)
-        let subdomainConfidence = confidenceForSubdomains(results: subdomains.value, error: subdomains.message)
-        let emailConfidence = confidenceForEmail(result: emailSecurity.value, error: emailSecurity.message)
-        let geolocationConfidence = confidenceForGeolocation(result: geolocation.value, error: geolocation.message)
+        let ownershipConfidence = confidenceForOwnership(result: ownership.value)
+        let subdomainConfidence = confidenceForSubdomains(results: subdomains.value)
+        let emailConfidence = confidenceForEmail(result: emailSecurity.value)
+        let geolocationConfidence = confidenceForGeolocation(result: geolocation.value)
         let validationIssues = validationIssues(for: normalizedDomain, snapshotTimestamp: startedAt, availability: availability.value, dnsSections: dnsSections.value, provenanceBySection: provenanceBySection)
 
         let snapshot = LookupSnapshot(
@@ -580,21 +580,21 @@ struct DomainInspectionService {
         return .low
     }
 
-    private func confidenceForOwnership(result: DomainOwnership?, error: String?) -> ConfidenceLevel {
-        guard let result else { return error == nil ? .low : .low }
+    private func confidenceForOwnership(result: DomainOwnership?) -> ConfidenceLevel {
+        guard let result else { return .low }
         let hasDirectRegistrationData = result.registrar != nil || result.createdDate != nil || result.expirationDate != nil
         return hasDirectRegistrationData ? .high : .medium
     }
 
-    private func confidenceForSubdomains(results: [DiscoveredSubdomain], error: String?) -> ConfidenceLevel {
+    private func confidenceForSubdomains(results: [DiscoveredSubdomain]) -> ConfidenceLevel {
         if !results.isEmpty {
             return .medium
         }
-        return error == nil ? .low : .low
+        return .low
     }
 
-    private func confidenceForEmail(result: EmailSecurityResult?, error: String?) -> ConfidenceLevel {
-        guard let result else { return error == nil ? .low : .low }
+    private func confidenceForEmail(result: EmailSecurityResult?) -> ConfidenceLevel {
+        guard let result else { return .low }
         let foundCount = [result.spf.found, result.dmarc.found, result.dkim.found, result.bimi.found, result.mtaSts?.txtFound == true]
             .filter { $0 }
             .count
@@ -607,8 +607,8 @@ struct DomainInspectionService {
         return .low
     }
 
-    private func confidenceForGeolocation(result: IPGeolocation?, error: String?) -> ConfidenceLevel {
-        guard let result else { return error == nil ? .low : .low }
+    private func confidenceForGeolocation(result: IPGeolocation?) -> ConfidenceLevel {
+        guard let result else { return .low }
         if result.city != nil && result.country_name != nil && result.latitude != nil && result.longitude != nil {
             return .high
         }

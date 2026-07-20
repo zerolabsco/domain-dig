@@ -104,7 +104,7 @@ struct BatchResultRowView: View {
             if let changeClassification = result.changeClassification {
                 Text("Impact: \(changeClassification.title)")
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(changeClassification == .critical ? .red : (changeClassification == .warning ? .yellow : .secondary))
+                    .foregroundStyle(changeClassification.color)
             }
 
             if let errorMessage = result.errorMessage {

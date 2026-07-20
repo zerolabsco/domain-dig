@@ -8,7 +8,7 @@ final class SweepActivityController {
 
     private var activity: Activity<SweepActivityAttributes>?
 
-    private init() {}
+    private init() { /* Singleton; use the shared instance. */ }
 
     func begin(title: String, total: Int) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }

@@ -40,7 +40,7 @@ enum CloudSyncTrigger: String {
     case launch
     case automatic
     case manual
-    case `import`
+    case imported = "import"
 }
 
 enum ShareableEntity: Identifiable, Hashable {
@@ -1186,7 +1186,7 @@ final class CloudSyncService {
     }
 
     private func collaborationMetadata(
-        for record: CKRecord,
+        for _: CKRecord,
         share: CKShare?,
         scope: SyncDatabaseScope
     ) -> CollaborationMetadata {

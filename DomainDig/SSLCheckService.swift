@@ -156,10 +156,9 @@ private enum DERCertificateParser {
         var offset = tbsContent.contentStart
 
         // Skip version (explicit tag [0]) if present
-        if offset < bytes.count && (bytes[offset] & 0xE0) == 0xA0 {
-            if let tagLen = readTagAndLength(bytes, offset: offset) {
-                offset = tagLen.contentStart + tagLen.length
-            }
+        if offset < bytes.count, (bytes[offset] & 0xE0) == 0xA0,
+           let tagLen = readTagAndLength(bytes, offset: offset) {
+            offset = tagLen.contentStart + tagLen.length
         }
 
         // Skip serialNumber
@@ -199,11 +198,10 @@ private enum DERCertificateParser {
         // Extensions are in an explicit tag [3]
         while offset < tbsContent.contentStart + tbsContent.length {
             if bytes[offset] == 0xA3 {
-                if let extWrapper = readTagAndLength(bytes, offset: offset) {
-                    // Inside is a SEQUENCE of SEQUENCE extensions
-                    if let extsSeq = readTagAndLength(bytes, offset: extWrapper.contentStart) {
-                        result.subjectAltNames = extractSANs(bytes, sequenceStart: extsSeq.contentStart, length: extsSeq.length)
-                    }
+                // Inside the wrapper is a SEQUENCE of SEQUENCE extensions
+                if let extWrapper = readTagAndLength(bytes, offset: offset),
+                   let extsSeq = readTagAndLength(bytes, offset: extWrapper.contentStart) {
+                    result.subjectAltNames = extractSANs(bytes, sequenceStart: extsSeq.contentStart, length: extsSeq.length)
                 }
                 break
             }
@@ -267,27 +265,25 @@ private enum DERCertificateParser {
                 if oidBytes == sanOID {
                     var valuePos = oidTL.contentStart + oidTL.length
                     // Skip optional critical BOOLEAN
-                    if valuePos < extEnd && bytes[valuePos] == 0x01 {
-                        if let boolTL = readTagAndLength(bytes, offset: valuePos) {
-                            valuePos = boolTL.contentStart + boolTL.length
-                        }
+                    if valuePos < extEnd, bytes[valuePos] == 0x01,
+                       let boolTL = readTagAndLength(bytes, offset: valuePos) {
+                        valuePos = boolTL.contentStart + boolTL.length
                     }
                     // The value is an OCTET STRING wrapping a SEQUENCE of GeneralNames
-                    if let octetTL = readTagAndLength(bytes, offset: valuePos) {
-                        if let sanSeq = readTagAndLength(bytes, offset: octetTL.contentStart) {
-                            let sanEnd = sanSeq.contentStart + sanSeq.length
-                            var sanPos = sanSeq.contentStart
-                            while sanPos < sanEnd {
-                                guard let nameTL = readTagAndLength(bytes, offset: sanPos) else { break }
-                                // Context tag [2] = dNSName (IA5String)
-                                if (bytes[sanPos] & 0x1F) == 2 {
-                                    let nameBytes = bytes[nameTL.contentStart..<nameTL.contentStart + nameTL.length]
-                                    if let name = String(bytes: nameBytes, encoding: .ascii) {
-                                        sans.append(name)
-                                    }
+                    if let octetTL = readTagAndLength(bytes, offset: valuePos),
+                       let sanSeq = readTagAndLength(bytes, offset: octetTL.contentStart) {
+                        let sanEnd = sanSeq.contentStart + sanSeq.length
+                        var sanPos = sanSeq.contentStart
+                        while sanPos < sanEnd {
+                            guard let nameTL = readTagAndLength(bytes, offset: sanPos) else { break }
+                            // Context tag [2] = dNSName (IA5String)
+                            if (bytes[sanPos] & 0x1F) == 2 {
+                                let nameBytes = bytes[nameTL.contentStart..<nameTL.contentStart + nameTL.length]
+                                if let name = String(bytes: nameBytes, encoding: .ascii) {
+                                    sans.append(name)
                                 }
-                                sanPos = nameTL.contentStart + nameTL.length
                             }
+                            sanPos = nameTL.contentStart + nameTL.length
                         }
                     }
                 }
@@ -386,19 +382,19 @@ enum SSLError: LocalizedError {
 
 final class SSLSessionDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
     private let lock = NSLock()
-    private var _serverTrust: SecTrust?
-    private var _tlsMetadata: TLSMetadata?
+    private var storedServerTrust: SecTrust?
+    private var storedTLSMetadata: TLSMetadata?
 
     var serverTrust: SecTrust? {
         lock.lock()
         defer { lock.unlock() }
-        return _serverTrust
+        return storedServerTrust
     }
 
     fileprivate var tlsMetadata: TLSMetadata? {
         lock.lock()
         defer { lock.unlock() }
-        return _tlsMetadata
+        return storedTLSMetadata
     }
 
     func urlSession(
@@ -413,7 +409,7 @@ final class SSLSessionDelegate: NSObject, URLSessionDelegate, @unchecked Sendabl
         }
 
         lock.lock()
-        _serverTrust = trust
+        storedServerTrust = trust
         lock.unlock()
 
         let credential = URLCredential(trust: trust)
@@ -439,7 +435,7 @@ extension SSLSessionDelegate: URLSessionTaskDelegate {
         }
 
         lock.lock()
-        _tlsMetadata = TLSMetadata(tlsVersion: tlsVersion, cipherSuite: cipherSuite)
+        storedTLSMetadata = TLSMetadata(tlsVersion: tlsVersion, cipherSuite: cipherSuite)
         lock.unlock()
     }
 

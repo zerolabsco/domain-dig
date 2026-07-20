@@ -149,7 +149,7 @@ struct RunSweepIntent: AppIntent {
 final class DomainDigIntentRouter {
     static let shared = DomainDigIntentRouter()
     var pendingAction: DomainDigDeepLink.Action?
-    private init() {}
+    private init() { /* Singleton; use the shared instance. */ }
 }
 
 /// Exposes DomainDig intents to Spotlight and Siri with invocation phrases.

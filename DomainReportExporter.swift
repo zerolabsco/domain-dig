@@ -11,8 +11,8 @@ enum DomainExportFormat: String, CaseIterable, Identifiable, Codable {
     case markdown = "md"
     case pdf = "pdf"
 
-    var id: String { rawValue }
     var fileExtension: String { rawValue }
+    var id: String { fileExtension }
 
     var title: String {
         switch self {

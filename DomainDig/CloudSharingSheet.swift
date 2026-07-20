@@ -13,7 +13,7 @@ struct CloudSharingSheet: UIViewControllerRepresentable {
         Coordinator(dismiss: dismiss, title: title)
     }
 
-    func makeUIViewController(context: Context) -> UIViewController {
+    func makeUIViewController(context _: Context) -> UIViewController {
         UIViewController()
     }
 
@@ -77,7 +77,7 @@ struct CloudSharingSheet: UIViewControllerRepresentable {
             }
         }
 
-        func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        func presentationControllerDidDismiss(_: UIPresentationController) {
             dismissAction()
         }
     }
