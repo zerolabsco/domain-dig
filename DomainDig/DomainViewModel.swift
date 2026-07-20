@@ -2975,7 +2975,11 @@ final class DomainViewModel {
         let riskAssessment = entry?.changeSummary?.riskAssessment ?? DomainInsightEngine.analyze(snapshot: payload.snapshot).riskAssessment
         let quickStatus: String
         if entry?.changeSummary?.hasChanges == true {
-            quickStatus = entry?.changeSummary?.impactClassification == .critical ? "Critical" : (entry?.changeSummary?.severity == .high ? "High" : "Changed")
+            if entry?.changeSummary?.impactClassification == .critical {
+                quickStatus = "Critical"
+            } else {
+                quickStatus = entry?.changeSummary?.severity == .high ? "High" : "Changed"
+            }
         } else if certificateWarningLevel != .none {
             quickStatus = certificateWarningLevel == .critical ? "Critical" : "Warning"
         } else if riskAssessment.level == .high {
