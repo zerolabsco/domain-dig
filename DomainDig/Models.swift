@@ -1544,6 +1544,10 @@ struct MonitoringDomainResult: Codable, Identifiable, Equatable {
     let certificateWarningLevel: CertificateWarningLevel
     let resultSource: LookupResultSource
     let errorMessage: String?
+    /// Non-nil when the lookup failed and the previous snapshot was reused, so
+    /// this run compared the old data against itself and cannot claim the
+    /// domain is unchanged. Optional so already-persisted logs still decode.
+    let unreachableReason: String?
 
     init(
         id: UUID = UUID(),
@@ -1555,7 +1559,8 @@ struct MonitoringDomainResult: Codable, Identifiable, Equatable {
         alertSeverity: MonitoringAlertSeverity?,
         certificateWarningLevel: CertificateWarningLevel,
         resultSource: LookupResultSource,
-        errorMessage: String? = nil
+        errorMessage: String? = nil,
+        unreachableReason: String? = nil
     ) {
         self.id = id
         self.domain = domain
@@ -1567,6 +1572,7 @@ struct MonitoringDomainResult: Codable, Identifiable, Equatable {
         self.certificateWarningLevel = certificateWarningLevel
         self.resultSource = resultSource
         self.errorMessage = errorMessage
+        self.unreachableReason = unreachableReason
     }
 }
 
