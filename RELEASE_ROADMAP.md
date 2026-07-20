@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.8.0`.
+Current version: `v4.8.1`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -95,6 +95,30 @@ Deferred/scoped out: scheduled-report settings and logs are UserDefaults-only
 (not part of `DomainDataPortabilityService` backup/restore), same reasoning as
 v4.7.0's watchlist saved views — this is local automation config, not
 user-authored content.
+
+## v4.8.1 Patch: Reporting & Sharing Fixes — ✅ shipped
+
+Goal: fix what UAT of v4.8.0 turned up.
+
+- **Scheduled reports were unreachable manually** — the Overview section wrapped
+  every control in a single `VStack` inside one `List` row, so SwiftUI collapsed
+  them into one tap target and the Cadence `Picker` captured taps meant for
+  "Generate Now". Each control is now its own row.
+- **Pro gate completed on that screen** — `.automatedMonitoring` previously
+  disabled only the toggle, leaving both pickers and "Generate Now" interactive
+  on Free where they silently no-opped against the service-side guard.
+- **Markdown/PDF reports rendered `=` underlines as bullets** — the plain-text
+  transform only recognized `-`, so `batchText`'s title underline and its
+  48-character inter-report separators leaked through as literal list items.
+- **Duplicate DNS record values** — the report concatenated apex and wildcard
+  records without dedup, listing every value twice on domains with wildcard DNS.
+- **Inspect tab keyboard behavior** — removed the "Dismiss Keyboard" toolbar
+  button and the launch-time focus that raised the keyboard on app open.
+
+Known open follow-ups filed during UAT: integration events to a disabled target
+vanish with no delivery-log row (#8), "Process Queue Now" does not force a
+backed-off retry (#9), and a monitoring snapshot fallback silently reports "No
+meaningful changes" (#10).
 
 ## v5.0.0 Major: Contract Stabilization & Engineering Health
 
