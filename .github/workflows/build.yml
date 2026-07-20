@@ -9,39 +9,29 @@ name: Build
 # dependencies). The test target is DomainDigUITests — an accessibility audit
 # suite; see DomainDigUITests/AccessibilityAuditHarness.swift.
 #
+# WHAT THIS JOB IS FOR, given the audit also runs locally:
+# a clean checkout of the merge result. A local hook runs against the working
+# tree and therefore cannot catch a file that was never committed — the failure
+# mode that matters most here, since DomainDig.xcodeproj is hand-edited and uses
+# file-system-synchronized groups where a whole missing folder still builds fine
+# locally. This job is the only place that check exists; sr.ht cannot run it.
+#
+# DELIBERATELY ONE JOB, NEWEST RUNTIME ONLY. Audit coverage is not nested across
+# OS versions, so the oldest supported OS genuinely needs its own run — but the
+# macos-26 image ships only iOS 26.x runtimes, so CI *cannot* provide it. Asking
+# for two jobs here bought two near-identical 26.x runs at double the macOS
+# minutes. Floor coverage lives in Scripts/audit-a11y.sh, run from a machine that
+# actually has an 18.x runtime installed, and is wired to the pre-push hook in
+# .githooks/. See Docs/ACCESSIBILITY.md for the split.
+#
 # The audit REPORTS but does not FAIL by default. It surfaces violations that
 # exist today, so gating on it would block every unrelated PR until the
 # accessibility pass in issue #21 completes. Findings land in the job log and in
-# the uploaded .xcresult bundle, tagged [report] or [FAIL].
-#
-# Enforcement is a committed constant, not a CI setting: widen
-# `AccessibilityAuditHarness.enforcedAuditTypes` as each phase clears a category.
-# (Env vars were tried first — neither a plain xcodebuild env var nor a
-# TEST_RUNNER_-prefixed build setting reaches the UI test process.)
-#
-# The matrix runs two simulators because audit coverage is NOT nested — each
-# runtime reports findings the other misses, in both directions. Measured
-# locally on the Tracked Domains screen, iOS 18.6 reported 2 issues and iOS 27.0
-# reported 6 (including contrast and element-detection issues 18.6 never
-# raised); at accessibility text sizes the Dashboard produced a hit-region
-# finding on 18.6 that 27.0 did not.
-#
-# CAVEAT — this image cannot test the real support floor. The app's deployment
-# target is 17.6, but the macos-26 runner ships only iOS 26.x simulator
-# runtimes, so "floor" resolves to ~26.2 here rather than an 18.x image. CI
-# therefore compares two 26.x runtimes; genuine oldest-supported-OS coverage has
-# to come from a local run or a self-hosted runner with older runtimes
-# installed. The "Select simulator" step emits a warning annotation when the
-# resolved floor sits well above the deployment target, so this gap stays
-# visible instead of being silently assumed away.
-#
-# Installing an older runtime in CI (xcodebuild -downloadPlatform iOS
-# -buildVersion 18.6) is possible but costs several GB and minutes per job; not
-# done by default.
-#
-# Runtimes are resolved dynamically rather than pinned. The previous selector
-# took the first iPhone from any runtime, which could pick a simulator BELOW the
-# deployment target, where the app cannot install.
+# the uploaded .xcresult bundle, tagged [report] or [FAIL]. Enforcement is a
+# committed constant: widen `AccessibilityAuditHarness.enforcedAuditTypes` as
+# each phase clears a category. (Env vars were tried first — neither a plain
+# xcodebuild env var nor a TEST_RUNNER_-prefixed build setting reaches the UI
+# test process.)
 #
 # pull_request only, plus manual dispatch. GitHub builds the merge result (PR
 # merged into main), so a green PR validates exactly what will land on main.
@@ -65,24 +55,12 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Keep in sync with IPHONEOS_DEPLOYMENT_TARGET in DomainDig.xcodeproj.
-  DEPLOYMENT_TARGET_MAJOR: '17'
-  DEPLOYMENT_TARGET_MINOR: '6'
-
 jobs:
   test:
-    name: xcodebuild test (${{ matrix.tier }})
+    name: xcodebuild test
     # macos-latest still points at macOS 15, which lacks the iOS 26+ SDK this app
     # is built against.
     runs-on: macos-26
-
-    strategy:
-      fail-fast: false
-      matrix:
-        # floor   = oldest runtime the app actually supports
-        # current = newest runtime available on the image
-        tier: [floor, current]
 
     steps:
       - uses: actions/checkout@v7
@@ -96,26 +74,27 @@ jobs:
         id: sim
         run: |
           set -euo pipefail
-          floor=$(( DEPLOYMENT_TARGET_MAJOR * 1000 + DEPLOYMENT_TARGET_MINOR ))
 
+          # Newest available iPhone runtime. No deployment-target filtering is
+          # needed for "newest" — it is always at or above the floor. The
+          # previous selector took the first iPhone from ANY runtime, which on a
+          # machine with an older runtime installed could pick a simulator below
+          # the deployment target, where the app cannot install.
           selected=$(xcrun simctl list devices available --json \
-            | jq -c --argjson floor "$floor" --arg tier "${{ matrix.tier }}" '
+            | jq -c '
                 [ .devices | to_entries[]
                   | (.key | capture("SimRuntime\\.iOS-(?<maj>[0-9]+)-(?<min>[0-9]+)$")) as $v
                   | (($v.maj | tonumber) * 1000 + ($v.min | tonumber)) as $rank
-                  | select($rank >= $floor)
                   | .value[]
                   | select(.name | startswith("iPhone"))
                   | { rank: $rank, udid: .udid, name: .name, os: "\($v.maj).\($v.min)" }
                 ]
                 | sort_by(.rank, .name)
-                | if length == 0 then empty
-                  elif $tier == "floor" then .[0]
-                  else .[-1] end
+                | last
               ')
 
-          if [ -z "$selected" ]; then
-            echo "::error::No iPhone simulator at or above iOS ${DEPLOYMENT_TARGET_MAJOR}.${DEPLOYMENT_TARGET_MINOR} on this image"
+          if [ -z "$selected" ] || [ "$selected" = "null" ]; then
+            echo "::error::No iPhone simulator available on this image"
             xcrun simctl list devices available >&2
             exit 1
           fi
@@ -124,15 +103,6 @@ jobs:
           echo "Selected $label"
           echo "udid=$(echo "$selected" | jq -r .udid)" >> "$GITHUB_OUTPUT"
           echo "label=$label" >> "$GITHUB_OUTPUT"
-
-          # Surface the floor-coverage gap rather than letting the matrix imply
-          # coverage it does not have. One major version of slack is tolerated.
-          if [ "${{ matrix.tier }}" = "floor" ]; then
-            rank=$(echo "$selected" | jq -r .rank)
-            if [ "$rank" -ge $(( (DEPLOYMENT_TARGET_MAJOR + 1) * 1000 )) ]; then
-              echo "::warning::Floor tier resolved to $label, well above the ${DEPLOYMENT_TARGET_MAJOR}.${DEPLOYMENT_TARGET_MINOR} deployment target. This image has no older runtime, so the oldest supported OS is NOT covered by this run."
-            fi
-          fi
 
       - name: Test on ${{ steps.sim.outputs.label }}
         run: |
@@ -150,6 +120,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.tier }}
+          name: test-results
           path: TestResults.xcresult
           retention-days: 7

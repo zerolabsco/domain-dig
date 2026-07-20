@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+#
+# Run the accessibility audit against the oldest supported simulator runtime
+# before pushing.
+#
+# Enable once per clone:
+#     git config core.hooksPath .githooks
+#
+# Why pre-push and not pre-commit: the suite takes ~85s. At pre-commit that
+# blocks every commit, and a hook you routinely bypass with --no-verify is worse
+# than no hook, because it trains you to ignore it. Pushes are far less frequent
+# and map to the unit of work that actually reaches CI.
+#
+# Why only the floor tier: CI already audits the newest runtime on a clean
+# checkout. The GitHub image has no old runtimes, so the floor is the one thing
+# CI structurally cannot cover — and it is the one this machine can. Running
+# both here would just double the wait to re-check what CI already does.
+#
+# Skip deliberately with: git push --no-verify
+
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+zero='0000000000000000000000000000000000000000'
+changed=''
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>, one line per ref.
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue  # branch deletion
+
+  if [ "$remote_sha" = "$zero" ]; then
+    # New branch: diff against the default branch rather than the whole history.
+    base=$(git merge-base origin/main "$local_sha" 2>/dev/null || echo '')
+    range="${base:+$base..}$local_sha"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  changed="$changed$(git diff --name-only "$range" 2>/dev/null || true)"$'\n'
+done
+
+if [ -z "$(printf '%s' "$changed" | tr -d '[:space:]')" ]; then
+  exit 0
+fi
+
+# Only pay the ~85s when something could actually change the rendered UI.
+if ! printf '%s' "$changed" | grep -qE '\.(swift|xcassets|xcodeproj)|\.pbxproj|xcscheme'; then
+  echo "pre-push: no Swift/project changes, skipping accessibility audit"
+  exit 0
+fi
+
+echo "pre-push: running accessibility audit on the floor runtime (~85s)"
+echo "          skip with 'git push --no-verify'"
+
+if ! ./Scripts/audit-a11y.sh floor; then
+  echo
+  echo "pre-push: audit could not run. Push aborted." >&2
+  echo "          Re-run with './Scripts/audit-a11y.sh floor' to see why," >&2
+  echo "          or bypass with 'git push --no-verify'." >&2
+  exit 1
+fi
+
+# Note: findings are reported, not enforced, so a clean exit here does not mean
+# zero findings — read the list above. Enforcement is controlled by
+# AccessibilityAuditHarness.enforcedAuditTypes.
+exit 0
