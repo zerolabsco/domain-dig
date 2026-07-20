@@ -77,12 +77,21 @@ enum DomainReportExporter {
             let line = lines[index]
             if index == 0, line == title {
                 index += 1
+                if index < lines.count, isUnderline(lines[index], for: line) {
+                    index += 1
+                }
                 continue
             }
-            if index + 1 < lines.count, !line.isEmpty, lines[index + 1] == String(repeating: "-", count: line.count) {
+            if index + 1 < lines.count, !line.isEmpty, isUnderline(lines[index + 1], for: line) {
                 output.append("")
                 output.append("## \(line)")
                 index += 2
+                continue
+            }
+            if isRule(line) {
+                output.append("")
+                output.append("---")
+                index += 1
                 continue
             }
             if line.isEmpty || line.hasPrefix("-") || line.hasPrefix("  ") {
@@ -93,6 +102,21 @@ enum DomainReportExporter {
             index += 1
         }
         return output.joined(separator: "\n")
+    }
+
+    /// True when `line` is a run of `-` or `=` exactly as long as the heading it
+    /// underlines. `batchText` uses `=` for the document title, `appendSection`
+    /// uses `-` for section headers.
+    private static func isUnderline(_ line: String, for heading: String) -> Bool {
+        guard !heading.isEmpty else { return false }
+        return line == String(repeating: "-", count: heading.count)
+            || line == String(repeating: "=", count: heading.count)
+    }
+
+    /// True for a standalone divider not attached to a heading — `batchText`
+    /// emits a fixed 48-character `=` run between reports.
+    private static func isRule(_ line: String) -> Bool {
+        line.count >= 3 && (line.allSatisfy { $0 == "=" } || line.allSatisfy { $0 == "-" })
     }
 
     /// Renders Markdown as a simple monospaced multi-page PDF. Foundation-only
@@ -249,7 +273,10 @@ enum DomainReportExporter {
             } else {
                 dnsLines.append("Records:")
                 for section in report.dns.recordSections {
-                    let values = (section.records + section.wildcardRecords).map(\.value)
+                    var seen: Set<String> = []
+                    let values = (section.records + section.wildcardRecords)
+                        .map(\.value)
+                        .filter { seen.insert($0).inserted }
                     let renderedValues = values.isEmpty ? "None" : values.joined(separator: " | ")
                     dnsLines.append("  \(section.recordType.rawValue): \(renderedValues)")
                 }
