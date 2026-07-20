@@ -51,7 +51,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		8B6472EF300EBFA30018E10A /* DomainDig.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = DomainDig.storekit; sourceTree = "<group>"; };
+		8B6472EF300EBFA30018E10A /* SyncedProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = SyncedProducts.storekit; sourceTree = "<group>"; };
 		8B7800692F6090E300933221 /* DomainDig.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DomainDig.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainInspectionService.swift; sourceTree = "<group>"; };
 		8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainReportBuilder.swift; sourceTree = "<group>"; };
@@ -150,7 +150,7 @@
 		8B7800602F6090E300933221 = {
 			isa = PBXGroup;
 			children = (
-				8B6472EF300EBFA30018E10A /* DomainDig.storekit */,
+				8B6472EF300EBFA30018E10A /* SyncedProducts.storekit */,
 				8B78006B2F6090E300933221 /* DomainDig */,
 				8BDA0001000000000000000D /* Shared */,
 				8BDA0001000000000000000E /* DomainDigWidget */,
