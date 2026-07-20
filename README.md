@@ -7,12 +7,6 @@
 
 DomainDig is a local-first iOS domain inspection toolkit for DNS, web, ownership, monitoring, reporting, and audit workflows. The app gathers a point-in-time domain snapshot, normalizes it into a canonical `DomainReport`, and keeps user data on device unless the user exports, shares, or syncs it.
 
-## Current Release Target
-
-Current release: `v4.6.0`.
-
-This minor release makes alerts and results first-class across contexts: a sweep Live Activity (Lock Screen + Dynamic Island), a share-sheet extension for digging a domain from Safari, an iPad `NavigationSplitView` layout, and actionable, grouped notifications.
-
 ## Features
 
 - Domain inspection for DNS records, email security, TLS certificates, HTTP headers, redirects, IP geolocation, reachability, open ports, RDAP, ownership, subdomain discovery, and availability.
