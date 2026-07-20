@@ -4,7 +4,7 @@
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [![App Store Badge](https://zerolabs.sh/storebutton.svg)](https://apps.apple.com/us/app/domaindig/id6760368004)
 
@@ -67,7 +67,7 @@ If you discover a security issue, see `SECURITY.md`.
 
 ## License
 
-This project is licensed under GPL 3.0 or later. See `LICENSE`.
+This project is licensed under the MIT License. See `LICENSE`.
 
 ## Contact
 
