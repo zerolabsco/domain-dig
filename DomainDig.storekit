@@ -1,0 +1,135 @@
+{
+  "identifier" : "A1B2C3D4",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6763610682",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "20250720",
+      "localizations" : [
+
+      ],
+      "name" : "DomainDig Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "2000000001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Everything in Pro, plus ownership history, DNS history, extended subdomains, domain pricing, and reputation data.",
+              "displayName" : "DomainDig Pro+ (Annually)",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "domaindig.proplus.annually",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "DomainDig Pro+ (Annually)",
+          "subscriptionGroupID" : "20250720",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "2000000002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Everything in Pro, plus ownership history, DNS history, extended subdomains, domain pricing, and reputation data.",
+              "displayName" : "DomainDig Pro+ (Monthly)",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "domaindig.proplus.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "DomainDig Pro+ (Monthly)",
+          "subscriptionGroupID" : "20250720",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "29.99",
+          "familyShareable" : true,
+          "groupNumber" : 2,
+          "internalID" : "2000000003",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited tracked domains, automated monitoring, local alerts, workflows, and advanced exports.",
+              "displayName" : "DomainDig Pro (Annually)",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "domaindig.pro.annually",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "DomainDig Pro (Annually)",
+          "subscriptionGroupID" : "20250720",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.99",
+          "familyShareable" : true,
+          "groupNumber" : 2,
+          "internalID" : "2000000004",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited tracked domains, automated monitoring, local alerts, workflows, and advanced exports.",
+              "displayName" : "DomainDig Pro (Monthly)",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "domaindig.pro.month",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "DomainDig Pro (Monthly)",
+          "subscriptionGroupID" : "20250720",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
