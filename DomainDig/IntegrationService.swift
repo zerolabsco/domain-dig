@@ -100,9 +100,22 @@ final class IntegrationService {
 
     func enqueue(events: [MonitoringEvent]) {
         guard !events.isEmpty else { return }
-        let eligibleTargets = targets.filter(\.isEnabled)
         for event in events {
-            for target in eligibleTargets {
+            for target in targets {
+                guard target.isEnabled else {
+                    appendRecord(
+                        DeliveryRecord(
+                            integrationID: target.id,
+                            eventID: event.id,
+                            status: .skipped,
+                            destination: destinationLabel(for: target),
+                            summary: event.summary,
+                            failureReason: Self.disabledTargetReason
+                        )
+                    )
+                    continue
+                }
+
                 if let reason = filterMismatchReason(for: event, target: target) {
                     appendRecord(
                         DeliveryRecord(
@@ -150,7 +163,7 @@ final class IntegrationService {
     }
 
     func sendTest(for targetID: UUID) {
-        guard targets.contains(where: { $0.id == targetID }) else { return }
+        guard let target = targets.first(where: { $0.id == targetID }) else { return }
         let event = MonitoringEvent(
             type: .test,
             severity: .info,
@@ -161,13 +174,31 @@ final class IntegrationService {
                 "environment": "local-first"
             ]
         )
-        queue.append(QueuedDelivery(integrationID: targetID, event: event))
+
+        // Real events skip a disabled target, so a test event must too —
+        // otherwise a test succeeds against a target that silently drops
+        // everything monitoring sends it.
+        guard target.isEnabled else {
+            appendRecord(
+                DeliveryRecord(
+                    integrationID: target.id,
+                    eventID: event.id,
+                    status: .skipped,
+                    destination: destinationLabel(for: target),
+                    summary: event.summary,
+                    failureReason: Self.disabledTargetReason
+                )
+            )
+            return
+        }
+
+        queue.append(QueuedDelivery(integrationID: target.id, event: event))
         appendRecord(
             DeliveryRecord(
-                integrationID: targetID,
+                integrationID: target.id,
                 eventID: event.id,
                 status: .pending,
-                destination: targets.first(where: { $0.id == targetID }).map(destinationLabel(for:)) ?? "Unknown",
+                destination: destinationLabel(for: target),
                 summary: event.summary
             )
         )
@@ -175,7 +206,20 @@ final class IntegrationService {
         scheduleProcessing()
     }
 
+    /// Restarting the processing task alone leaves any item still in retry
+    /// backoff undue, so the loop would skip it and sleep again. Pulling every
+    /// queued item forward is what makes this button mean "now".
     func processQueueNow() {
+        guard !queue.isEmpty else {
+            statusMessage = "No deliveries are waiting."
+            return
+        }
+
+        let now = Date()
+        for index in queue.indices {
+            queue[index].nextAttemptAt = now
+        }
+        persistQueue()
         scheduleProcessing(force: true)
     }
 
@@ -426,6 +470,8 @@ final class IntegrationService {
     private static func hostLabel(from string: String) -> String {
         URL(string: string)?.host ?? "Configured"
     }
+
+    private static let disabledTargetReason = "This integration is disabled."
 
     private static func secretReference(for integrationID: UUID, suffix: String) -> String {
         "integration.\(integrationID.uuidString).\(suffix)"
