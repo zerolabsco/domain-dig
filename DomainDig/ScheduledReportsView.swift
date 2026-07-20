@@ -10,63 +10,62 @@ struct ScheduledReportsView: View {
     var body: some View {
         List {
             Section("Overview") {
-                VStack(alignment: .leading, spacing: 8) {
-                    if !FeatureAccessService.hasAccess(to: .automatedMonitoring) {
-                        Text("Scheduled reports require Pro.")
-                            .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Toggle("Scheduled Reports", isOn: Binding(
-                        get: { settings.isEnabled },
-                        set: { newValue in
-                            settings.isEnabled = newValue
-                            saveSettings()
-                        }
-                    ))
-                    .disabled(!FeatureAccessService.hasAccess(to: .automatedMonitoring))
-
-                    Picker("Cadence", selection: Binding(
-                        get: { settings.cadence },
-                        set: { newValue in
-                            settings.cadence = newValue
-                            saveSettings()
-                        }
-                    )) {
-                        ForEach(ScheduledReportCadence.allCases) { cadence in
-                            Text(cadence.title).tag(cadence)
-                        }
-                    }
-
-                    Picker("Format", selection: Binding(
-                        get: { settings.format },
-                        set: { newValue in
-                            settings.format = newValue
-                            saveSettings()
-                        }
-                    )) {
-                        ForEach([DomainExportFormat.markdown, .pdf, .json]) { format in
-                            Text(format.title).tag(format)
-                        }
-                    }
-
-                    LabeledContent(
-                        "Last Generated",
-                        value: settings.lastGeneratedAt?.formatted(date: .abbreviated, time: .shortened) ?? "Never"
-                    )
-
-                    if let statusMessage {
-                        Text(statusMessage)
-                            .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Button(isGenerating ? "Generating…" : "Generate Now") {
-                        Task { await generateNow() }
-                    }
-                    .disabled(isGenerating)
+                if !FeatureAccessService.hasAccess(to: .automatedMonitoring) {
+                    Text("Scheduled reports require Pro.")
+                        .font(appDensity.font(.caption))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 4)
+
+                Toggle("Scheduled Reports", isOn: Binding(
+                    get: { settings.isEnabled },
+                    set: { newValue in
+                        settings.isEnabled = newValue
+                        saveSettings()
+                    }
+                ))
+                .disabled(!FeatureAccessService.hasAccess(to: .automatedMonitoring))
+
+                Picker("Cadence", selection: Binding(
+                    get: { settings.cadence },
+                    set: { newValue in
+                        settings.cadence = newValue
+                        saveSettings()
+                    }
+                )) {
+                    ForEach(ScheduledReportCadence.allCases) { cadence in
+                        Text(cadence.title).tag(cadence)
+                    }
+                }
+                .disabled(!FeatureAccessService.hasAccess(to: .automatedMonitoring))
+
+                Picker("Format", selection: Binding(
+                    get: { settings.format },
+                    set: { newValue in
+                        settings.format = newValue
+                        saveSettings()
+                    }
+                )) {
+                    ForEach([DomainExportFormat.markdown, .pdf, .json]) { format in
+                        Text(format.title).tag(format)
+                    }
+                }
+                .disabled(!FeatureAccessService.hasAccess(to: .automatedMonitoring))
+
+                LabeledContent(
+                    "Last Generated",
+                    value: settings.lastGeneratedAt?.formatted(date: .abbreviated, time: .shortened) ?? "Never"
+                )
+
+                if let statusMessage {
+                    Text(statusMessage)
+                        .font(appDensity.font(.caption))
+                        .foregroundStyle(.secondary)
+                }
+
+                Button(isGenerating ? "Generating…" : "Generate Now") {
+                    Task { await generateNow() }
+                }
+                .disabled(isGenerating || !FeatureAccessService.hasAccess(to: .automatedMonitoring))
             }
             .listRowBackground(Color(.systemGray6).opacity(0.5))
 

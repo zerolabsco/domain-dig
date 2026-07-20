@@ -186,20 +186,10 @@ struct ContentView: View {
                         }
                     }
                 }
-
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Dismiss Keyboard") {
-                        focusedInputField = nil
-                    }
-                }
             }
             .navigationDestination(for: WorkflowNavigationTarget.self) { target in
                 WorkflowDetailView(viewModel: viewModel, workflowID: target.workflowID)
             }
-        }
-        .onAppear {
-            focusedInputField = .singleDomain
         }
         .task {
             await viewModel.refreshUsageCredits()
