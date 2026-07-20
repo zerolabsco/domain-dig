@@ -85,6 +85,18 @@ enum AccessibilityAuditHarness {
             timeout = nil
             do {
                 try app.performAccessibilityAudit { issue in
+                    // WCAG 1.4.3 exempts inactive components from contrast
+                    // requirements, but the audit flags them anyway. Inspect's
+                    // Run button is disabled until a domain is typed, so the
+                    // empty state reported a contrast failure that was never a
+                    // real defect. Suppressing on the rule beats driving the UI
+                    // to enable the control: typing raises the keyboard, which
+                    // then follows the audit onto later screens and flags the
+                    // system emoji picker's category buttons.
+                    if issue.auditType.contains(.contrast), issue.element?.isEnabled == false {
+                        return true
+                    }
+
                     let isEnforced = !enforcedAuditTypes.intersection(issue.auditType).isEmpty
                     let marker = isEnforced ? "FAIL" : "report"
                     // Include the element so the burndown says *what* to fix, not
