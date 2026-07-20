@@ -54,9 +54,12 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "DOMAIN_DIG_FORCE_PRO_PLUS"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
+      <StoreKitConfigurationFileReference
+         identifier = "../../../DomainDig.storekit">
+      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
