@@ -291,6 +291,12 @@ final class DomainMonitoringService {
                 previousSnapshot: previousSnapshot
             )
             let snapshot = Self.resolvedSnapshotAfterFallback(inspectedSnapshot, previousSnapshot: previousSnapshot)
+            // When the fallback fires, `snapshot` *is* `previousSnapshot`, so
+            // every comparison below is old-against-old and would otherwise
+            // report "No meaningful changes" for a domain we never reached.
+            let unreachableReason = (previousSnapshot != nil && Self.shouldFallbackToSnapshot(inspectedSnapshot))
+                ? Self.firstErrorMessage(in: inspectedSnapshot)
+                : nil
             let savedEntry: HistoryEntry?
             if snapshot.statusMessage == nil {
                 savedEntry = persistSnapshot(
@@ -330,14 +336,16 @@ final class DomainMonitoringService {
                 historyEntryID: savedEntry?.id ?? snapshot.historyEntryID,
                 checkedAt: now,
                 didChange: alertDescriptor != nil,
-                summaryMessage: snapshot.statusMessage
+                summaryMessage: unreachableReason.map { "Could not check — kept the previous result. \($0)" }
+                    ?? snapshot.statusMessage
                     ?? alertDescriptor?.message
                     ?? savedEntry?.changeSummary?.message
                     ?? "No meaningful changes",
                 alertSeverity: alertDescriptor?.severity,
                 certificateWarningLevel: DomainDiffService.certificateWarningLevel(for: snapshot),
                 resultSource: snapshot.resultSource,
-                errorMessage: snapshot.statusMessage
+                errorMessage: snapshot.statusMessage,
+                unreachableReason: unreachableReason
             )
             results.append(result)
 
@@ -391,6 +399,21 @@ final class DomainMonitoringService {
                     timestamp: result.checkedAt,
                     summary: errorMessage,
                     details: [
+                        "trigger": log.trigger.rawValue,
+                        "resultSource": result.resultSource.rawValue
+                    ]
+                )
+            }
+
+            if let unreachableReason = result.unreachableReason {
+                return MonitoringEvent(
+                    type: .monitoringFailure,
+                    severity: .warning,
+                    domain: result.domain,
+                    timestamp: result.checkedAt,
+                    summary: result.summaryMessage,
+                    details: [
+                        "reason": unreachableReason,
                         "trigger": log.trigger.rawValue,
                         "resultSource": result.resultSource.rawValue
                     ]
@@ -941,6 +964,22 @@ final class DomainMonitoringService {
             cachedSections: [],
             statusMessage: "Last known result • \(previousSnapshot.timestamp.formatted(date: .abbreviated, time: .shortened))"
         )
+    }
+
+    /// First reported error on a snapshot, used to explain a fallback. Mirrors
+    /// the ordering `shouldFallbackToSnapshot` inspects.
+    private static func firstErrorMessage(in snapshot: LookupSnapshot) -> String {
+        [
+            snapshot.dnsError,
+            snapshot.httpHeadersError,
+            snapshot.sslError,
+            snapshot.ownershipError,
+            snapshot.subdomainsError,
+            snapshot.redirectChainError,
+            snapshot.ipGeolocationError
+        ]
+        .compactMap { $0 }
+        .first ?? "The lookup could not reach the domain."
     }
 
     private static func shouldFallbackToSnapshot(_ snapshot: LookupSnapshot) -> Bool {
