@@ -182,14 +182,16 @@ final class LocalAPIService {
         let server = LocalAPIServer(
             port: Self.sanitizedPort(config.port),
             token: token,
-            requestLogger: { log in
-                Task { @MainActor [weak self] in
-                    self?.record(log)
+            requestLogger: { [weak self] log in
+                guard let self else { return }
+                Task { @MainActor in
+                    self.record(log)
                 }
             },
-            stateLogger: { stateMessage in
-                Task { @MainActor [weak self] in
-                    self?.statusMessage = stateMessage
+            stateLogger: { [weak self] stateMessage in
+                guard let self else { return }
+                Task { @MainActor in
+                    self.statusMessage = stateMessage
                 }
             }
         )
