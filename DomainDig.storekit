@@ -1,4 +1,14 @@
 {
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
   "identifier" : "A1B2C3D4",
   "nonRenewingSubscriptions" : [
 
@@ -7,15 +17,21 @@
 
   ],
   "settings" : {
-    "_applicationInternalID" : "6763610682",
-    "_developerTeamID" : "",
+    "_applicationInternalID" : "",
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_developerTeamID" : "ZCNAX3VL9D",
+    "_disableDialogs" : false,
     "_failTransactionsEnabled" : false,
     "_lastSynchronizedDate" : 0,
     "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
     "_storefront" : "USA",
     "_storeKitErrors" : [
 
-    ]
+    ],
+    "_timeRate" : 0
   },
   "subscriptionGroups" : [
     {
@@ -35,7 +51,7 @@
           "displayPrice" : "49.99",
           "familyShareable" : true,
           "groupNumber" : 1,
-          "internalID" : "2000000001",
+          "internalID" : "6763610682",
           "introductoryOffer" : null,
           "localizations" : [
             {
@@ -129,7 +145,7 @@
     }
   ],
   "version" : {
-    "major" : 4,
+    "major" : 5,
     "minor" : 0
   }
 }
