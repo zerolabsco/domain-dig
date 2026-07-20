@@ -45,12 +45,12 @@ struct TimelineView: View {
                             }
                         }
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
                 }
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle(domain)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -116,8 +116,8 @@ private struct TimelineRow: View {
                         model: .init(
                             title: severity.title,
                             systemImage: "arrow.triangle.2.circlepath",
-                            foregroundColor: severity == .high ? .red : .yellow,
-                            backgroundColor: (severity == .high ? Color.red : .yellow).opacity(0.16)
+                            foregroundColor: severity == .high ? Color(.statusCritical) : Color(.statusWarning),
+                            backgroundColor: (severity == .high ? Color(.statusCritical) : Color(.statusWarning)).opacity(0.16)
                         )
                     )
                 }
@@ -203,7 +203,7 @@ struct TimelineDiffView: View {
                 }
                 .padding()
             }
-            .background(Color.black)
+            .background(Color(.appBackground))
             .navigationTitle("Compare Snapshots")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {

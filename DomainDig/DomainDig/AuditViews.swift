@@ -27,7 +27,7 @@ struct AuditListView: View {
                         showsCardBackground: false
                     )
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             } else {
                 Section("Audit Domains") {
                     ForEach(groupedSessions, id: \.domain) { group in
@@ -65,11 +65,11 @@ struct AuditListView: View {
                         }
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("Audit Mode")
         .toolbar {
             if !viewModel.searchedDomain.isEmpty {
@@ -132,7 +132,7 @@ struct AuditDomainTimelineView: View {
                     }
                 }
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
 
             Section("Trend") {
                 ForEach(viewModel.auditTimeline(for: domain)) { point in
@@ -152,10 +152,10 @@ struct AuditDomainTimelineView: View {
                     .padding(.vertical, 2)
                 }
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle(domain)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -218,7 +218,7 @@ struct AuditSessionDetailView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
 
                     Section("Audit Summary") {
                         LabeledContent("Findings", value: "\(session.findings.count)")
@@ -228,7 +228,7 @@ struct AuditSessionDetailView: View {
                             LabeledContent("Highest Severity", value: severity.title)
                         }
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
 
                     Section("Reviewer Notes") {
                         TextEditor(text: $notesDraft)
@@ -240,7 +240,7 @@ struct AuditSessionDetailView: View {
                             viewModel.updateAuditNotes(notesDraft, sessionID: session.id)
                         }
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
 
                     Section("Checklist") {
                         ForEach(session.checklist) { item in
@@ -249,7 +249,7 @@ struct AuditSessionDetailView: View {
                             } label: {
                                 HStack(alignment: .top, spacing: 10) {
                                     Image(systemName: item.isComplete ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(item.isComplete ? Color.green : .secondary)
+                                        .foregroundStyle(item.isComplete ? Color(.statusPositive) : .secondary)
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(item.title)
                                             .font(appDensity.font(.callout))
@@ -264,7 +264,7 @@ struct AuditSessionDetailView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
 
                     Section("Findings") {
                         if session.findings.isEmpty {
@@ -301,7 +301,7 @@ struct AuditSessionDetailView: View {
                             }
                         }
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
 
                     Section("Evidence Snapshot") {
                         LabeledContent("Availability", value: availabilityTitle(session.evidence.report.availability))
@@ -311,7 +311,7 @@ struct AuditSessionDetailView: View {
                         LabeledContent("Reachability", value: session.evidence.report.network.reachabilitySummary)
                         LabeledContent("Registrar", value: session.evidence.report.ownership?.registrar ?? "Unavailable")
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
 
                     if !session.evidence.historicalContext.isEmpty {
                         Section("Historical Context") {
@@ -325,7 +325,7 @@ struct AuditSessionDetailView: View {
                                 }
                             }
                         }
-                        .listRowBackground(Color(.systemGray6).opacity(0.5))
+                        .listRowBackground(Color(.appSurface))
                     }
 
                     Section("Audit Timeline") {
@@ -345,10 +345,10 @@ struct AuditSessionDetailView: View {
                             }
                         }
                     }
-                    .listRowBackground(Color(.systemGray6).opacity(0.5))
+                    .listRowBackground(Color(.appSurface))
                 }
                 .scrollContentBackground(.hidden)
-                .background(Color.black)
+                .background(Color(.appBackground))
                 .navigationTitle("Audit Session")
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarTrailing) {
@@ -398,7 +398,7 @@ struct AuditSessionDetailView: View {
                 }
             } else {
                 ContentUnavailableView("Audit Session Missing", systemImage: "exclamationmark.triangle")
-                    .background(Color.black)
+                    .background(Color(.appBackground))
             }
         }
         .preferredColorScheme(.dark)
@@ -477,7 +477,7 @@ private struct AuditFindingEditorView: View {
                                 Text(area.title)
                                 Spacer()
                                 Image(systemName: selectedAreas.contains(area) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(selectedAreas.contains(area) ? Color.green : .secondary)
+                                    .foregroundStyle(selectedAreas.contains(area) ? Color(.statusPositive) : .secondary)
                             }
                         }
                         .buttonStyle(.plain)
@@ -528,11 +528,11 @@ private func auditStatusBadge(_ status: AuditStatus) -> some View {
     let model: AppStatusBadgeModel
     switch status {
     case .draft:
-        model = .init(title: "Draft", systemImage: "square.and.pencil", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+        model = .init(title: "Draft", systemImage: "square.and.pencil", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
     case .inReview:
-        model = .init(title: "In Review", systemImage: "doc.text.magnifyingglass", foregroundColor: .cyan, backgroundColor: .cyan.opacity(0.16))
+        model = .init(title: "In Review", systemImage: "doc.text.magnifyingglass", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
     case .complete:
-        model = .init(title: "Complete", systemImage: "checkmark.seal.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+        model = .init(title: "Complete", systemImage: "checkmark.seal.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
     }
     return AppStatusBadgeView(model: model)
 }
@@ -543,11 +543,11 @@ private func findingSeverityBadge(_ severity: AuditFindingSeverity) -> some View
     case .informational:
         color = .secondary
     case .low:
-        color = .green
+        color = Color(.statusPositive)
     case .medium:
-        color = .yellow
+        color = Color(.statusWarning)
     case .high:
-        color = .red
+        color = Color(.statusCritical)
     }
     return AppStatusBadgeView(
         model: .init(

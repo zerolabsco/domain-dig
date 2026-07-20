@@ -67,7 +67,7 @@ struct ScheduledReportsView: View {
                 }
                 .disabled(isGenerating || !FeatureAccessService.hasAccess(to: .automatedMonitoring))
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
 
             if logs.isEmpty {
                 Section {
@@ -79,7 +79,7 @@ struct ScheduledReportsView: View {
                         showsCardBackground: false
                     )
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             } else {
                 Section("Recent Reports") {
                     ForEach(logs) { log in
@@ -96,11 +96,11 @@ struct ScheduledReportsView: View {
                         }
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("Scheduled Reports")
     }
 

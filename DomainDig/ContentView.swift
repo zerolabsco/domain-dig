@@ -167,7 +167,7 @@ struct ContentView: View {
             }
             .background(
                 LinearGradient(
-                    colors: [Color.black, Color(.systemGray6).opacity(0.12)],
+                    colors: [Color(.appBackground), Color(.appSurface)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -302,7 +302,7 @@ struct ContentView: View {
                     .keyboardType(.URL)
                     .padding(.horizontal, 12)
                     .padding(.vertical, appDensity.metrics.controlVerticalPadding)
-                    .background(Color(.systemGray6))
+                    .background(Color(.appSurfaceElevated))
                     .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
                     .focused($focusedInputField, equals: .singleDomain)
                     .onSubmit {
@@ -320,6 +320,7 @@ struct ContentView: View {
                         .frame(minHeight: appDensity.metrics.controlMinHeight)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Color(.accentFill))
                 .disabled(viewModel.trimmedDomain.isEmpty)
             } else {
                 if FeatureAccessService.hasAccess(to: .batchOperations) {
@@ -346,7 +347,7 @@ struct ContentView: View {
                         .lineLimit(4...10)
                         .padding(.horizontal, 12)
                         .padding(.vertical, appDensity.metrics.controlVerticalPadding)
-                        .background(Color(.systemGray6))
+                        .background(Color(.appSurfaceElevated))
                         .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
                         .focused($focusedInputField, equals: .bulkDomains)
 
@@ -360,6 +361,7 @@ struct ContentView: View {
                                 .frame(minHeight: appDensity.metrics.controlMinHeight)
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(Color(.accentFill))
                         .disabled(viewModel.bulkInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.batchLookupRunning)
                     }
                 } else {
@@ -549,7 +551,7 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: viewModel.isCurrentDomainSaved ? "bookmark.fill" : "bookmark")
                         .font(appDensity.font(.body, design: .default))
-                        .foregroundStyle(viewModel.isCurrentDomainSaved ? .yellow : .secondary)
+                        .foregroundStyle(viewModel.isCurrentDomainSaved ? Color(.statusWarning) : .secondary)
                 }
                 Menu {
                     Button("Export TXT") {
@@ -671,7 +673,7 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 10)
-                        .background(Color(.systemGray6).opacity(0.5))
+                        .background(Color(.appSurface))
                         .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
                 }
             }
@@ -696,7 +698,7 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(appDensity.metrics.cardPadding)
-        .background(Color(.systemGray6))
+        .background(Color(.appSurfaceElevated))
         .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
     }
 
@@ -792,7 +794,7 @@ struct SummaryView: View {
                     .frame(minHeight: appDensity.metrics.rowMinHeight + 12, alignment: .topLeading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(appDensity.metrics.cardPadding)
-                    .background(Color(.systemGray6).opacity(0.5))
+                    .background(Color(.appSurface))
                     .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
                 }
             }
@@ -851,22 +853,22 @@ struct RiskSummaryCardView: View {
     private var levelColor: Color {
         switch report.riskAssessment.level {
         case .low:
-            return .green
+            return Color(.statusPositive)
         case .medium:
-            return .yellow
+            return Color(.statusWarning)
         case .high:
-            return .red
+            return Color(.statusCritical)
         }
     }
 
     private func factorColor(_ impact: RiskImpact) -> Color {
         switch impact {
         case .positive:
-            return .green
+            return Color(.statusPositive)
         case .neutral:
             return .secondary
         case .negative:
-            return .red
+            return Color(.statusCritical)
         }
     }
 }
@@ -888,7 +890,7 @@ struct InsightsSummaryCardView: View {
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: "chart.line.uptrend.xyaxis")
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(.cyan)
+                                .foregroundStyle(Color(.statusInfo))
                                 .padding(.top, 2)
                             Text(insight)
                                 .font(appDensity.font(.caption))
@@ -995,13 +997,13 @@ struct LookupStatusBannerView: View {
     private var color: Color {
         switch resultSource {
         case .live:
-            return .green
+            return Color(.statusPositive)
         case .cached:
             return .secondary
         case .mixed:
-            return .yellow
+            return Color(.statusWarning)
         case .snapshot:
-            return .orange
+            return Color(.statusWarning)
         }
     }
 
@@ -1029,7 +1031,7 @@ struct DomainChangeSummaryView: View {
             HStack {
                 Label(summary.hasChanges ? "Changed" : "Stable", systemImage: summary.hasChanges ? "arrow.triangle.2.circlepath" : "checkmark.circle")
                     .font(appDensity.font(.caption))
-                    .foregroundStyle(summary.hasChanges ? severityColor(summary.severity) : .green)
+                    .foregroundStyle(summary.hasChanges ? severityColor(summary.severity) : Color(.statusPositive))
                 Spacer()
                 Text(summary.severity.title.uppercased())
                     .font(appDensity.font(.caption2))
@@ -1079,13 +1081,13 @@ struct DomainChangeSummaryView: View {
                         if let riskScoreDelta = summary.riskScoreDelta {
                             Text("Risk delta: \(riskScoreDelta >= 0 ? "+" : "")\(riskScoreDelta)")
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(riskScoreDelta > 0 ? .orange : .secondary)
+                                .foregroundStyle(riskScoreDelta > 0 ? Color(.statusWarning) : .secondary)
                         }
 
                         if let contextNote = summary.contextNote {
                             Text(contextNote)
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(Color(.statusWarning))
                         }
                     }
                     .padding(.top, 4)
@@ -1101,9 +1103,9 @@ struct DomainChangeSummaryView: View {
         case .low:
             return .secondary
         case .medium:
-            return .yellow
+            return Color(.statusWarning)
         case .high:
-            return .red
+            return Color(.statusCritical)
         }
     }
 
@@ -1205,7 +1207,7 @@ struct DomainDiffView: View {
                                     }
                                 }
                                 .padding(10)
-                                .background(item.hasChanges ? changeColor(for: item).opacity(0.08) : Color(.systemGray6).opacity(0.25))
+                                .background(item.hasChanges ? changeColor(for: item).opacity(0.08) : Color(.appSurface))
                                 .cornerRadius(8)
                             }
                         } label: {
@@ -1225,7 +1227,7 @@ struct DomainDiffView: View {
                     .overlay {
                         if highlightedSectionID == section.id {
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.cyan.opacity(0.55), lineWidth: 1)
+                                .stroke(Color(.statusInfo).opacity(0.55), lineWidth: 1)
                         }
                     }
                 }
@@ -1258,9 +1260,9 @@ struct DomainDiffView: View {
         case .low:
             return .blue
         case .medium:
-            return .yellow
+            return Color(.statusWarning)
         case .high:
-            return .red
+            return Color(.statusCritical)
         }
     }
 
@@ -1269,9 +1271,9 @@ struct DomainDiffView: View {
         case .low:
             return .blue
         case .medium:
-            return .yellow
+            return Color(.statusWarning)
         case .high:
-            return .red
+            return Color(.statusCritical)
         }
     }
 
@@ -1337,7 +1339,7 @@ struct DomainSectionView: View {
         CollapsibleSectionView(title: "Domain", isCollapsed: $isCollapsed) {
             if let trackedDomain {
                 HStack(spacing: 8) {
-                    AppStatusBadgeView(model: .init(title: "Tracked", systemImage: "eye.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16)))
+                    AppStatusBadgeView(model: .init(title: "Tracked", systemImage: "eye.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16)))
                     Button {
                         onTogglePinned()
                     } label: {
@@ -1638,7 +1640,7 @@ struct IntelligenceSectionView: View {
                                         if item.isEphemeral {
                                             Text("Ephemeral")
                                                 .font(appDensity.font(.caption2))
-                                                .foregroundStyle(.yellow)
+                                                .foregroundStyle(Color(.statusWarning))
                                         }
                                     }
                                     Text("First \(item.firstSeen.formatted(date: .abbreviated, time: .omitted)) • Last \(item.lastSeen.formatted(date: .abbreviated, time: .omitted)) • Seen \(item.recurrenceCount)x")
@@ -1667,7 +1669,7 @@ struct IntelligenceSectionView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(appDensity.font(.subheadline, weight: .semibold))
-                .foregroundStyle(.cyan)
+                .foregroundStyle(Color(.statusInfo))
             content()
         }
     }
@@ -1758,7 +1760,7 @@ struct SubdomainsSectionView: View {
                             HStack {
                                 Text("\(group.label).*")
                                     .font(appDensity.font(.caption))
-                                    .foregroundStyle(.cyan)
+                                    .foregroundStyle(Color(.statusInfo))
                                 Spacer()
                                 Text("\(group.subdomains.count)")
                                     .font(appDensity.font(.caption2))
@@ -1776,10 +1778,10 @@ struct SubdomainsSectionView: View {
                             if row.isInteresting {
                                 Text("Interesting")
                                     .font(.system(.caption2, design: .monospaced))
-                                    .foregroundStyle(.yellow)
+                                    .foregroundStyle(Color(.statusWarning))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(Color.yellow.opacity(0.14))
+                                    .background(Color(.statusWarning).opacity(0.14))
                                     .clipShape(Capsule())
                             }
                         }
@@ -1883,7 +1885,7 @@ struct DNSSectionView: View {
                         Text(section.title)
                             .font(.system(.subheadline, design: .monospaced))
                             .fontWeight(.semibold)
-                            .foregroundStyle(.cyan)
+                            .foregroundStyle(Color(.statusInfo))
 
                         if let message = section.message {
                             MessageRowView(text: message.text, isError: message.isError)
@@ -1910,7 +1912,7 @@ struct DNSSectionView: View {
                         Text("PTR")
                             .font(.system(.subheadline, design: .monospaced))
                             .fontWeight(.semibold)
-                            .foregroundStyle(.cyan)
+                            .foregroundStyle(Color(.statusInfo))
                         SectionTrustMetadataView(provenance: ptrProvenance, confidence: nil)
                         MessageRowView(text: ptrMessage.text, isError: ptrMessage.isError)
                     }
@@ -1920,7 +1922,7 @@ struct DNSSectionView: View {
                     HStack {
                         Text("History")
                             .font(appDensity.font(.subheadline, weight: .semibold))
-                            .foregroundStyle(.cyan)
+                            .foregroundStyle(Color(.statusInfo))
                         Spacer()
                         if let onLoadHistory, history.isEmpty, !historyLoading, !showsHistoryPlaceholder {
                             Button("Load") {
@@ -1990,7 +1992,7 @@ struct WebSectionView: View {
                 HStack {
                     Text("TLS")
                         .font(appDensity.font(.subheadline, weight: .semibold))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(Color(.statusInfo))
                     Spacer()
                     if !sslLoading {
                         AppStatusBadgeView(model: AppStatusFactory.tls(sslInfo: sslInfo, error: sslError))
@@ -2034,7 +2036,7 @@ struct WebSectionView: View {
             CardView {
                 Text("Headers")
                     .font(appDensity.font(.subheadline, weight: .semibold))
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(Color(.statusInfo))
                 SectionTrustMetadataView(provenance: httpProvenance, confidence: nil)
                 if headersLoading {
                     ProgressView("Fetching headers…")
@@ -2052,7 +2054,7 @@ struct WebSectionView: View {
                             HStack(alignment: .top, spacing: 4) {
                                 Text(header.name + ":")
                                     .font(appDensity.font(.caption))
-                                    .foregroundStyle(header.isSecurityHeader ? .yellow : .cyan)
+                                    .foregroundStyle(header.isSecurityHeader ? Color(.statusWarning) : Color(.statusInfo))
                                 Text(header.value)
                                     .font(appDensity.font(.caption))
                                     .foregroundStyle(.primary)
@@ -2067,7 +2069,7 @@ struct WebSectionView: View {
                 HStack {
                     Text("Redirects")
                         .font(appDensity.font(.subheadline, weight: .semibold))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(Color(.statusInfo))
                     Spacer()
                     if let finalURL {
                         AppCopyButton(value: finalURL, label: "Copy redirect URL")
@@ -2093,7 +2095,7 @@ struct WebSectionView: View {
                                 .frame(width: 16, alignment: .trailing)
                             Text(redirect.statusCode)
                                 .font(appDensity.font(.caption))
-                                .foregroundStyle(.cyan)
+                                .foregroundStyle(Color(.statusInfo))
                                 .frame(width: 36, alignment: .leading)
                             Text(redirect.url)
                                 .font(appDensity.font(.caption))
@@ -2163,7 +2165,7 @@ struct EmailSectionView: View {
                             HStack(spacing: 8) {
                                 Text(row.label)
                                     .font(appDensity.font(.caption))
-                                    .foregroundStyle(.cyan)
+                                    .foregroundStyle(Color(.statusInfo))
                                     .frame(width: 76, alignment: .leading)
                                 AppStatusBadgeView(model: emailRowBadge(row))
                             }
@@ -2186,13 +2188,13 @@ struct EmailSectionView: View {
     private func emailRowBadge(_ row: EmailRowViewData) -> AppStatusBadgeModel {
         switch row.statusTone {
         case .success:
-            return .init(title: row.status, systemImage: "checkmark.shield.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: row.status, systemImage: "checkmark.shield.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         case .warning:
-            return .init(title: row.status, systemImage: "shield.lefthalf.filled", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: row.status, systemImage: "shield.lefthalf.filled", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .failure:
-            return .init(title: row.status, systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: row.status, systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         case .primary, .secondary:
-            return .init(title: row.status, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: row.status, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         }
     }
 }
@@ -2227,7 +2229,7 @@ struct NetworkSectionView: View {
             CardView {
                 Text("Reachability")
                     .font(appDensity.font(.subheadline, weight: .semibold))
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(Color(.statusInfo))
                 SectionTrustMetadataView(provenance: reachabilityProvenance, confidence: nil)
                 if reachabilityLoading {
                     ProgressView("Checking ports…")
@@ -2252,7 +2254,7 @@ struct NetworkSectionView: View {
             CardView(allowsHorizontalScroll: false) {
                 Text("Location")
                     .font(appDensity.font(.subheadline, weight: .semibold))
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(Color(.statusInfo))
                 SectionTrustMetadataView(provenance: geolocationProvenance, confidence: geolocationConfidence)
                 if geolocationLoading {
                     ProgressView("Looking up location…")
@@ -2284,13 +2286,13 @@ struct NetworkSectionView: View {
             CardView(allowsHorizontalScroll: false) {
                 Text("Port Scan")
                     .font(appDensity.font(.subheadline, weight: .semibold))
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(Color(.statusInfo))
                 SectionTrustMetadataView(provenance: portScanProvenance, confidence: nil)
 
                 if isCloudflareProxied {
                     Text("Domain is behind Cloudflare's proxy. Results reflect the edge, not the origin.")
                         .font(appDensity.font(.caption2))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Color(.statusWarning))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -2314,7 +2316,7 @@ struct NetworkSectionView: View {
                             .autocorrectionDisabled()
                             .keyboardType(.numberPad)
                             .padding(10)
-                            .background(Color(.systemGray6).opacity(0.5))
+                            .background(Color(.appSurface))
                             .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
 
                         Button("Scan") {
@@ -2322,6 +2324,7 @@ struct NetworkSectionView: View {
                             onScanCustomPorts()
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(Color(.accentFill))
                         .disabled(customPortScanLoading)
 
                         if customPortScanLoading {
@@ -2344,13 +2347,13 @@ struct NetworkSectionView: View {
     private func reachabilityBadge(_ row: ReachabilityRowViewData) -> AppStatusBadgeModel {
         switch row.statusTone {
         case .success:
-            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         case .warning:
-            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .failure:
-            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         case .primary, .secondary:
-            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         }
     }
 }
@@ -2395,13 +2398,13 @@ struct PortRowsView: View {
     private func portBadge(_ row: PortScanRowViewData) -> AppStatusBadgeModel {
         switch row.statusTone {
         case .success:
-            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         case .warning:
-            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .failure:
-            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         case .primary, .secondary:
-            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         }
     }
 }
@@ -2413,7 +2416,7 @@ struct SectionTitleView: View {
     var body: some View {
         Text(title)
             .font(appDensity.font(.headline, design: .default, weight: .semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
     }
 }
 
@@ -2442,7 +2445,7 @@ struct CardView<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(appDensity.metrics.cardPadding)
-        .background(Color(.systemGray6).opacity(0.5))
+        .background(Color(.appSurface))
         .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
     }
 
@@ -2484,7 +2487,7 @@ struct MessageRowView: View {
     var body: some View {
         Label(text, systemImage: isError ? "exclamationmark.triangle.fill" : "info.circle")
             .font(appDensity.font(.caption))
-            .foregroundStyle(isError ? .red : .secondary)
+            .foregroundStyle(isError ? Color(.statusCritical) : .secondary)
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -2576,6 +2579,11 @@ struct LabeledValueRow: View {
     }
 }
 
+/// Maps a row's semantic tone onto the app palette.
+///
+/// See `Docs/ACCESSIBILITY.md` for the measured contrast ratios behind these
+/// colours. Never reach for a literal (`Color(.statusCritical)`, `Color(.statusWarning)`, …) — the system
+/// palette fails WCAG AA badly in light mode (systemYellow is 1.28:1 on white).
 enum ResultColors {
     static func color(for tone: ResultTone) -> Color {
         switch tone {
@@ -2584,11 +2592,11 @@ enum ResultColors {
         case .secondary:
             return .secondary
         case .success:
-            return .green
+            return Color(.statusPositive)
         case .warning:
-            return .yellow
+            return Color(.statusWarning)
         case .failure:
-            return .red
+            return Color(.statusCritical)
         }
     }
 }
@@ -2654,7 +2662,7 @@ struct SettingsView: View {
                 if let errorMessage = purchaseService.errorMessage {
                     Text(errorMessage)
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color(.statusCritical))
                 }
             }
 
@@ -2789,7 +2797,7 @@ private struct HistoryNetworkSettingsView: View {
                     if let customResolverError {
                         Text(customResolverError)
                             .font(appDensity.font(.caption, design: .default))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color(.statusCritical))
                     }
                 }
             }
@@ -2871,7 +2879,7 @@ private struct CloudSyncSettingsView: View {
                 if let lastErrorMessage = cloudSyncService.lastErrorMessage {
                     Text(lastErrorMessage)
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color(.statusCritical))
                 }
             }
         }
@@ -2964,7 +2972,7 @@ private struct LocalAPISettingsView: View {
                                 Spacer()
                                 Text("\(log.statusCode)")
                                     .font(appDensity.font(.caption, design: .default))
-                                    .foregroundStyle(log.statusCode >= 400 ? .red : .secondary)
+                                    .foregroundStyle(log.statusCode >= 400 ? Color(.statusCritical) : .secondary)
                             }
 
                             Text(log.timestamp.formatted(date: .abbreviated, time: .standard))
@@ -3744,8 +3752,8 @@ extension ChangeImpactClassification {
     var color: Color {
         switch self {
         case .informational: return .secondary
-        case .warning: return .yellow
-        case .critical: return .red
+        case .warning: return Color(.statusWarning)
+        case .critical: return Color(.statusCritical)
         }
     }
 }

@@ -41,7 +41,7 @@ struct MonitoringView: View {
                 }
                 .padding(.vertical, 4)
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
 
             if viewModel.monitoringLogs.isEmpty {
                 Section {
@@ -53,7 +53,7 @@ struct MonitoringView: View {
                         showsCardBackground: false
                     )
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             } else {
                 Section("Recent Runs") {
                     ForEach(viewModel.monitoringLogs) { log in
@@ -78,10 +78,10 @@ struct MonitoringView: View {
                                 HStack(spacing: 8) {
                                     metricBadge(title: "\(log.domainsChecked) checked")
                                     if log.changesFound > 0 {
-                                        metricBadge(title: "\(log.changesFound) changed", tint: .orange)
+                                        metricBadge(title: "\(log.changesFound) changed", tint: Color(.statusWarning))
                                     }
                                     if log.alertsTriggered > 0 {
-                                        metricBadge(title: "\(log.alertsTriggered) alerts", tint: .red)
+                                        metricBadge(title: "\(log.alertsTriggered) alerts", tint: Color(.statusCritical))
                                     }
                                 }
                             }
@@ -89,11 +89,11 @@ struct MonitoringView: View {
                         }
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("Monitoring")
         .preferredColorScheme(.dark)
         .onAppear {
@@ -101,7 +101,7 @@ struct MonitoringView: View {
         }
     }
 
-    private func metricBadge(title: String, tint: Color = .cyan) -> some View {
+    private func metricBadge(title: String, tint: Color = Color(.statusInfo)) -> some View {
         Text(title)
             .font(appDensity.font(.caption2))
             .foregroundStyle(tint)
@@ -133,7 +133,7 @@ struct MonitoringLogDetailView: View {
                 LabeledContent("Alerts", value: "\(log.alertsTriggered)")
                 LabeledContent("Timestamp", value: log.timestamp.formatted(date: .abbreviated, time: .shortened))
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
 
             Section("Domains") {
                 ForEach(log.checkedDomains) { result in
@@ -167,7 +167,7 @@ struct MonitoringLogDetailView: View {
                         if let errorMessage = result.errorMessage {
                             Text(errorMessage)
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(.yellow)
+                                .foregroundStyle(Color(.statusWarning))
                         }
 
                         if let historyEntryID = result.historyEntryID,
@@ -181,7 +181,7 @@ struct MonitoringLogDetailView: View {
                     .padding(.vertical, 4)
                 }
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
 
             if !log.errors.isEmpty {
                 Section("Errors") {
@@ -191,11 +191,11 @@ struct MonitoringLogDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("Run Details")
         .preferredColorScheme(.dark)
     }
@@ -205,9 +205,9 @@ struct MonitoringLogDetailView: View {
         case .info:
             return .secondary
         case .warning:
-            return .yellow
+            return Color(.statusWarning)
         case .critical:
-            return .red
+            return Color(.statusCritical)
         }
     }
 }

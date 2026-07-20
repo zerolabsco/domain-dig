@@ -24,13 +24,13 @@ struct WorkflowsView: View {
                         .font(appDensity.font(.caption))
                         .foregroundStyle(.secondary)
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
 
             workflowContent
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .refreshable {
             await viewModel.refreshWorkflowList()
         }
@@ -73,7 +73,7 @@ struct WorkflowsView: View {
                         value: Double(viewModel.batchCompletedCount),
                         total: Double(max(viewModel.batchTotalCount, 1))
                     )
-                    .tint(.cyan)
+                    .tint(Color(.statusInfo))
 
                     HStack {
                         Text(viewModel.batchProgressLabel)
@@ -91,7 +91,7 @@ struct WorkflowsView: View {
                 }
                 .padding(.vertical, 4)
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
         }
 
         if viewModel.workflows.isEmpty {
@@ -104,7 +104,7 @@ struct WorkflowsView: View {
                     showsCardBackground: false
                 )
             }
-            .listRowBackground(Color(.systemGray6).opacity(0.5))
+            .listRowBackground(Color(.appSurface))
         } else {
             ForEach(viewModel.workflows) { workflow in
                 NavigationLink {
@@ -112,7 +112,7 @@ struct WorkflowsView: View {
                 } label: {
                     WorkflowRowView(workflow: workflow)
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
             .onDelete { offsets in
                 let workflows = offsets.map { viewModel.workflows[$0] }
@@ -133,7 +133,7 @@ private struct WorkflowRowView: View {
                 if workflow.collaboration?.isShared == true {
                     Image(systemName: "person.2.fill")
                         .font(.caption2)
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(Color(.statusInfo))
                 }
                 Text(workflow.name)
                     .font(appDensity.font(.callout, design: .default, weight: .semibold))
@@ -335,7 +335,7 @@ struct WorkflowDetailView: View {
                     }
                 }
                 .scrollContentBackground(.hidden)
-                .background(Color.black)
+                .background(Color(.appBackground))
                 .navigationTitle(workflow.name)
                 .toolbar {
                     if !workflow.domains.isEmpty {
@@ -640,7 +640,7 @@ struct WorkflowBulkAddSheet: View {
                                     .foregroundStyle(.primary)
                                 Spacer()
                                 Image(systemName: selectedDomains.contains(domain) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(selectedDomains.contains(domain) ? .cyan : .secondary)
+                                    .foregroundStyle(selectedDomains.contains(domain) ? Color(.statusInfo) : .secondary)
                             }
                         }
                         .buttonStyle(.plain)

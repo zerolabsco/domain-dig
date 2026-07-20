@@ -13,7 +13,7 @@ struct BatchResultsView: View {
                 if viewModel.batchLookupRunning {
                     VStack(alignment: .trailing, spacing: 4) {
                         ProgressView(value: Double(viewModel.batchCompletedCount), total: Double(max(viewModel.batchTotalCount, 1)))
-                            .tint(.cyan)
+                            .tint(Color(.statusInfo))
                             .frame(width: 120)
                         Text(viewModel.batchProgressLabel)
                             .font(appDensity.font(.caption2))
@@ -110,7 +110,7 @@ struct BatchResultRowView: View {
             if let errorMessage = result.errorMessage {
                 Text(errorMessage)
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(result.status == .failed ? .red : .secondary)
+                    .foregroundStyle(result.status == .failed ? Color(.statusCritical) : .secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -138,29 +138,29 @@ struct BatchResultRowView: View {
             title: availabilityText,
             systemImage: "exclamationmark.circle",
             foregroundColor: .secondary,
-            backgroundColor: Color(.systemGray5).opacity(0.55)
+            backgroundColor: Color(.appSurfaceElevated)
         )
     }
 
     private var quickStatusBadge: AppStatusBadgeModel {
         switch result.status {
         case .pending:
-            return .init(title: "Pending", systemImage: "clock", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: "Pending", systemImage: "clock", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         case .running:
-            return .init(title: "Running", systemImage: "arrow.clockwise", foregroundColor: .cyan, backgroundColor: .cyan.opacity(0.16))
+            return .init(title: "Running", systemImage: "arrow.clockwise", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
         case .completed:
             if result.changeClassification == .critical || result.certificateWarningLevel == .critical || result.riskLevel == .high {
-                return .init(title: "Critical", systemImage: "exclamationmark.octagon.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+                return .init(title: "Critical", systemImage: "exclamationmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
             }
             if result.changeClassification == .warning || result.changeSeverity == .medium || result.certificateWarningLevel == .warning {
-                return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+                return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
             }
             if result.quickStatus == "Changed" {
-                return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: .cyan, backgroundColor: .cyan.opacity(0.16))
+                return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
             }
-            return .init(title: "Stable", systemImage: "checkmark.circle.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: "Stable", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         case .failed:
-            return .init(title: "Failed", systemImage: "xmark.circle.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+            return .init(title: "Failed", systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         }
     }
 }

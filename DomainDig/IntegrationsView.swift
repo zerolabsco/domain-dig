@@ -52,7 +52,7 @@ struct IntegrationsSettingsView: View {
                                 if !target.isEnabled {
                                     Text("Disabled")
                                         .font(.caption2)
-                                        .foregroundStyle(.orange)
+                                        .foregroundStyle(Color(.statusWarning))
                                 }
                             }
                         }
@@ -158,7 +158,7 @@ private struct IntegrationDetailView: View {
                                     .foregroundStyle(.secondary)
 
                                 if let failureReason = record.failureReason {
-                                    let failureColor: Color = record.status == .skipped ? .secondary : .red
+                                    let failureColor: Color = record.status == .skipped ? .secondary : Color(.statusCritical)
                                     Text(failureReason)
                                         .font(.caption)
                                         .foregroundStyle(failureColor)
@@ -324,7 +324,7 @@ private struct IntegrationEditorView: View {
                 Section {
                     Text(validationMessage)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color(.statusCritical))
                 }
             }
         }

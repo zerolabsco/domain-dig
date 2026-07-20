@@ -92,48 +92,48 @@ enum AppStatusFactory {
     static func availability(_ status: DomainAvailabilityStatus?) -> AppStatusBadgeModel {
         switch status {
         case .available:
-            return .init(title: "Available", systemImage: "checkmark.circle.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: "Available", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         case .registered:
-            return .init(title: "Registered", systemImage: "circle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: "Registered", systemImage: "circle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .unknown, .none:
-            return .init(title: "Unknown", systemImage: "questionmark.circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: "Unknown", systemImage: "questionmark.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         }
     }
 
     static func tls(sslInfo: SSLCertificateInfo?, error: String?) -> AppStatusBadgeModel {
         if error != nil || sslInfo == nil {
-            return .init(title: "Invalid", systemImage: "xmark.octagon.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+            return .init(title: "Invalid", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         }
         if let sslInfo, sslInfo.daysUntilExpiry <= 14 {
-            return .init(title: "Expiring", systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: "Expiring", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         }
-        return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+        return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
     }
 
     static func email(_ result: EmailSecurityResult?, error: String?) -> AppStatusBadgeModel {
         guard error == nil, let result else {
-            return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         }
 
         let foundCount = [result.spf.found, result.dmarc.found, result.dkim.found].filter { $0 }.count
         switch foundCount {
         case 3:
-            return .init(title: "Secure", systemImage: "checkmark.shield.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: "Secure", systemImage: "checkmark.shield.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         case 1, 2:
-            return .init(title: "Partial", systemImage: "shield.lefthalf.filled", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: "Partial", systemImage: "shield.lefthalf.filled", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         default:
-            return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         }
     }
 
     static func change(_ summary: DomainChangeSummary?) -> AppStatusBadgeModel {
         guard let summary else {
-            return .init(title: "Unchanged", systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+            return .init(title: "Unchanged", systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
         }
         if summary.hasChanges {
-            return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: .cyan, backgroundColor: .cyan.opacity(0.16))
+            return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
         }
-        return .init(title: "Unchanged", systemImage: "checkmark.circle", foregroundColor: .secondary, backgroundColor: Color(.systemGray5).opacity(0.55))
+        return .init(title: "Unchanged", systemImage: "checkmark.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
     }
 }
 
@@ -184,9 +184,9 @@ struct AppCopyButton: View {
         } label: {
             Image(systemName: didCopy ? "checkmark" : "doc.on.doc")
                 .font(appDensity.font(.caption))
-                .foregroundStyle(didCopy ? Color.green : .secondary)
+                .foregroundStyle(didCopy ? Color(.statusPositive) : .secondary)
                 .frame(width: 30, height: 30)
-                .background(Color(.systemGray5).opacity(0.35))
+                .background(Color(.appSurfaceElevated))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
@@ -264,11 +264,11 @@ struct EmptyStateCardView: View {
 
             Text(suggestion)
                 .font(appDensity.font(.caption))
-                .foregroundStyle(.cyan)
+                .foregroundStyle(Color(.statusInfo))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(appDensity.metrics.cardPadding)
-        .background(showsCardBackground ? Color(.systemGray6).opacity(0.45) : Color.clear)
+        .background(showsCardBackground ? Color(.appSurface) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
     }
 }
@@ -307,7 +307,7 @@ struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title)
                             .font(appDensity.font(.headline, design: .default, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         if let subtitle {
                             Text(subtitle)
                                 .font(appDensity.font(.caption))
@@ -346,7 +346,7 @@ struct TagChipRowView: View {
                         .font(.caption)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Color(.systemGray5).opacity(0.6), in: Capsule())
+                        .background(Color(.appSurfaceElevated), in: Capsule())
                 }
             }
         }
@@ -380,8 +380,8 @@ struct TagFilterChipRowView: View {
                 .font(.caption)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(isSelected ? Color.cyan.opacity(0.3) : Color(.systemGray5).opacity(0.6), in: Capsule())
-                .foregroundStyle(isSelected ? Color.cyan : Color.primary)
+                .background(isSelected ? Color(.statusInfo).opacity(0.3) : Color(.appSurfaceElevated), in: Capsule())
+                .foregroundStyle(isSelected ? Color(.statusInfo) : Color.primary)
         }
         .buttonStyle(.plain)
     }

@@ -22,20 +22,20 @@ struct DashboardView: View {
                         showsCardBackground: false
                     )
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             } else {
                 Section {
                     LazyVGrid(columns: summaryColumns, spacing: 10) {
-                        summaryCard(title: "Total Domains", value: viewModel.portfolioDashboardData.snapshot.totalDomains, filter: .all, tint: .cyan)
-                        summaryCard(title: "Healthy", value: viewModel.portfolioDashboardData.snapshot.healthyCount, filter: .healthy, tint: .green)
-                        summaryCard(title: "Warning", value: viewModel.portfolioDashboardData.snapshot.warningCount, filter: .warning, tint: .yellow)
-                        summaryCard(title: "Critical", value: viewModel.portfolioDashboardData.snapshot.criticalCount, filter: .critical, tint: .red)
-                        summaryCard(title: "Changes (24h)", value: viewModel.portfolioDashboardData.snapshot.changedLast24h, filter: .changed, tint: .orange)
-                        summaryCard(title: "Unreachable", value: viewModel.portfolioDashboardData.snapshot.unreachableCount, filter: .unreachable, tint: .pink)
+                        summaryCard(title: "Total Domains", value: viewModel.portfolioDashboardData.snapshot.totalDomains, filter: .all, tint: Color(.statusInfo))
+                        summaryCard(title: "Healthy", value: viewModel.portfolioDashboardData.snapshot.healthyCount, filter: .healthy, tint: Color(.statusPositive))
+                        summaryCard(title: "Warning", value: viewModel.portfolioDashboardData.snapshot.warningCount, filter: .warning, tint: Color(.statusWarning))
+                        summaryCard(title: "Critical", value: viewModel.portfolioDashboardData.snapshot.criticalCount, filter: .critical, tint: Color(.statusCritical))
+                        summaryCard(title: "Changes (24h)", value: viewModel.portfolioDashboardData.snapshot.changedLast24h, filter: .changed, tint: Color(.statusWarning))
+                        summaryCard(title: "Unreachable", value: viewModel.portfolioDashboardData.snapshot.unreachableCount, filter: .unreachable, tint: Color(.statusCritical))
                     }
                     .padding(.vertical, 4)
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
 
                 Section("Quick Filters") {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -46,10 +46,10 @@ struct DashboardView: View {
                                 } label: {
                                     Text(filter.title)
                                         .font(appDensity.font(.caption, weight: .semibold))
-                                        .foregroundStyle(viewModel.dashboardFilter == filter ? Color.black : Color.white)
+                                        .foregroundStyle(viewModel.dashboardFilter == filter ? Color(.appOnAccent) : Color.primary)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
-                                        .background(viewModel.dashboardFilter == filter ? Color.cyan : Color(.systemGray5).opacity(0.6))
+                                        .background(viewModel.dashboardFilter == filter ? Color(.statusInfo) : Color(.appSurfaceElevated))
                                         .clipShape(Capsule())
                                 }
                                 .buttonStyle(.plain)
@@ -58,7 +58,7 @@ struct DashboardView: View {
                         .padding(.vertical, 4)
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
 
                 Section("Recent Activity") {
                     if viewModel.filteredPortfolioRecentActivity.isEmpty {
@@ -76,7 +76,7 @@ struct DashboardView: View {
                         }
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
 
                 Section("Attention Required") {
                     if viewModel.filteredPortfolioAttentionRequired.isEmpty {
@@ -94,7 +94,7 @@ struct DashboardView: View {
                         }
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
 
                 Section("Expiring Soon") {
                     if viewModel.filteredPortfolioExpiringSoon.isEmpty {
@@ -110,7 +110,7 @@ struct DashboardView: View {
                         }
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
 
                 Section("Portfolio List") {
                     if viewModel.filteredPortfolioGroups.isEmpty {
@@ -150,11 +150,11 @@ struct DashboardView: View {
                         }
                     }
                 }
-                .listRowBackground(Color(.systemGray6).opacity(0.5))
+                .listRowBackground(Color(.appSurface))
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color.black)
+        .background(Color(.appBackground))
         .navigationTitle("Dashboard")
         .searchable(text: $viewModel.dashboardSearchText, prompt: "Search portfolio")
         .toolbar {
@@ -196,7 +196,7 @@ struct DashboardView: View {
                     .foregroundStyle(.secondary)
                 Text("\(value)")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 HStack {
                     Circle()
                         .fill(tint)
@@ -218,13 +218,13 @@ struct DashboardView: View {
         if viewModel.dashboardFilter == filter {
             return AnyShapeStyle(
                 LinearGradient(
-                    colors: [Color.cyan.opacity(0.28), Color.cyan.opacity(0.12)],
+                    colors: [Color(.statusInfo).opacity(0.28), Color(.statusInfo).opacity(0.12)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
         }
-        return AnyShapeStyle(Color(.systemGray5).opacity(0.45))
+        return AnyShapeStyle(Color(.appSurfaceElevated))
     }
 
     private func dashboardEmptyRow(_ message: String) -> some View {
@@ -243,15 +243,15 @@ struct DashboardView: View {
 
         if criticalCount > 0 {
             title = "\(criticalCount) critical"
-            color = .red
+            color = Color(.statusCritical)
             systemImage = "exclamationmark.octagon.fill"
         } else if warningCount > 0 {
             title = "\(warningCount) warning"
-            color = .yellow
+            color = Color(.statusWarning)
             systemImage = "exclamationmark.triangle.fill"
         } else {
             title = "Healthy"
-            color = .green
+            color = Color(.statusPositive)
             systemImage = "checkmark.circle.fill"
         }
 
@@ -297,11 +297,11 @@ private struct PortfolioActivityRow: View {
     private var iconColor: Color {
         switch item.health {
         case .healthy:
-            return .cyan
+            return Color(.statusInfo)
         case .warning:
-            return .yellow
+            return Color(.statusWarning)
         case .critical:
-            return .red
+            return Color(.statusCritical)
         }
     }
 }
@@ -332,11 +332,11 @@ private struct PortfolioAttentionRow: View {
     private var badgeModel: AppStatusBadgeModel {
         switch item.health {
         case .healthy:
-            return .init(title: "Healthy", systemImage: "checkmark.circle.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: "Healthy", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         case .warning:
-            return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .critical:
-            return .init(title: "Critical", systemImage: "exclamationmark.octagon.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+            return .init(title: "Critical", systemImage: "exclamationmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         }
     }
 }
@@ -371,11 +371,11 @@ private struct PortfolioExpiryRow: View {
     private var badgeModel: AppStatusBadgeModel {
         switch state.certificateExpiryState {
         case .none:
-            return .init(title: "Healthy", systemImage: "lock.fill", foregroundColor: .green, backgroundColor: .green.opacity(0.16))
+            return .init(title: "Healthy", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
         case .warning:
-            return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: .yellow, backgroundColor: .yellow.opacity(0.16))
+            return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .critical:
-            return .init(title: "Critical", systemImage: "xmark.octagon.fill", foregroundColor: .red, backgroundColor: .red.opacity(0.16))
+            return .init(title: "Critical", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         }
     }
 }
