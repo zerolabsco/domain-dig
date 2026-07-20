@@ -58,7 +58,7 @@
          </CommandLineArgument>
       </CommandLineArguments>
       <StoreKitConfigurationFileReference
-         identifier = "../../../DomainDig.storekit">
+         identifier = "../../DomainDig.storekit">
       </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
