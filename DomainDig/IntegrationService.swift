@@ -555,7 +555,7 @@ private enum HTTPIntegrationClient {
         headers: [String: String],
         timeoutSeconds: Double
     ) async throws {
-        guard let url = URL(string: urlString) else {
+        guard let url = URL(string: urlString), url.scheme?.lowercased() == "https" else {
             throw IntegrationError.invalidURL
         }
 

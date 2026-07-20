@@ -2,7 +2,11 @@ import Foundation
 import os
 
 enum DomainDebugLog {
+#if DEBUG
     static let enabled = true
+#else
+    static let enabled = false
+#endif
     private static let logger = Logger(subsystem: "co.zerolabs.domain-dig", category: "Debug")
 
     static func debug(_ message: String) {
