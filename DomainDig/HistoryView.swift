@@ -56,7 +56,7 @@ struct HistoryView: View {
                                                 title: severity.title,
                                                 systemImage: "arrow.triangle.2.circlepath",
                                                 foregroundColor: severity == .high ? Color(.statusCritical) : Color(.statusWarning),
-                                                backgroundColor: (severity == .high ? Color(.statusCritical) : Color(.statusWarning)).opacity(0.16)
+                                                backgroundColor: (severity == .high ? AppStatusTone.critical : .warning).surface
                                             )
                                         )
                                     }

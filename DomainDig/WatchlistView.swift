@@ -516,7 +516,7 @@ struct WatchlistRowView: View {
                         title: "Shared",
                         systemImage: "person.2.fill",
                         foregroundColor: Color(.statusInfo),
-                        backgroundColor: Color(.statusInfo).opacity(0.16)
+                        backgroundColor: Color(.statusInfoSurface)
                     )
                 )
             }
@@ -533,11 +533,11 @@ struct WatchlistRowView: View {
         let days = trackedDomain.certificateDaysRemaining.map { "\($0)d" } ?? "Soon"
         switch trackedDomain.certificateWarningLevel {
         case .critical:
-            return .init(title: "Invalid \(days)", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
+            return .init(title: "Invalid \(days)", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
         case .warning:
-            return .init(title: "Expiring \(days)", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: "Expiring \(days)", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         case .none:
-            return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         }
     }
 }

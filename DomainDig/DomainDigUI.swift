@@ -120,6 +120,53 @@ extension EnvironmentValues {
     }
 }
 
+/// A status colour pairing: the foreground and the surface it sits on.
+///
+/// These travel together because they cannot be derived from one another. The
+/// badge fill used to be `foreground.opacity(0.16)`, which forced every
+/// foreground dark enough to stay legible against its own wash — that is how the
+/// light palette ended up olive-and-mud rather than amber-and-green. Decoupling
+/// them lets the foregrounds stay fully saturated.
+///
+/// See `Docs/ACCESSIBILITY.md` for the measured ratios.
+enum AppStatusTone {
+    case positive
+    case warning
+    case critical
+    case info
+    case neutral
+
+    var foreground: Color {
+        switch self {
+        case .positive:
+            return Color(.statusPositive)
+        case .warning:
+            return Color(.statusWarning)
+        case .critical:
+            return Color(.statusCritical)
+        case .info:
+            return Color(.statusInfo)
+        case .neutral:
+            return Color(.statusNeutral)
+        }
+    }
+
+    var surface: Color {
+        switch self {
+        case .positive:
+            return Color(.statusPositiveSurface)
+        case .warning:
+            return Color(.statusWarningSurface)
+        case .critical:
+            return Color(.statusCriticalSurface)
+        case .info:
+            return Color(.statusInfoSurface)
+        case .neutral:
+            return Color(.statusNeutralSurface)
+        }
+    }
+}
+
 struct AppStatusBadgeModel: Equatable {
     let title: String
     let systemImage: String?
@@ -131,9 +178,9 @@ enum AppStatusFactory {
     static func availability(_ status: DomainAvailabilityStatus?) -> AppStatusBadgeModel {
         switch status {
         case .available:
-            return .init(title: "Available", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: "Available", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         case .registered:
-            return .init(title: "Registered", systemImage: "circle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: "Registered", systemImage: "circle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         case .unknown, .none:
             return .init(title: "Unknown", systemImage: "questionmark.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
@@ -141,12 +188,12 @@ enum AppStatusFactory {
 
     static func tls(sslInfo: SSLCertificateInfo?, error: String?) -> AppStatusBadgeModel {
         if error != nil || sslInfo == nil {
-            return .init(title: "Invalid", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
+            return .init(title: "Invalid", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
         }
         if let sslInfo, sslInfo.daysUntilExpiry <= 14 {
-            return .init(title: "Expiring", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: "Expiring", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         }
-        return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+        return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
     }
 
     static func email(_ result: EmailSecurityResult?, error: String?) -> AppStatusBadgeModel {
@@ -157,9 +204,9 @@ enum AppStatusFactory {
         let foundCount = [result.spf.found, result.dmarc.found, result.dkim.found].filter { $0 }.count
         switch foundCount {
         case 3:
-            return .init(title: "Secure", systemImage: "checkmark.shield.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: "Secure", systemImage: "checkmark.shield.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         case 1, 2:
-            return .init(title: "Partial", systemImage: "shield.lefthalf.filled", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: "Partial", systemImage: "shield.lefthalf.filled", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         default:
             return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
@@ -170,7 +217,7 @@ enum AppStatusFactory {
             return .init(title: "Unchanged", systemImage: "circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
         if summary.hasChanges {
-            return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
+            return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfoSurface))
         }
         return .init(title: "Unchanged", systemImage: "checkmark.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
     }

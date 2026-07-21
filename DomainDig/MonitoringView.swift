@@ -78,10 +78,10 @@ struct MonitoringView: View {
                                 HStack(spacing: 8) {
                                     metricBadge(title: "\(log.domainsChecked) checked")
                                     if log.changesFound > 0 {
-                                        metricBadge(title: "\(log.changesFound) changed", tint: Color(.statusWarning))
+                                        metricBadge(title: "\(log.changesFound) changed", tone: .warning)
                                     }
                                     if log.alertsTriggered > 0 {
-                                        metricBadge(title: "\(log.alertsTriggered) alerts", tint: Color(.statusCritical))
+                                        metricBadge(title: "\(log.alertsTriggered) alerts", tone: .critical)
                                     }
                                 }
                             }
@@ -100,13 +100,13 @@ struct MonitoringView: View {
         }
     }
 
-    private func metricBadge(title: String, tint: Color = Color(.statusInfo)) -> some View {
+    private func metricBadge(title: String, tone: AppStatusTone = .info) -> some View {
         Text(title)
             .font(appDensity.font(.caption2))
-            .foregroundStyle(tint)
+            .foregroundStyle(tone.foreground)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(0.16))
+            .background(tone.surface)
             .clipShape(Capsule())
     }
 

@@ -526,33 +526,33 @@ private func auditStatusBadge(_ status: AuditStatus) -> some View {
     let model: AppStatusBadgeModel
     switch status {
     case .draft:
-        model = .init(title: "Draft", systemImage: "square.and.pencil", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+        model = .init(title: "Draft", systemImage: "square.and.pencil", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
     case .inReview:
-        model = .init(title: "In Review", systemImage: "doc.text.magnifyingglass", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
+        model = .init(title: "In Review", systemImage: "doc.text.magnifyingglass", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfoSurface))
     case .complete:
-        model = .init(title: "Complete", systemImage: "checkmark.seal.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+        model = .init(title: "Complete", systemImage: "checkmark.seal.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
     }
     return AppStatusBadgeView(model: model)
 }
 
 private func findingSeverityBadge(_ severity: AuditFindingSeverity) -> some View {
-    let color: Color
+    let tone: AppStatusTone
     switch severity {
     case .informational:
-        color = .secondary
+        tone = .neutral
     case .low:
-        color = Color(.statusPositive)
+        tone = .positive
     case .medium:
-        color = Color(.statusWarning)
+        tone = .warning
     case .high:
-        color = Color(.statusCritical)
+        tone = .critical
     }
     return AppStatusBadgeView(
         model: .init(
             title: severity.title,
             systemImage: "exclamationmark.circle.fill",
-            foregroundColor: color,
-            backgroundColor: color.opacity(0.16)
+            foregroundColor: tone.foreground,
+            backgroundColor: tone.surface
         )
     )
 }

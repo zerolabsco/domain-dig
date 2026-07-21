@@ -104,13 +104,13 @@ struct BatchResultRowView: View {
             if let changeClassification = result.changeClassification {
                 Text("Impact: \(changeClassification.title)")
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(changeClassification.color)
+                    .foregroundStyle(changeClassification.tone.foreground)
             }
 
             if let errorMessage = result.errorMessage {
                 Text(errorMessage)
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(result.status == .failed ? Color(.statusCritical) : .secondary)
+                    .foregroundStyle(result.status == .failed ? Color(.statusCritical) : Color(.appTextSecondary))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -147,20 +147,20 @@ struct BatchResultRowView: View {
         case .pending:
             return .init(title: "Pending", systemImage: "clock", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         case .running:
-            return .init(title: "Running", systemImage: "arrow.clockwise", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
+            return .init(title: "Running", systemImage: "arrow.clockwise", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfoSurface))
         case .completed:
             if result.changeClassification == .critical || result.certificateWarningLevel == .critical || result.riskLevel == .high {
-                return .init(title: "Critical", systemImage: "exclamationmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
+                return .init(title: "Critical", systemImage: "exclamationmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
             }
             if result.changeClassification == .warning || result.changeSeverity == .medium || result.certificateWarningLevel == .warning {
-                return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+                return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
             }
             if result.quickStatus == "Changed" {
-                return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
+                return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfoSurface))
             }
-            return .init(title: "Stable", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: "Stable", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         case .failed:
-            return .init(title: "Failed", systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
+            return .init(title: "Failed", systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
         }
     }
 }
