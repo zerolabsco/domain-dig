@@ -2418,19 +2418,31 @@ struct SectionTitleView: View {
     }
 }
 
+/// A card that wraps its content by default.
+///
+/// `allowsHorizontalScroll` used to default to `true`, so nine call sites put
+/// their content behind a horizontal gesture instead of letting it wrap — a
+/// WCAG 1.4.10 (Reflow) failure, and the mechanism behind clipped rows at large
+/// text sizes. It also forced VoiceOver and Switch Control users onto a nested
+/// scroll axis to reach data.
+///
+/// The default is now `false`. Where horizontal scrolling genuinely suits wide
+/// tabular content, it is still opt-in — but it is suppressed at accessibility
+/// text sizes, where wrapping always beats a hidden axis.
 struct CardView<Content: View>: View {
     @Environment(\.appDensity) private var appDensity
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let allowsHorizontalScroll: Bool
     let content: Content
 
-    init(allowsHorizontalScroll: Bool = true, @ViewBuilder content: () -> Content) {
+    init(allowsHorizontalScroll: Bool = false, @ViewBuilder content: () -> Content) {
         self.allowsHorizontalScroll = allowsHorizontalScroll
         self.content = content()
     }
 
     var body: some View {
         Group {
-            if allowsHorizontalScroll {
+            if allowsHorizontalScroll, !dynamicTypeSize.isAccessibilitySize {
                 ScrollView(.horizontal) {
                     cardContent
                         .scrollTargetLayout()

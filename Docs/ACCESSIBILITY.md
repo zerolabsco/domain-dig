@@ -187,6 +187,27 @@ Pre-push rather than pre-commit deliberately: the suite takes ~85s, and at
 pre-commit that blocks every commit. A hook routinely bypassed with
 `--no-verify` is worse than no hook, because it trains you to ignore it.
 
+## Layout gotchas found the hard way
+
+- **`Label` clips its own title.** Every empty-state heading reported as clipped
+  text. `.fixedSize` applied to the `Label` does not reach the `Text` inside it,
+  so the fix is to split it into an `HStack { Image; Text }` and put the modifier
+  on the `Text`. Changing the font design did **not** help — that hypothesis was
+  tested and discarded.
+- **Splitting a `Label` exposes its icon to VoiceOver.** `Label` folds the image
+  into the title's accessibility element; an `HStack` does not, so the icon
+  starts announcing its raw SF Symbol name ("checklist.unchecked"). Decorative
+  icons split out of a `Label` need `.accessibilityHidden(true)`.
+- **Placeholder text is always reported as clipped.** Search prompts and
+  `TextField` placeholders are flagged regardless of length — shortening
+  "Search portfolio" to "Search" changed nothing. Treat `textClipped` findings on
+  a `searchField` or `textField` element as noise rather than shortening useful
+  prompts to chase them.
+- **`AppLayout.minimumTapTarget` is the floor for every control.** `@ScaledMetric`
+  scales *down* below the default text size as well as up, so a scaled dimension
+  needs `max(scaled, AppLayout.minimumTapTarget)` or it drops under 44pt for
+  users who prefer smaller text.
+
 ## Notes
 
 - **Disabled controls are a false positive, and are suppressed.** WCAG 1.4.3

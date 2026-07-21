@@ -72,7 +72,9 @@ enum AppDensity: String, CaseIterable, Identifiable {
                 rowSpacing: 4,
                 rowMinHeight: 30,
                 controlVerticalPadding: 10,
-                controlMinHeight: 42,
+                // Was 42, which put every control using it under the 44pt
+                // minimum in compact density — section headers, Run, Run Batch.
+                controlMinHeight: AppLayout.minimumTapTarget,
                 cardCornerRadius: 10
             )
         case .comfortable:
@@ -96,6 +98,13 @@ enum AppDensity: String, CaseIterable, Identifiable {
         }
         return font
     }
+}
+
+/// Layout constants that are not density-dependent.
+enum AppLayout {
+    /// The HIG minimum for an interactive control, and WCAG 2.5.8's floor.
+    /// Controls scale up from here with Dynamic Type; none may sit below it.
+    static let minimumTapTarget: CGFloat = 44
 }
 
 struct AppDensityMetrics: Equatable {
@@ -249,6 +258,11 @@ struct AppCopyButton: View {
     @Environment(\.appDensity) private var appDensity
     @State private var didCopy = false
 
+    /// Grows with Dynamic Type. The `max(_, minimumTapTarget)` floor matters
+    /// because `@ScaledMetric` also scales *down* below the default text size,
+    /// which would push this back under the 44pt minimum.
+    @ScaledMetric(relativeTo: .caption) private var size: CGFloat = AppLayout.minimumTapTarget
+
     let value: String
     let label: String
 
@@ -270,8 +284,8 @@ struct AppCopyButton: View {
         } label: {
             Image(systemName: didCopy ? "checkmark" : "doc.on.doc")
                 .font(appDensity.font(.caption))
-                .foregroundStyle(didCopy ? Color(.statusPositive) : .secondary)
-                .frame(width: 30, height: 30)
+                .foregroundStyle(didCopy ? Color(.statusPositive) : Color(.appTextSecondary))
+                .frame(width: max(size, AppLayout.minimumTapTarget), height: max(size, AppLayout.minimumTapTarget))
                 .background(Color(.appSurfaceElevated))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
@@ -339,7 +353,25 @@ struct EmptyStateCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
-            Label(title, systemImage: systemImage)
+            // `Text(message)` already carried `fixedSize`; the title and
+            // suggestion did not, which is why the audit reported the *title*
+            // clipped on every empty state while the body beneath it wrapped.
+            // Deliberately an HStack rather than `Label`. `Label` constrains its
+            // own title text and `.fixedSize` applied to the Label does not
+            // reach the Text inside, so every empty-state heading reported as
+            // clipped. Splitting it lets the modifier land on the Text itself.
+            // Verified: doing this alone cleared the finding on all four empty
+            // states; changing the font design did not.
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                // Decorative. `Label` used to fold the icon into the title's
+                // element; splitting them exposed it as its own, announcing the
+                // raw SF Symbol name ("checklist.unchecked") to VoiceOver.
+                Image(systemName: systemImage)
+                    .accessibilityHidden(true)
+                Text(title)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+            }
                 .font(appDensity.font(.headline, weight: .semibold))
                 .foregroundStyle(.primary)
 
@@ -351,6 +383,7 @@ struct EmptyStateCardView: View {
             Text(suggestion)
                 .font(appDensity.font(.caption))
                 .foregroundStyle(Color(.statusInfo))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(appDensity.metrics.cardPadding)
@@ -392,7 +425,7 @@ struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
                 HStack(alignment: .center, spacing: 10) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title)
-                            .font(appDensity.font(.headline, design: .default, weight: .semibold))
+                            .font(appDensity.font(.headline, weight: .semibold))
                             .foregroundStyle(.primary)
                         if let subtitle {
                             Text(subtitle)

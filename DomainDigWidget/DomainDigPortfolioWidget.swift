@@ -34,6 +34,12 @@ struct DomainDigPortfolioWidget: Widget {
         StaticConfiguration(kind: kind, provider: DomainDigProvider()) { entry in
             DomainDigWidgetView(data: entry.data)
                 .containerBackground(.fill.tertiary, for: .widget)
+                // Clamped here and ONLY here. A widget canvas is a fixed
+                // system-defined size and WidgetKit truncates overflow with no
+                // scroll affordance, so unclamped accessibility sizes produce
+                // less readable output, not more. In-app there is always a
+                // scroll view, so nothing there is clamped.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         }
         .configurationDisplayName("Domain Portfolio")
         .description("Health and certificate status for your tracked domains.")
@@ -83,7 +89,7 @@ struct DomainDigWidgetView: View {
             .foregroundStyle(Color(.appTextSecondary))
 
             Text("\(data.totalDomains)")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
             Text("tracked")
                 .font(.caption2)
                 .foregroundStyle(Color(.appTextSecondary))
@@ -146,7 +152,7 @@ struct DomainDigWidgetView: View {
                 .font(.headline)
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 9))
+                .font(.caption2)
                 .foregroundStyle(Color(.appTextSecondary))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -159,7 +165,7 @@ struct DomainDigWidgetView: View {
                 .frame(width: 8, height: 8)
             if domain.isPinned {
                 Image(systemName: "pin.fill")
-                    .font(.system(size: 8))
+                    .font(.caption2)
                     .foregroundStyle(Color(.appTextSecondary))
             }
             Text(domain.domain)
