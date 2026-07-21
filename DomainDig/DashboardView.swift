@@ -194,7 +194,8 @@ struct DashboardView: View {
                     .font(appDensity.font(.caption, design: .default, weight: .semibold))
                     .foregroundStyle(Color(.appTextSecondary))
                 Text("\(value)")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    // Was a fixed 28pt, which ignored Dynamic Type entirely.
+                    .font(.system(.title, design: .rounded, weight: .bold))
                     .foregroundStyle(.primary)
                 HStack {
                     Circle()
