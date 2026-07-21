@@ -215,9 +215,13 @@ struct DashboardView: View {
 
     private func cardBackground(for filter: PortfolioFilterOption) -> some ShapeStyle {
         if viewModel.dashboardFilter == filter {
+            // Uses the authored info surface rather than a translucent wash of
+            // the accent. `statusInfo` at 28% over a light background renders
+            // lavender, not blue — an artefact of carrying a dark-only opacity
+            // trick into light mode.
             return AnyShapeStyle(
                 LinearGradient(
-                    colors: [Color(.statusInfo).opacity(0.28), Color(.statusInfo).opacity(0.12)],
+                    colors: [Color(.statusInfoSurface), Color(.appSurface)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
