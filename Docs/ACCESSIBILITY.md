@@ -24,11 +24,37 @@ worst of those three is shown:
 
 | Role | Light | Dark | Worst light | Worst dark |
 | --- | --- | --- | --- | --- |
-| `StatusInfo` / `AccentColor` | `#0000FF` | `#4DA3FF` | 5.50 | 5.85 |
-| `StatusPositive` | `#146C2E` | `#30D158` | 4.65 | 7.32 |
-| `StatusWarning` | `#7A5600` | `#FFD60A` | 4.74 | 9.61 |
-| `StatusCritical` | `#B3261E` | `#FF6961` | 4.51 | 5.54 |
-| `StatusNeutral` | `#5A5A5F` | `#A1A1A6` | 4.92 | 5.88 |
+| `StatusInfo` / `AccentColor` | `#0000FF` | `#4DA3FF` | 6.76 | 6.47 |
+| `StatusPositive` | `#008035` | `#30D158` | 4.54 | 7.62 |
+| `StatusWarning` | `#AD5100` | `#FF9F0A` | 4.59 | 7.76 |
+| `StatusCritical` | `#CC0700` | `#FF6961` | 4.68 | 6.12 |
+| `StatusNeutral` | `#5A5A5F` | `#A1A1A6` | 5.84 | 6.76 |
+
+Each status foreground has a matching `…Surface` colour for the fill behind it,
+paired through `AppStatusTone`.
+
+### Contrast alone is not a palette
+
+The first version of this palette maximised contrast and produced mud. Requiring
+every foreground to clear 4.5:1 against *its own 16% tint* — the harshest
+surface it ever sits on — pushed each colour ~20% darker than the common case
+needed. `#7A5600` is not amber, it is olive; `#146C2E` is not green so much as
+bottle-dark. Contrast passed and the UI was still hard to read, because hue
+identity is what tells "warning" from "critical" at a glance.
+
+Two fixes:
+
+1. **Decouple the fill from the foreground.** `AppStatusTone` carries a
+   `foreground` and a `surface` that are authored independently, so the
+   foreground no longer has to survive a wash of itself. Every status foreground
+   is now fully saturated (`S = 1.0`).
+2. **Warning is orange, not yellow.** Yellow cannot stay yellow at a lightness
+   low enough to clear 4.5:1 on white — it *becomes* olive. That is
+   colorimetric, not a tuning problem. Orange holds its identity when darkened,
+   so warning is `#AD5100` in light and `#FF9F0A` in dark.
+
+When adding a colour, search for the most saturated value that passes, not the
+darkest. The darkest is always easy and always wrong.
 | `AppTextSecondary` | `#5A5A5F` | `#A1A1A6` | 6.15 | 7.50 |
 
 `AppTextSecondary` replaces `.secondary` for body text. iOS's own `secondaryLabel`

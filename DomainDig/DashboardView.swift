@@ -237,20 +237,20 @@ struct DashboardView: View {
         let criticalCount = states.filter { $0.health == .critical }.count
         let warningCount = states.filter { $0.health == .warning }.count
         let title: String
-        let color: Color
+        let tone: AppStatusTone
         let systemImage: String
 
         if criticalCount > 0 {
             title = "\(criticalCount) critical"
-            color = Color(.statusCritical)
+            tone = .critical
             systemImage = "exclamationmark.octagon.fill"
         } else if warningCount > 0 {
             title = "\(warningCount) warning"
-            color = Color(.statusWarning)
+            tone = .warning
             systemImage = "exclamationmark.triangle.fill"
         } else {
             title = "Healthy"
-            color = Color(.statusPositive)
+            tone = .positive
             systemImage = "checkmark.circle.fill"
         }
 
@@ -258,8 +258,8 @@ struct DashboardView: View {
             model: .init(
                 title: title,
                 systemImage: systemImage,
-                foregroundColor: color,
-                backgroundColor: color.opacity(0.16)
+                foregroundColor: tone.foreground,
+                backgroundColor: tone.surface
             )
         )
     }
@@ -331,11 +331,11 @@ private struct PortfolioAttentionRow: View {
     private var badgeModel: AppStatusBadgeModel {
         switch item.health {
         case .healthy:
-            return .init(title: "Healthy", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: "Healthy", systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         case .warning:
-            return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         case .critical:
-            return .init(title: "Critical", systemImage: "exclamationmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
+            return .init(title: "Critical", systemImage: "exclamationmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
         }
     }
 }
@@ -370,11 +370,11 @@ private struct PortfolioExpiryRow: View {
     private var badgeModel: AppStatusBadgeModel {
         switch state.certificateExpiryState {
         case .none:
-            return .init(title: "Healthy", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: "Healthy", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         case .warning:
-            return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: "Warning", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         case .critical:
-            return .init(title: "Critical", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
+            return .init(title: "Critical", systemImage: "xmark.octagon.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
         }
     }
 }

@@ -1029,21 +1029,21 @@ struct DomainChangeSummaryView: View {
             HStack {
                 Label(summary.hasChanges ? "Changed" : "Stable", systemImage: summary.hasChanges ? "arrow.triangle.2.circlepath" : "checkmark.circle")
                     .font(appDensity.font(.caption))
-                    .foregroundStyle(summary.hasChanges ? severityColor(summary.severity) : Color(.statusPositive))
+                    .foregroundStyle(summary.hasChanges ? severityTone(summary.severity).foreground : Color(.statusPositive))
                 Spacer()
                 Text(summary.severity.title.uppercased())
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(summary.hasChanges ? severityColor(summary.severity) : .secondary)
+                    .foregroundStyle(summary.hasChanges ? severityTone(summary.severity).foreground : Color(.appTextSecondary))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background((summary.hasChanges ? severityColor(summary.severity) : .secondary).opacity(0.16))
+                    .background((summary.hasChanges ? severityTone(summary.severity) : AppStatusTone.neutral).surface)
                     .clipShape(Capsule())
                 Text(summary.impactClassification.title.uppercased())
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(summary.impactClassification.color)
+                    .foregroundStyle(summary.impactClassification.tone.foreground)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(summary.impactClassification.color.opacity(0.16))
+                    .background(summary.impactClassification.tone.surface)
                     .clipShape(Capsule())
                 Text(summary.generatedAt, style: .time)
                     .font(appDensity.font(.caption2))
@@ -1096,14 +1096,14 @@ struct DomainChangeSummaryView: View {
         }
     }
 
-    private func severityColor(_ severity: ChangeSeverity) -> Color {
+    private func severityTone(_ severity: ChangeSeverity) -> AppStatusTone {
         switch severity {
         case .low:
-            return .secondary
+            return .neutral
         case .medium:
-            return Color(.statusWarning)
+            return .warning
         case .high:
-            return Color(.statusCritical)
+            return .critical
         }
     }
 
@@ -1173,10 +1173,10 @@ struct DomainDiffView: View {
                                         Spacer()
                                         Text("\(item.changeType.marker) \(item.severity.title) • \(changeLabel(for: item.changeType))")
                                             .font(.system(.caption2, design: .monospaced))
-                                            .foregroundStyle(changeColor(for: item))
+                                            .foregroundStyle(changeTone(for: item).foreground)
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 4)
-                                            .background(changeColor(for: item).opacity(0.16))
+                                            .background(changeTone(for: item).surface)
                                             .clipShape(Capsule())
                                     }
 
@@ -1205,7 +1205,7 @@ struct DomainDiffView: View {
                                     }
                                 }
                                 .padding(10)
-                                .background(item.hasChanges ? changeColor(for: item).opacity(0.08) : Color(.appSurface))
+                                .background(item.hasChanges ? changeTone(for: item).surface : Color(.appSurface))
                                 .cornerRadius(8)
                             }
                         } label: {
@@ -1249,18 +1249,18 @@ struct DomainDiffView: View {
         }
     }
 
-    private func changeColor(for item: DomainDiffItem) -> Color {
+    private func changeTone(for item: DomainDiffItem) -> AppStatusTone {
         if item.changeType == .unchanged {
-            return .secondary
+            return .neutral
         }
 
         switch item.severity {
         case .low:
-            return .blue
+            return .info
         case .medium:
-            return Color(.statusWarning)
+            return .warning
         case .high:
-            return Color(.statusCritical)
+            return .critical
         }
     }
 
@@ -1337,7 +1337,7 @@ struct DomainSectionView: View {
         CollapsibleSectionView(title: "Domain", isCollapsed: $isCollapsed) {
             if let trackedDomain {
                 HStack(spacing: 8) {
-                    AppStatusBadgeView(model: .init(title: "Tracked", systemImage: "eye.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16)))
+                    AppStatusBadgeView(model: .init(title: "Tracked", systemImage: "eye.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface)))
                     Button {
                         onTogglePinned()
                     } label: {
@@ -2186,9 +2186,9 @@ struct EmailSectionView: View {
     private func emailRowBadge(_ row: EmailRowViewData) -> AppStatusBadgeModel {
         switch row.statusTone {
         case .success:
-            return .init(title: row.status, systemImage: "checkmark.shield.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: row.status, systemImage: "checkmark.shield.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         case .warning:
-            return .init(title: row.status, systemImage: "shield.lefthalf.filled", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: row.status, systemImage: "shield.lefthalf.filled", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         case .failure:
             return .init(title: row.status, systemImage: "minus.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         case .primary, .secondary:
@@ -2345,11 +2345,11 @@ struct NetworkSectionView: View {
     private func reachabilityBadge(_ row: ReachabilityRowViewData) -> AppStatusBadgeModel {
         switch row.statusTone {
         case .success:
-            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         case .warning:
-            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         case .failure:
-            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
         case .primary, .secondary:
             return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
@@ -2396,11 +2396,11 @@ struct PortRowsView: View {
     private func portBadge(_ row: PortScanRowViewData) -> AppStatusBadgeModel {
         switch row.statusTone {
         case .success:
-            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositive).opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "checkmark.circle.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
         case .warning:
-            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         case .failure:
-            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
+            return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
         case .primary, .secondary:
             return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
@@ -3754,11 +3754,11 @@ private struct DataImportPreviewSheet: View {
 }
 
 extension ChangeImpactClassification {
-    var color: Color {
+    var tone: AppStatusTone {
         switch self {
-        case .informational: return .secondary
-        case .warning: return Color(.statusWarning)
-        case .critical: return Color(.statusCritical)
+        case .informational: return .neutral
+        case .warning: return .warning
+        case .critical: return .critical
         }
     }
 }
