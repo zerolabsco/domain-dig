@@ -466,7 +466,7 @@ struct TagFilterChipRowView: View {
                 .font(.caption)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(isSelected ? Color(.statusInfo).opacity(0.3) : Color(.appSurfaceElevated), in: Capsule())
+                .background(isSelected ? Color(.statusInfoSurface) : Color(.appSurfaceElevated), in: Capsule())
                 .foregroundStyle(isSelected ? Color(.statusInfo) : Color.primary)
         }
         .buttonStyle(.plain)

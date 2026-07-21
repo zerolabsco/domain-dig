@@ -1779,7 +1779,7 @@ struct SubdomainsSectionView: View {
                                     .foregroundStyle(Color(.statusWarning))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(Color(.statusWarning).opacity(0.14))
+                                    .background(Color(.statusWarningSurface))
                                     .clipShape(Capsule())
                             }
                         }
