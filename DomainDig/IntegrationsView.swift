@@ -15,7 +15,7 @@ struct IntegrationsSettingsView: View {
                 if let statusMessage = integrationService.statusMessage {
                     Text(statusMessage)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
 
                 Button("Process Queue Now") {
@@ -26,7 +26,7 @@ struct IntegrationsSettingsView: View {
             Section("Targets") {
                 if integrationService.targets.isEmpty {
                     Text("No integrations configured.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 } else {
                     ForEach(integrationService.targets) { target in
                         NavigationLink {
@@ -42,12 +42,12 @@ struct IntegrationsSettingsView: View {
                                     Text(target.name)
                                     Spacer()
                                     Text(target.type.title)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
 
                                 Text(summary(for: target))
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
 
                                 if !target.isEnabled {
                                     Text("Disabled")
@@ -138,7 +138,7 @@ private struct IntegrationDetailView: View {
                 Section("Delivery Log") {
                     if integrationService.deliveryRecords(for: target.id).isEmpty {
                         Text("No deliveries yet.")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     } else {
                         ForEach(integrationService.deliveryRecords(for: target.id), id: \.id) { record in
                             VStack(alignment: .leading, spacing: 4) {
@@ -147,7 +147,7 @@ private struct IntegrationDetailView: View {
                                     Spacer()
                                     Text(record.timestamp.formatted(date: .abbreviated, time: .shortened))
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
 
                                 Text(record.summary)
@@ -155,7 +155,7 @@ private struct IntegrationDetailView: View {
 
                                 Text(record.destination)
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
 
                                 if let failureReason = record.failureReason {
                                     let failureColor: Color = record.status == .skipped ? .secondary : Color(.statusCritical)
@@ -169,7 +169,7 @@ private struct IntegrationDetailView: View {
                 }
             } else {
                 Text("Integration not found.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
         }
         .navigationTitle(target?.name ?? "Integration")
@@ -265,7 +265,7 @@ private struct IntegrationEditorView: View {
                     if existingTarget != nil {
                         Text("Saved webhook URL remains in Keychain unless you replace it.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                 }
             case .slack:
@@ -278,7 +278,7 @@ private struct IntegrationEditorView: View {
                     if existingTarget != nil {
                         Text("Saved Slack webhook remains in Keychain unless you replace it.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                 }
             case .email:
@@ -315,7 +315,7 @@ private struct IntegrationEditorView: View {
                     if existingTarget != nil {
                         Text("Saved SMTP password remains in Keychain unless you replace it.")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                 }
             }

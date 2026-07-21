@@ -42,7 +42,7 @@ struct WatchlistView: View {
                         HStack {
                             Text(viewModel.batchProgressLabel)
                                 .font(appDensity.font(.caption))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                             Spacer()
                             if viewModel.batchLookupRunning {
                                 Button("Cancel") {
@@ -78,7 +78,7 @@ struct WatchlistView: View {
                     Section {
                         Text(limitMessage)
                             .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                     .listRowBackground(Color(.appSurface))
                 }
@@ -208,7 +208,7 @@ struct WatchlistView: View {
                     Section {
                         Text("Adds the domain directly to your watchlist so monitoring can run without a prior inspection.")
                             .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
 
                     if let addDomainError {
@@ -267,7 +267,7 @@ struct WatchlistView: View {
                                     .foregroundStyle(.primary)
                                 Text([view.tag, view.filter.title, view.sort.title].compactMap { $0 }.joined(separator: " • "))
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                             }
                         }
                     }
@@ -288,7 +288,6 @@ struct WatchlistView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder
@@ -450,12 +449,12 @@ struct WatchlistRowView: View {
 
             Text("Updated \(trackedDomain.updatedAt.formatted(date: .abbreviated, time: .shortened))")
                 .font(appDensity.font(.caption2))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
 
             if let collaboration = trackedDomain.collaboration, collaboration.isShared {
                 Text("\(collaboration.ownership.title) • \(collaboration.permission.title)")
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
 
             HStack(spacing: 8) {
@@ -468,19 +467,19 @@ struct WatchlistRowView: View {
                 }
             }
             .font(appDensity.font(.caption2))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(.appTextSecondary))
 
             indicatorRow
 
             if let note = trackedDomain.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty {
                 Text(note)
                     .font(appDensity.font(.caption))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                     .lineLimit(2)
             } else if let summary = trackedDomain.lastChangeSummary {
                 Text(summary.message)
                     .font(appDensity.font(.caption))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                     .lineLimit(2)
             }
         }
@@ -502,7 +501,7 @@ struct WatchlistRowView: View {
     @ViewBuilder
     private var statusBadge: some View {
         if isRefreshing {
-            AppStatusBadgeView(model: .init(title: "Refreshing", systemImage: "arrow.clockwise", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated)))
+            AppStatusBadgeView(model: .init(title: "Refreshing", systemImage: "arrow.clockwise", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated)))
         } else {
             AppStatusBadgeView(model: AppStatusFactory.availability(trackedDomain.lastKnownAvailability))
         }
@@ -700,7 +699,7 @@ struct TrackedDomainDetailView: View {
                 if latestSnapshots.isEmpty {
                     Text("No snapshots yet")
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 } else {
                     ForEach(latestSnapshots) { entry in
                         NavigationLink {
@@ -712,7 +711,7 @@ struct TrackedDomainDetailView: View {
                                     .foregroundStyle(.primary)
                                 Text(entry.changeSummary?.hasChanges == true ? "Changed" : "Snapshot")
                                     .font(.system(.caption2, design: .monospaced))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                             }
                         }
                     }
@@ -723,7 +722,6 @@ struct TrackedDomainDetailView: View {
         .scrollContentBackground(.hidden)
         .background(Color(.appBackground))
         .navigationTitle(liveTrackedDomain.domain)
-        .preferredColorScheme(.dark)
         .onChange(of: viewModel.rerunNavigationToken) { _, _ in
             dismiss()
         }

@@ -40,12 +40,12 @@ struct HistoryView: View {
                                     Spacer()
                                     Text("\(item.count) snapshots")
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
 
                                 Text(item.latest.changeSummaryMessage ?? "No change summary")
                                     .font(appDensity.font(.caption))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                                     .lineLimit(2)
 
                                 HStack(spacing: 8) {
@@ -129,7 +129,6 @@ struct HistoryView: View {
         .onChange(of: viewModel.rerunNavigationToken) { _, _ in
             dismiss()
         }
-        .preferredColorScheme(.dark)
     }
 
     private func deleteFilteredHistoryEntries(at offsets: IndexSet) {
@@ -372,7 +371,6 @@ struct HistoryDetailView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var snapshotBanner: some View {
@@ -385,7 +383,7 @@ struct HistoryDetailView: View {
                 Spacer()
                 Text("Live re-run available")
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
             if let mismatchNote = viewModel.resolverMismatchNote(for: entry) {
                 Text(mismatchNote)
@@ -400,10 +398,10 @@ struct HistoryDetailView: View {
             if let note = entry.note, !note.isEmpty {
                 Text(note)
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
         }
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Color(.appTextSecondary))
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.appSurface))

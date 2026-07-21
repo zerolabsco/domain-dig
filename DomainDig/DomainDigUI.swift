@@ -6,6 +6,45 @@ import UIKit
 import AppKit
 #endif
 
+/// User-selected appearance, applied once at the `WindowGroup`.
+///
+/// Deliberately applied in exactly one place. The app previously carried 16
+/// separate `.preferredColorScheme(.dark)` calls scattered across view bodies,
+/// which is how it became impossible to reach light mode at all — re-applying
+/// per view is what let the lock spread unnoticed.
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    static let userDefaultsKey = "appAppearance"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system:
+            return "System"
+        case .light:
+            return "Light"
+        case .dark:
+            return "Dark"
+        }
+    }
+
+    /// `nil` hands control back to the system setting.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
+}
+
 enum AppDensity: String, CaseIterable, Identifiable {
     case compact
     case comfortable
@@ -96,7 +135,7 @@ enum AppStatusFactory {
         case .registered:
             return .init(title: "Registered", systemImage: "circle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .unknown, .none:
-            return .init(title: "Unknown", systemImage: "questionmark.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: "Unknown", systemImage: "questionmark.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
     }
 
@@ -112,7 +151,7 @@ enum AppStatusFactory {
 
     static func email(_ result: EmailSecurityResult?, error: String?) -> AppStatusBadgeModel {
         guard error == nil, let result else {
-            return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
 
         let foundCount = [result.spf.found, result.dmarc.found, result.dkim.found].filter { $0 }.count
@@ -122,18 +161,18 @@ enum AppStatusFactory {
         case 1, 2:
             return .init(title: "Partial", systemImage: "shield.lefthalf.filled", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         default:
-            return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: "Missing", systemImage: "minus.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
     }
 
     static func change(_ summary: DomainChangeSummary?) -> AppStatusBadgeModel {
         guard let summary else {
-            return .init(title: "Unchanged", systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: "Unchanged", systemImage: "circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
         if summary.hasChanges {
             return .init(title: "Changed", systemImage: "arrow.triangle.2.circlepath", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
         }
-        return .init(title: "Unchanged", systemImage: "checkmark.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+        return .init(title: "Unchanged", systemImage: "checkmark.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
     }
 }
 
@@ -259,7 +298,7 @@ struct EmptyStateCardView: View {
 
             Text(message)
                 .font(appDensity.font(.body))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(suggestion)
@@ -311,14 +350,14 @@ struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
                         if let subtitle {
                             Text(subtitle)
                                 .font(appDensity.font(.caption))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
                     }
                     Spacer(minLength: 8)
                     trailing()
                     Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
                 .contentShape(Rectangle())
                 .frame(minHeight: appDensity.metrics.controlMinHeight, alignment: .center)

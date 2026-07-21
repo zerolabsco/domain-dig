@@ -17,12 +17,12 @@ struct BatchResultsView: View {
                             .frame(width: 120)
                         Text(viewModel.batchProgressLabel)
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                 } else if !viewModel.batchResults.isEmpty {
                     Text("\(viewModel.batchResults.count) domains")
                         .font(appDensity.font(.caption2))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
             }
 
@@ -67,7 +67,7 @@ struct BatchResultRowView: View {
                 Spacer(minLength: 8)
                 Text(result.resultSource.label.lowercased())
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                 AppStatusBadgeView(model: quickStatusBadge)
             }
 
@@ -80,7 +80,7 @@ struct BatchResultRowView: View {
                 }
             }
             .font(appDensity.font(.caption2))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(.appTextSecondary))
 
             HStack(spacing: 10) {
                 Text(result.primaryIP ?? "No IP")
@@ -93,12 +93,12 @@ struct BatchResultRowView: View {
                     .lineLimit(1)
             }
             .font(appDensity.font(.caption2))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(.appTextSecondary))
 
             if let summaryMessage = result.summaryMessage {
                 Text(summaryMessage)
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
 
             if let changeClassification = result.changeClassification {
@@ -137,7 +137,7 @@ struct BatchResultRowView: View {
         return .init(
             title: availabilityText,
             systemImage: "exclamationmark.circle",
-            foregroundColor: .secondary,
+            foregroundColor: Color(.appTextSecondary),
             backgroundColor: Color(.appSurfaceElevated)
         )
     }
@@ -145,7 +145,7 @@ struct BatchResultRowView: View {
     private var quickStatusBadge: AppStatusBadgeModel {
         switch result.status {
         case .pending:
-            return .init(title: "Pending", systemImage: "clock", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: "Pending", systemImage: "clock", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         case .running:
             return .init(title: "Running", systemImage: "arrow.clockwise", foregroundColor: Color(.statusInfo), backgroundColor: Color(.statusInfo).opacity(0.16))
         case .completed:

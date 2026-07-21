@@ -9,7 +9,7 @@ struct SavedDomainsView: View {
             if viewModel.savedDomains.isEmpty {
                 Text("No saved domains")
                     .font(.system(.callout, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                     .listRowBackground(Color(.appSurface))
             } else {
                 ForEach(viewModel.savedDomains, id: \.self) { domain in
@@ -37,6 +37,5 @@ struct SavedDomainsView: View {
                 EditButton()
             }
         }
-        .preferredColorScheme(.dark)
     }
 }

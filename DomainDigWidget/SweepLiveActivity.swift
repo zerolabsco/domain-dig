@@ -14,7 +14,7 @@ struct SweepLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.leading) {
                     Label(context.attributes.title, systemImage: "arrow.trianglehead.2.clockwise")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text("\(context.state.completed)/\(context.state.total)")
@@ -28,7 +28,7 @@ struct SweepLiveActivity: Widget {
                         if let current = context.state.currentDomain {
                             Text(current)
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                                 .lineLimit(1)
                         }
                     }
@@ -58,7 +58,7 @@ private struct SweepActivityBannerView: View {
                 Label(context.attributes.title, systemImage: "arrow.trianglehead.2.clockwise")
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                 Spacer()
                 Text("\(context.state.completed) of \(context.state.total)")
                     .font(.caption)
@@ -72,12 +72,12 @@ private struct SweepActivityBannerView: View {
                 if let current = context.state.currentDomain {
                     Text(current)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                         .lineLimit(1)
                 } else {
                     Text(context.state.completed >= context.state.total ? "Finished" : "Working…")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
                 Spacer()
                 if context.state.changed > 0 {

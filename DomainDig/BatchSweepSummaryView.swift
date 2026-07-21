@@ -32,7 +32,7 @@ struct BatchSweepSummaryView: View {
                     if visibleResults.isEmpty {
                         Text("No domains with changes or warnings")
                             .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     } else {
                         ForEach(visibleResults) { result in
                             if let entry = viewModel.historyEntry(for: result) {
@@ -56,7 +56,7 @@ struct BatchSweepSummaryView: View {
         HStack {
             Text(label)
                 .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
             Spacer()
             Text(value)
                 .font(.system(.callout, design: .monospaced))

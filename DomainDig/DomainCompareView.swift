@@ -38,7 +38,7 @@ struct DomainCompareView: View {
                 Section {
                     Text("Choose two different domains to compare.")
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
             }
 

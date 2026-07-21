@@ -13,7 +13,7 @@ struct ScheduledReportsView: View {
                 if !FeatureAccessService.hasAccess(to: .automatedMonitoring) {
                     Text("Scheduled reports require Pro.")
                         .font(appDensity.font(.caption))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
 
                 Toggle("Scheduled Reports", isOn: Binding(
@@ -59,7 +59,7 @@ struct ScheduledReportsView: View {
                 if let statusMessage {
                     Text(statusMessage)
                         .font(appDensity.font(.caption))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
 
                 Button(isGenerating ? "Generating…" : "Generate Now") {
@@ -91,7 +91,7 @@ struct ScheduledReportsView: View {
                                     .foregroundStyle(.primary)
                                 Text(log.generatedAt.formatted(date: .abbreviated, time: .shortened))
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                             }
                         }
                     }

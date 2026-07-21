@@ -173,8 +173,6 @@ struct ContentView: View {
                 )
             )
             .navigationTitle("DomainDig")
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .preferredColorScheme(.dark)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if viewModel.hasRun {
@@ -182,7 +180,7 @@ struct ContentView: View {
                             viewModel.reset()
                         } label: {
                             Image(systemName: "xmark.circle")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
                     }
                 }
@@ -327,12 +325,12 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
                         Text("Paste domains separated by new lines or commas.")
                             .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
 
                         if let batchAllowanceSummary = FeatureAccessService.batchAllowanceSummary() {
                             Text(batchAllowanceSummary)
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
 
                         TextField(
@@ -544,7 +542,7 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "bolt.circle")
                         .font(appDensity.font(.body, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
                 Button {
                     viewModel.toggleSavedDomain()
@@ -583,7 +581,7 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(appDensity.font(.body, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
             }
         }
@@ -652,13 +650,13 @@ struct ContentView: View {
             HStack {
                 Text("RECENT")
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                 Spacer()
                 Button("Clear") {
                     viewModel.clearRecentSearches()
                 }
                 .font(appDensity.font(.caption2))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
             }
 
             ForEach(viewModel.recentSearches, id: \.self) { domain in
@@ -694,7 +692,7 @@ struct ContentView: View {
                 .font(appDensity.font(.headline, design: .default, weight: .semibold))
             Text(message)
                 .font(appDensity.font(.callout, design: .default))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(appDensity.metrics.cardPadding)
@@ -784,7 +782,7 @@ struct SummaryView: View {
                     VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing) {
                         Text(field.label)
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                         Text(field.value)
                             .font(appDensity.font(.caption))
                             .foregroundStyle(ResultColors.color(for: field.tone))
@@ -826,13 +824,13 @@ struct RiskSummaryCardView: View {
                     Spacer()
                     Text("Deterministic")
                         .font(appDensity.font(.caption2))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
 
                 if topFactors.isEmpty {
                     Text("No major risk factors identified")
                         .font(appDensity.font(.caption))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 } else {
                     ForEach(Array(topFactors.enumerated()), id: \.offset) { _, factor in
                         HStack(alignment: .top, spacing: 8) {
@@ -884,7 +882,7 @@ struct InsightsSummaryCardView: View {
                 if insights.isEmpty {
                     Text("No deterministic insights triggered")
                         .font(appDensity.font(.caption))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 } else {
                     ForEach(Array(insights.enumerated()), id: \.offset) { _, insight in
                         HStack(alignment: .top, spacing: 8) {
@@ -940,7 +938,7 @@ struct StickyLookupSummaryView: View {
                     HStack(spacing: 8) {
                         Label(primaryIP, systemImage: "network")
                             .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                         Spacer(minLength: 6)
                         AppCopyButton(value: primaryIP, label: "Copy IP")
                     }
@@ -966,7 +964,7 @@ struct LookupProgressOverviewView: View {
                         .foregroundStyle(.primary)
                     Text(steps.isEmpty ? "Preparing requests" : steps.joined(separator: " • "))
                         .font(appDensity.font(.caption2))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
                 Spacer()
             }
@@ -1049,13 +1047,13 @@ struct DomainChangeSummaryView: View {
                     .clipShape(Capsule())
                 Text(summary.generatedAt, style: .time)
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Inference")
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                 Text(summary.message)
                     .font(appDensity.font(.caption))
                     .foregroundStyle(.primary)
@@ -1069,7 +1067,7 @@ struct DomainChangeSummaryView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Observed")
                                     .font(appDensity.font(.caption2))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                                 ForEach(Array(summary.observedFacts.enumerated()), id: \.offset) { _, fact in
                                     Text(fact)
                                         .font(appDensity.font(.caption))
@@ -1171,7 +1169,7 @@ struct DomainDiffView: View {
                                     HStack {
                                         Text(item.label)
                                             .font(.system(.caption, design: .monospaced))
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color(.appTextSecondary))
                                         Spacer()
                                         Text("\(item.changeType.marker) \(item.severity.title) • \(changeLabel(for: item.changeType))")
                                             .font(.system(.caption2, design: .monospaced))
@@ -1186,10 +1184,10 @@ struct DomainDiffView: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text("Old")
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(Color(.appTextSecondary))
                                             Text(oldValue)
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(Color(.appTextSecondary))
                                                 .textSelection(.enabled)
                                         }
                                     }
@@ -1198,7 +1196,7 @@ struct DomainDiffView: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text("New")
                                                 .font(.system(.caption2, design: .monospaced))
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(Color(.appTextSecondary))
                                             Text(newValue)
                                                 .font(.system(.caption, design: .monospaced))
                                                 .foregroundStyle(item.hasChanges ? .primary : .secondary)
@@ -1306,7 +1304,7 @@ struct TrackedDomainDetailHeaderView: View {
                 Text("Last refresh \(trackedDomain.updatedAt.formatted(date: .abbreviated, time: .shortened))")
             }
             .font(.system(.caption2, design: .monospaced))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(.appTextSecondary))
         }
     }
 }
@@ -1394,7 +1392,7 @@ struct DomainSectionView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Part of workflow")
                             .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
 
                         ForEach(workflows) { workflow in
                             HStack {
@@ -1429,7 +1427,7 @@ struct DomainSectionView: View {
                 if showSuggestions {
                     Text("Suggestions")
                         .font(appDensity.font(.caption))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                         .padding(.top, 4)
                     if suggestionsLoading {
                         ProgressView("Checking alternatives…")
@@ -1527,7 +1525,7 @@ struct OwnershipSectionView: View {
                         HStack {
                             Text("History")
                                 .font(appDensity.font(.caption))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                             Spacer()
                             if let onLoadHistory, history.isEmpty, !historyLoading, !showsHistoryPlaceholder {
                                 Button("Load") {
@@ -1545,12 +1543,12 @@ struct OwnershipSectionView: View {
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(event.date.formatted(date: .abbreviated, time: .omitted))
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                     Text(event.summary)
                                         .font(appDensity.font(.caption))
                                     Text(event.source)
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                             }
                         } else if let historyError {
@@ -1604,7 +1602,7 @@ struct IntelligenceSectionView: View {
                                         .font(appDensity.font(.caption, weight: .semibold))
                                     Text(signal.detail)
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                             }
                         }
@@ -1645,7 +1643,7 @@ struct IntelligenceSectionView: View {
                                     }
                                     Text("First \(item.firstSeen.formatted(date: .abbreviated, time: .omitted)) • Last \(item.lastSeen.formatted(date: .abbreviated, time: .omitted)) • Seen \(item.recurrenceCount)x")
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                             }
                         }
@@ -1678,7 +1676,7 @@ struct IntelligenceSectionView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(date.formatted(date: .abbreviated, time: .omitted))
                 .font(appDensity.font(.caption2))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
             Text(title)
                 .font(appDensity.font(.caption))
         }
@@ -1755,7 +1753,7 @@ struct SubdomainsSectionView: View {
                     if !groups.isEmpty {
                         Text("Groups")
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                         ForEach(groups) { group in
                             HStack {
                                 Text("\(group.label).*")
@@ -1764,7 +1762,7 @@ struct SubdomainsSectionView: View {
                                 Spacer()
                                 Text("\(group.subdomains.count)")
                                     .font(appDensity.font(.caption2))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                             }
                         }
                     }
@@ -1898,7 +1896,7 @@ struct DNSSectionView: View {
                         if let wildcardTitle = section.wildcardTitle {
                             Text(wildcardTitle)
                                 .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                                 .padding(.top, 4)
                             ForEach(section.wildcardRows) { row in
                                 LabeledValueRow(row: row)
@@ -1940,18 +1938,18 @@ struct DNSSectionView: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(event.date.formatted(date: .abbreviated, time: .omitted))
                                     .font(appDensity.font(.caption2))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                                 Text(event.summary)
                                     .font(appDensity.font(.caption))
                                 if !event.aRecords.isEmpty {
                                     Text("A: \(event.aRecords.joined(separator: ", "))")
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                                 if !event.nameservers.isEmpty {
                                     Text("NS: \(event.nameservers.joined(separator: ", "))")
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                             }
                         }
@@ -2017,7 +2015,7 @@ struct WebSectionView: View {
                     if let sslInfo, !sslInfo.subjectAltNames.isEmpty {
                         Text("SANs")
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                         ForEach(sslInfo.subjectAltNames, id: \.self) { san in
                             HStack(alignment: .top, spacing: 8) {
                                 Text(san)
@@ -2091,7 +2089,7 @@ struct WebSectionView: View {
                         HStack(alignment: .top, spacing: 6) {
                             Text(redirect.stepLabel)
                                 .font(appDensity.font(.caption))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                                 .frame(width: 16, alignment: .trailing)
                             Text(redirect.statusCode)
                                 .font(appDensity.font(.caption))
@@ -2104,7 +2102,7 @@ struct WebSectionView: View {
                             if redirect.isFinal {
                                 Text("(final)")
                                     .font(appDensity.font(.caption2))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                             }
                         }
                     }
@@ -2149,7 +2147,7 @@ struct EmailSectionView: View {
                     if !assessment.reasons.isEmpty {
                         Text(assessment.reasons.joined(separator: " | "))
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                 }
                 if loading {
@@ -2176,7 +2174,7 @@ struct EmailSectionView: View {
                             if let auxiliaryDetail = row.auxiliaryDetail {
                                 Text(auxiliaryDetail)
                                     .font(appDensity.font(.caption2))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                             }
                         }
                     }
@@ -2192,9 +2190,9 @@ struct EmailSectionView: View {
         case .warning:
             return .init(title: row.status, systemImage: "shield.lefthalf.filled", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarning).opacity(0.16))
         case .failure:
-            return .init(title: row.status, systemImage: "minus.circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: row.status, systemImage: "minus.circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         case .primary, .secondary:
-            return .init(title: row.status, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: row.status, systemImage: "circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
     }
 }
@@ -2244,7 +2242,7 @@ struct NetworkSectionView: View {
                             Spacer()
                             Text(row.latencyLabel)
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                             AppStatusBadgeView(model: reachabilityBadge(row))
                         }
                     }
@@ -2304,7 +2302,7 @@ struct NetworkSectionView: View {
                 } else {
                     Text("Standard Ports")
                         .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                     PortRowsView(rows: standardPortRows)
                 }
 
@@ -2353,7 +2351,7 @@ struct NetworkSectionView: View {
         case .failure:
             return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         case .primary, .secondary:
-            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
     }
 }
@@ -2379,14 +2377,14 @@ struct PortRowsView: View {
                         if let durationLabel = row.durationLabel {
                             Text(durationLabel)
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
                         AppStatusBadgeView(model: portBadge(row))
                     }
                     if let banner = row.banner {
                         Text(banner)
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                             .padding(.leading, 8)
                     }
                 }
@@ -2404,7 +2402,7 @@ struct PortRowsView: View {
         case .failure:
             return .init(title: row.statusLabel, systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCritical).opacity(0.16))
         case .primary, .secondary:
-            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: .secondary, backgroundColor: Color(.appSurfaceElevated))
+            return .init(title: row.statusLabel, systemImage: "circle", foregroundColor: Color(.appTextSecondary), backgroundColor: Color(.appSurfaceElevated))
         }
     }
 }
@@ -2512,15 +2510,15 @@ struct SectionTrustMetadataView: View {
                     if let confidence {
                         Text("Confidence \(confidence.title)")
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                     if let provenance {
                         Text(provenance.provider ?? provenance.source)
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                         Text(provenance.resultSource.label)
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                 }
                 DisclosureGroup("Details") {
@@ -2559,7 +2557,7 @@ struct LabeledValueRow: View {
                 VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing - 1) {
                     Text(row.label)
                         .font(appDensity.font(.caption2))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                     Text(row.value)
                         .font(appDensity.font(.caption))
                         .foregroundStyle(ResultColors.color(for: row.tone))
@@ -2656,7 +2654,7 @@ struct SettingsView: View {
                 if let statusMessage = purchaseService.statusMessage {
                     Text(statusMessage)
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
 
                 if let errorMessage = purchaseService.errorMessage {
@@ -2732,10 +2730,17 @@ struct SettingsView: View {
 
 private struct DisplaySettingsView: View {
     @AppStorage(AppDensity.userDefaultsKey) private var storedDensity = AppDensity.compact.rawValue
+    @AppStorage(AppAppearance.userDefaultsKey) private var storedAppearance = AppAppearance.system.rawValue
 
     var body: some View {
         Form {
             Section("Display") {
+                Picker("Appearance", selection: $storedAppearance) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title).tag(appearance.rawValue)
+                    }
+                }
+
                 Picker("Density", selection: $storedDensity) {
                     ForEach(AppDensity.allCases) { density in
                         Text(density.title).tag(density.rawValue)
@@ -2778,7 +2783,7 @@ private struct HistoryNetworkSettingsView: View {
 
                 Text("History remains local-first. Auto-prune only trims older local snapshots on this device and defaults to unlimited.")
                     .font(appDensity.font(.caption, design: .default))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
 
             Section("Network") {
@@ -2870,11 +2875,11 @@ private struct CloudSyncSettingsView: View {
 
                 Text("iCloud Sync stores DomainDig data in your private iCloud account. DomainDig does not operate a sync server. Disabling sync keeps local data on this device.")
                     .font(appDensity.font(.caption, design: .default))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
 
                 Text(cloudSyncService.detailMessage)
                     .font(appDensity.font(.caption, design: .default))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
 
                 if let lastErrorMessage = cloudSyncService.lastErrorMessage {
                     Text(lastErrorMessage)
@@ -2932,7 +2937,7 @@ private struct LocalAPISettingsView: View {
                 if let statusMessage = localAPIService.statusMessage {
                     Text(statusMessage)
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
             }
 
@@ -2947,7 +2952,7 @@ private struct LocalAPISettingsView: View {
 
                 Text("Every request requires either `Authorization: Bearer <token>` or `X-API-Token`. DomainDig stores the token in Keychain and only binds the server to localhost.")
                     .font(appDensity.font(.caption, design: .default))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
 
             Section("Request Logging") {
@@ -2962,7 +2967,7 @@ private struct LocalAPISettingsView: View {
                 if localAPIService.requestLogs.isEmpty {
                     Text("No local API requests logged yet.")
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 } else {
                     ForEach(localAPIService.requestLogs.prefix(25)) { log in
                         VStack(alignment: .leading, spacing: 4) {
@@ -2977,11 +2982,11 @@ private struct LocalAPISettingsView: View {
 
                             Text(log.timestamp.formatted(date: .abbreviated, time: .standard))
                                 .font(appDensity.font(.caption2, design: .default))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
 
                             Text("\(Int(log.duration * 1000)) ms")
                                 .font(appDensity.font(.caption2, design: .default))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
                     }
                 }
@@ -3184,13 +3189,13 @@ private struct MonitoringSettingsView: View {
                 if let monitoringStatusMessage = viewModel.monitoringStatusMessage {
                     Text(monitoringStatusMessage)
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
 
                 if !FeatureAccessService.hasAccess(to: .automatedMonitoring) {
                     Text("Background monitoring and alerts are available in Pro.")
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
             }
         }
@@ -3260,7 +3265,7 @@ private struct DataPortabilitySettingsView: View {
 
                 Text(importMode.explanation)
                     .font(appDensity.font(.caption, design: .default))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
 
                 Button("Export Full Backup") {
                     exportFullBackup()
@@ -3317,12 +3322,12 @@ private struct DataPortabilitySettingsView: View {
 
                 Text("Data stays on this device unless you export it. Backup files can include domain history, monitoring settings, and notes. Imported files are processed on-device.")
                     .font(appDensity.font(.caption, design: .default))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
 
                 if let portabilityStatusMessage = viewModel.portabilityStatusMessage {
                     Text(portabilityStatusMessage)
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 }
             }
 
@@ -3331,7 +3336,7 @@ private struct DataPortabilitySettingsView: View {
                 Section("Import Debug") {
                     Text(importDebugStatus)
                         .font(appDensity.font(.caption, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                         .textSelection(.enabled)
                 }
             }
@@ -3636,7 +3641,7 @@ private struct DataManagementSettingsView: View {
             if let deleteAllSuccessMessage {
                 Text(deleteAllSuccessMessage)
                     .font(.footnote.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(.thinMaterial, in: Capsule())
@@ -3722,7 +3727,7 @@ private struct DataImportPreviewSheet: View {
                     Section("Warnings") {
                         ForEach(preview.warnings, id: \.self) { warning in
                             Text(warning)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
                     }
                 }
