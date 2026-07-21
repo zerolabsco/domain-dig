@@ -61,10 +61,10 @@ struct DomainDigWidgetView: View {
         VStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .font(.title2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
             Text("No tracked domains")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
                 .multilineTextAlignment(.center)
         }
     }
@@ -80,13 +80,13 @@ struct DomainDigWidgetView: View {
                 Spacer()
             }
             .font(.caption2)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(.appTextSecondary))
 
             Text("\(data.totalDomains)")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
             Text("tracked")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
 
             Spacer(minLength: 0)
 
@@ -113,11 +113,11 @@ struct DomainDigWidgetView: View {
                 Label("Domain Portfolio", systemImage: "shield.lefthalf.filled")
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                 Spacer()
                 Text("\(data.totalDomains) tracked")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
 
             HStack(spacing: 12) {
@@ -147,7 +147,7 @@ struct DomainDigWidgetView: View {
                 .foregroundStyle(color)
             Text(label)
                 .font(.system(size: 9))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -160,7 +160,7 @@ struct DomainDigWidgetView: View {
             if domain.isPinned {
                 Image(systemName: "pin.fill")
                     .font(.system(size: 8))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
             Text(domain.domain)
                 .font(.caption)
@@ -168,7 +168,7 @@ struct DomainDigWidgetView: View {
             Spacer(minLength: 4)
             Text(certLabel(for: domain))
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
         }
     }
 

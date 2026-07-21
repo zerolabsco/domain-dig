@@ -139,7 +139,7 @@ struct DashboardView: View {
                                                 .font(appDensity.font(.headline, design: .default, weight: .semibold))
                                             Text("\(group.domains.count) domain\(group.domains.count == 1 ? "" : "s")")
                                                 .font(appDensity.font(.caption))
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(Color(.appTextSecondary))
                                         }
                                         Spacer()
                                         groupBadge(for: group.domains)
@@ -170,7 +170,6 @@ struct DashboardView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private func disclosureBinding(for apexDomain: String) -> Binding<Bool> {
@@ -193,7 +192,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
                     .font(appDensity.font(.caption, design: .default, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                 Text("\(value)")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
@@ -230,7 +229,7 @@ struct DashboardView: View {
     private func dashboardEmptyRow(_ message: String) -> some View {
         Text(message)
             .font(appDensity.font(.caption))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(.appTextSecondary))
             .padding(.vertical, 4)
     }
 
@@ -288,7 +287,7 @@ private struct PortfolioActivityRow: View {
                     Text(relativeTimestamp(item.timestamp))
                 }
                 .font(appDensity.font(.caption2))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
             }
         }
         .padding(.vertical, 4)
@@ -320,10 +319,10 @@ private struct PortfolioAttentionRow: View {
                     .foregroundStyle(.primary)
                 Text(item.reason)
                     .font(appDensity.font(.caption, design: .default))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
                 Text(relativeTimestamp(item.timestamp))
                     .font(appDensity.font(.caption2))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
         }
         .padding(.vertical, 4)
@@ -353,7 +352,7 @@ private struct PortfolioExpiryRow: View {
                     .foregroundStyle(.primary)
                 Text(expirySubtitle)
                     .font(appDensity.font(.caption))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.appTextSecondary))
             }
             Spacer()
             AppStatusBadgeView(model: badgeModel)

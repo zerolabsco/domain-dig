@@ -12,6 +12,7 @@ struct DomainDigApp: App {
     @UIApplicationDelegateAdaptor(DomainDigAppDelegate.self) private var appDelegate
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(AppDensity.userDefaultsKey) private var density = AppDensity.compact.rawValue
+    @AppStorage(AppAppearance.userDefaultsKey) private var appearance = AppAppearance.system.rawValue
     @State private var viewModel = DomainViewModel()
     @State private var purchaseService = PurchaseService.shared
     @State private var cloudSyncService = CloudSyncService.shared
@@ -27,6 +28,8 @@ struct DomainDigApp: App {
         WindowGroup {
             RootTabView(viewModel: viewModel)
                 .environment(\.appDensity, AppDensity(rawValue: density) ?? .compact)
+                // The single place appearance is applied. Keep it that way.
+                .preferredColorScheme((AppAppearance(rawValue: appearance) ?? .system).colorScheme)
                 .task {
                     let _ = purchaseService.currentTier
                     let _ = cloudSyncService.status

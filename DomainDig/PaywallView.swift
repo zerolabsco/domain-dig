@@ -12,7 +12,7 @@ struct PaywallView: View {
                 Section {
                     Text("Pro unlocks workflows, scale, monitoring automation, and exports. Pro+ adds deeper external intelligence with no additional usage limits.")
                         .font(appDensity.font(.body, design: .default))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -38,7 +38,7 @@ struct PaywallView: View {
                     } else if purchaseService.products.isEmpty {
                         Text("Pricing is unavailable right now.")
                             .font(appDensity.font(.caption, design: .default))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
 
                         Button("Retry") {
                             Task {
@@ -58,7 +58,7 @@ struct PaywallView: View {
                                         .foregroundStyle(.primary)
                                     Text(product.displayPrice)
                                         .font(appDensity.font(.callout, design: .default))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -69,7 +69,7 @@ struct PaywallView: View {
                     if let statusMessage = purchaseService.statusMessage {
                         Text(statusMessage)
                             .font(appDensity.font(.caption, design: .default))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
 
                     if let errorMessage = purchaseService.errorMessage {

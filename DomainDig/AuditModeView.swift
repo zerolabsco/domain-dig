@@ -25,7 +25,7 @@ struct AuditModeView: View {
             Section("Audit Timeline") {
                 if auditStore.sessions.isEmpty {
                     Text("No audits yet.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
                 } else {
                     ForEach(auditStore.sessions) { session in
                         Button {
@@ -35,7 +35,7 @@ struct AuditModeView: View {
                                 Text(session.domain).font(.headline)
                                 Text("\(session.createdAt.formatted(date: .abbreviated, time: .shortened)) • \(session.status.title)")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                             }
                         }
                     }

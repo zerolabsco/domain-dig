@@ -125,7 +125,7 @@ private struct TimelineRow: View {
 
             Text(summary.changeSummaryMessage ?? "No change summary")
                 .font(appDensity.font(.caption))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(.appTextSecondary))
                 .lineLimit(2)
 
             HStack(spacing: 8) {
@@ -137,14 +137,14 @@ private struct TimelineRow: View {
                 }
             }
             .font(appDensity.font(.caption2))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(.appTextSecondary))
 
             if !entry.intelligenceTimeline.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(entry.intelligenceTimeline.prefix(2))) { event in
                         Text("\(event.title): \(event.detail)")
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                             .lineLimit(1)
                     }
                 }
@@ -161,7 +161,7 @@ private struct TimelineRow: View {
                     .lineLimit(1)
             }
             .font(appDensity.font(.caption2))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Color(.appTextSecondary))
         }
     }
 }

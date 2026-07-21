@@ -31,7 +31,7 @@ struct MonitoringView: View {
                        !monitoringStatusMessage.isEmpty {
                         Text(monitoringStatusMessage)
                             .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
 
                     Button(viewModel.monitoringRunInProgress ? "Monitoring…" : "Run Now") {
@@ -68,12 +68,12 @@ struct MonitoringView: View {
                                     Spacer()
                                     Text(log.timestamp.formatted(date: .abbreviated, time: .shortened))
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
 
                                 Text(log.summary)
                                     .font(appDensity.font(.caption))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
 
                                 HStack(spacing: 8) {
                                     metricBadge(title: "\(log.domainsChecked) checked")
@@ -95,7 +95,6 @@ struct MonitoringView: View {
         .scrollContentBackground(.hidden)
         .background(Color(.appBackground))
         .navigationTitle("Monitoring")
-        .preferredColorScheme(.dark)
         .onAppear {
             viewModel.refreshMonitoringState()
         }
@@ -152,7 +151,7 @@ struct MonitoringLogDetailView: View {
 
                         Text(result.summaryMessage)
                             .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
 
                         HStack(spacing: 10) {
                             Text(result.resultSource.label)
@@ -162,7 +161,7 @@ struct MonitoringLogDetailView: View {
                             }
                         }
                         .font(appDensity.font(.caption2))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.appTextSecondary))
 
                         if let errorMessage = result.errorMessage {
                             Text(errorMessage)
@@ -188,7 +187,7 @@ struct MonitoringLogDetailView: View {
                     ForEach(log.errors, id: \.self) { error in
                         Text(error)
                             .font(appDensity.font(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                 }
                 .listRowBackground(Color(.appSurface))
@@ -197,7 +196,6 @@ struct MonitoringLogDetailView: View {
         .scrollContentBackground(.hidden)
         .background(Color(.appBackground))
         .navigationTitle("Run Details")
-        .preferredColorScheme(.dark)
     }
 
     private func color(for severity: MonitoringAlertSeverity) -> Color {

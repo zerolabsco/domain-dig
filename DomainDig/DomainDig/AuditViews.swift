@@ -41,13 +41,13 @@ struct AuditListView: View {
                                     Spacer()
                                     Text("\(group.sessions.count) audit\(group.sessions.count == 1 ? "" : "s")")
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
 
                                 if let latest = group.sessions.first {
                                     Text(latest.findings.isEmpty ? "No findings recorded yet" : latest.findings.map(\.title).prefix(2).joined(separator: " • "))
                                         .font(appDensity.font(.caption))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                         .lineLimit(2)
 
                                     HStack(spacing: 8) {
@@ -57,7 +57,7 @@ struct AuditListView: View {
                                         }
                                         Text("Checklist \(latest.completedChecklistCount)/\(latest.checklist.count)")
                                             .font(appDensity.font(.caption2))
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color(.appTextSecondary))
                                     }
                                 }
                             }
@@ -85,7 +85,6 @@ struct AuditListView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 
@@ -116,7 +115,7 @@ struct AuditDomainTimelineView: View {
 
                             Text("Reviewer: \(session.reviewer)")
                                 .font(appDensity.font(.caption))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
 
                             HStack(spacing: 8) {
                                 Text("\(session.findings.count) findings")
@@ -126,7 +125,7 @@ struct AuditDomainTimelineView: View {
                                 }
                             }
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                         }
                         .padding(.vertical, 4)
                     }
@@ -143,11 +142,11 @@ struct AuditDomainTimelineView: View {
                             Spacer()
                             Text("\(point.findingCount) findings")
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
                         Text("Open high severity: \(point.openHighSeverityCount) • Repeated issues: \(point.repeatedIssueCount)")
                             .font(appDensity.font(.caption2))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(.appTextSecondary))
                     }
                     .padding(.vertical, 2)
                 }
@@ -197,7 +196,7 @@ struct AuditSessionDetailView: View {
                                         .font(appDensity.font(.headline, design: .default, weight: .semibold))
                                     Text("Reviewer: \(session.reviewer)")
                                         .font(appDensity.font(.caption))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                                 Spacer()
                                 auditStatusBadge(session.status)
@@ -215,7 +214,7 @@ struct AuditSessionDetailView: View {
 
                             Text("Captured \(session.evidence.capturedAt.formatted(date: .abbreviated, time: .shortened))")
                                 .font(appDensity.font(.caption2))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
                     }
                     .listRowBackground(Color(.appSurface))
@@ -256,7 +255,7 @@ struct AuditSessionDetailView: View {
                                             .foregroundStyle(.primary)
                                         Text(item.detail)
                                             .font(appDensity.font(.caption))
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color(.appTextSecondary))
                                     }
                                     Spacer()
                                 }
@@ -270,7 +269,7 @@ struct AuditSessionDetailView: View {
                         if session.findings.isEmpty {
                             Text("No findings recorded.")
                                 .font(appDensity.font(.caption))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         } else {
                             ForEach(session.findings) { finding in
                                 Button {
@@ -286,11 +285,11 @@ struct AuditSessionDetailView: View {
                                         }
                                         Text(finding.summary)
                                             .font(appDensity.font(.caption))
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color(.appTextSecondary))
                                             .lineLimit(2)
                                         Text("\(finding.status.title) • \(finding.evidenceReferences.count) evidence refs")
                                             .font(appDensity.font(.caption2))
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(Color(.appTextSecondary))
                                     }
                                     .padding(.vertical, 2)
                                 }
@@ -321,7 +320,7 @@ struct AuditSessionDetailView: View {
                                         .font(appDensity.font(.caption, weight: .semibold))
                                     Text(entry.changeSummaryMessage ?? "No change summary")
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                             }
                         }
@@ -337,11 +336,11 @@ struct AuditSessionDetailView: View {
                                     Spacer()
                                     Text(point.status.title)
                                         .font(appDensity.font(.caption2))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color(.appTextSecondary))
                                 }
                                 Text("Findings \(point.findingCount) • Open high \(point.openHighSeverityCount) • Repeated \(point.repeatedIssueCount)")
                                     .font(appDensity.font(.caption2))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(.appTextSecondary))
                             }
                         }
                     }
@@ -401,7 +400,6 @@ struct AuditSessionDetailView: View {
                     .background(Color(.appBackground))
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 
@@ -459,7 +457,7 @@ private struct AuditFindingEditorView: View {
                         ForEach(session.evidence.screenshots) { asset in
                             Text("\(asset.title): \(asset.reference)")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color(.appTextSecondary))
                         }
                     }
                 }

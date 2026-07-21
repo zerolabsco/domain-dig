@@ -29,6 +29,12 @@ worst of those three is shown:
 | `StatusWarning` | `#7A5600` | `#FFD60A` | 4.74 | 9.61 |
 | `StatusCritical` | `#B3261E` | `#FF6961` | 4.51 | 5.54 |
 | `StatusNeutral` | `#5A5A5F` | `#A1A1A6` | 4.92 | 5.88 |
+| `AppTextSecondary` | `#5A5A5F` | `#A1A1A6` | 6.15 | 7.50 |
+
+`AppTextSecondary` replaces `.secondary` for body text. iOS's own `secondaryLabel`
+is only **3.29:1** on a light card — below AA — which never showed while the app
+was locked to dark, where the same colour reads 6.32:1. Unlocking light mode
+exposed it across 191 sites.
 
 High Contrast variants push further in the same direction. Surfaces
 (`AppBackground`, `AppSurface`, `AppSurfaceElevated`, `AppSeparator`) carry no
@@ -57,6 +63,26 @@ So there are two colours:
 
 `AppOnAccent` is the label colour for a solid accent fill and flips by scheme —
 white on the light accent, black on the dark one.
+
+## Appearance
+
+`AppAppearance` (System / Light / Dark) is stored in `@AppStorage` and applied in
+**exactly one place** — the `WindowGroup` in `DomainDigApp`. Keep it that way. The
+app previously carried 16 separate `.preferredColorScheme(.dark)` calls scattered
+through view bodies, which is how light mode became unreachable without anyone
+noticing; re-applying per view is what let the lock spread.
+
+Users override it under Settings → Display.
+
+### Known light-mode findings
+
+| Finding | Cause | Action |
+| --- | --- | --- |
+| 2× `contrast failed` on Settings | The last rows of a section sit under the translucent tab bar, so the audit measures text against a blended background. Present in dark mode too, since phase 0. | None — standard iOS scroll-under behaviour |
+| 3× `contrast nearly passed` on Settings | iOS-rendered `Section` headers (`TIER`, `PREFERENCES`, `SERVICES`) use the system's grey. | Not fixed. Overriding system header styling across every section to gain ~0.3:1 on decorative labels trades platform convention for very little |
+
+Dark mode reports 18 findings and light mode 21; the three extra are the section
+headers above. Everything the app actually controls passes in both schemes.
 
 ## Findings are reported, not enforced
 
