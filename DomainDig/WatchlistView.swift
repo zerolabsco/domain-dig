@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WatchlistView: View {
     @Environment(\.appDensity) private var appDensity
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var viewModel: DomainViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var purchaseService = PurchaseService.shared
@@ -92,7 +93,7 @@ struct WatchlistView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: viewModel.filteredTrackedDomains.map(\.id))
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: viewModel.filteredTrackedDomains.map(\.id))
         .scrollContentBackground(.hidden)
         .background(Color(.appBackground))
         .navigationTitle("Watchlist")

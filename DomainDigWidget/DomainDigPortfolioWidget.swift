@@ -97,16 +97,18 @@ struct DomainDigWidgetView: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                countPill(data.healthyCount, Color(.statusPositive), "healthy")
-                countPill(data.warningCount, Color(.statusWarning), "warning")
-                countPill(data.criticalCount, Color(.statusCritical), "critical")
+                countPill(data.healthyCount, .healthy, "healthy")
+                countPill(data.warningCount, .warning, "warning")
+                countPill(data.criticalCount, .critical, "critical")
             }
         }
     }
 
-    private func countPill(_ value: Int, _ color: Color, _ label: String) -> some View {
+    private func countPill(_ value: Int, _ status: DomainDigWidgetStatus, _ label: String) -> some View {
         HStack(spacing: 3) {
-            Circle().fill(color).frame(width: 7, height: 7)
+            Image(systemName: symbol(for: status))
+                .font(.caption2)
+                .foregroundStyle(color(for: status))
             Text("\(value)").font(.caption).fontWeight(.medium)
         }
         // A coloured dot and a number say nothing on their own.
@@ -163,9 +165,9 @@ struct DomainDigWidgetView: View {
 
     private func domainRow(_ domain: DomainDigWidgetDomain) -> some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(color(for: domain.status))
-                .frame(width: 8, height: 8)
+            Image(systemName: symbol(for: domain.status))
+                .font(.caption2)
+                .foregroundStyle(color(for: domain.status))
             if domain.isPinned {
                 Image(systemName: "pin.fill")
                     .font(.caption2)
@@ -217,6 +219,17 @@ struct DomainDigWidgetView: View {
         case .healthy: return Color(.statusPositive)
         case .warning: return Color(.statusWarning)
         case .critical: return Color(.statusCritical)
+        }
+    }
+
+    /// Same symbol vocabulary as the in-app badges, so status survives without
+    /// colour (Differentiate Without Color, greyscale, colour-blind viewers) and
+    /// reads consistently across surfaces.
+    private func symbol(for status: DomainDigWidgetStatus) -> String {
+        switch status {
+        case .healthy: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .critical: return "exclamationmark.octagon.fill"
         }
     }
 }

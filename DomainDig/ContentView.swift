@@ -2580,6 +2580,7 @@ struct SectionTrustMetadataView: View {
 
 struct LabeledValueRow: View {
     @Environment(\.appDensity) private var appDensity
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     let row: InfoRowViewData
 
     var body: some View {
@@ -2589,7 +2590,15 @@ struct LabeledValueRow: View {
                     Text(row.label)
                         .font(appDensity.font(.caption2))
                         .foregroundStyle(Color(.appTextSecondary))
-                    valueText
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        if differentiateWithoutColor, let symbol = toneSymbol {
+                            Image(systemName: symbol)
+                                .font(appDensity.font(.caption2))
+                                .foregroundStyle(ResultColors.color(for: row.tone))
+                                .accessibilityHidden(true)
+                        }
+                        valueText
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
@@ -2600,6 +2609,17 @@ struct LabeledValueRow: View {
             }
         }
         .frame(minHeight: appDensity.metrics.rowMinHeight, alignment: .topLeading)
+    }
+
+    /// A leading symbol for warning/failure tones, shown only under Differentiate
+    /// Without Color so tone is not conveyed by text colour alone. Hidden from
+    /// VoiceOver — the value text already carries the meaning.
+    private var toneSymbol: String? {
+        switch row.tone {
+        case .warning: return "exclamationmark.triangle.fill"
+        case .failure: return "xmark.octagon.fill"
+        default: return nil
+        }
     }
 
     @ViewBuilder
@@ -3588,6 +3608,7 @@ private struct DataPortabilitySettingsView: View {
 
 private struct DataManagementSettingsView: View {
     @Bindable var viewModel: DomainViewModel
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @State private var showClearHistoryConfirmation = false
     @State private var showClearCacheConfirmation = false
@@ -3695,7 +3716,12 @@ private struct DataManagementSettingsView: View {
                     .foregroundStyle(Color(.appTextSecondary))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(.thinMaterial, in: Capsule())
+                    // Reduce Transparency swaps the blur for an opaque surface.
+                    // On iOS 26+ the system also composites its own translucency
+                    // that the app cannot declare — verify there too (Phase 6).
+                    .background(
+                        Capsule().fill(reduceTransparency ? AnyShapeStyle(Color(.appSurfaceElevated)) : AnyShapeStyle(.thinMaterial))
+                    )
                     .padding(.bottom, 8)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
