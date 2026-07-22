@@ -31,6 +31,9 @@ struct DomainDigApp: App {
                 // The single place appearance is applied. Keep it that way.
                 .preferredColorScheme((AppAppearance(rawValue: appearance) ?? .system).colorScheme)
                 .task {
+                    #if DEBUG
+                    viewModel.seedAuditFixturesIfRequested()
+                    #endif
                     let _ = purchaseService.currentTier
                     let _ = cloudSyncService.status
                     let _ = localAPIService.isRunning

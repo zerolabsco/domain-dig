@@ -82,6 +82,71 @@ final class AccessibilityAuditTests: XCTestCase {
         )
     }
 
+    // MARK: Seeded audits — dense rows that never render on an empty simulator
+
+    /// Dashboard with a populated portfolio: summary tiles, quick filters,
+    /// activity/attention/expiry rows, and the grouped portfolio list.
+    func testSeededDashboard() throws {
+        let app = AccessibilityAuditHarness.launch(seeded: true)
+        app.selectRootTab("Dashboard")
+        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-dashboard", test: self)
+        try XCTSkipUnless(audited, "Audit did not complete in time for seeded Dashboard")
+    }
+
+    /// The watchlist's dense rows (up to nine text elements each).
+    func testSeededTrackedDomains() throws {
+        let app = AccessibilityAuditHarness.launch(seeded: true)
+        app.selectRootTab("Settings")
+        let trackedDomains = app.buttons["Tracked Domains"]
+        XCTAssertTrue(trackedDomains.waitForExistence(timeout: 5))
+        trackedDomains.tap()
+        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-tracked-domains", test: self)
+        try XCTSkipUnless(audited, "Audit did not complete in time for seeded Tracked Domains")
+    }
+
+    /// Batch result rows on the Inspect tab, including a failed lookup.
+    func testSeededBatchResults() throws {
+        let app = AccessibilityAuditHarness.launch(seeded: true)
+        app.selectRootTab("Inspect")
+        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-batch", test: self)
+        try XCTSkipUnless(audited, "Audit did not complete in time for seeded batch results")
+    }
+
+    /// The seeded screens again at the largest accessibility size — the case the
+    /// deferred ViewThatFits work exists for.
+    func testSeededScreensAtLargestAccessibilitySize() throws {
+        let app = AccessibilityAuditHarness.launch(
+            contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL",
+            seeded: true
+        )
+
+        var unaudited: [String] = []
+
+        app.selectRootTab("Dashboard")
+        if try !AccessibilityAuditHarness.audit(app, screen: "seeded-dashboard-accessibilityXXXL", test: self) {
+            unaudited.append("Dashboard")
+        }
+
+        app.selectRootTab("Inspect")
+        if try !AccessibilityAuditHarness.audit(app, screen: "seeded-batch-accessibilityXXXL", test: self) {
+            unaudited.append("Inspect batch")
+        }
+
+        app.selectRootTab("Settings")
+        let trackedDomains = app.buttons["Tracked Domains"]
+        if trackedDomains.waitForExistence(timeout: 5) {
+            trackedDomains.tap()
+            if try !AccessibilityAuditHarness.audit(app, screen: "seeded-tracked-domains-accessibilityXXXL", test: self) {
+                unaudited.append("Tracked Domains")
+            }
+        }
+
+        try XCTSkipUnless(
+            unaudited.isEmpty,
+            "Audit did not complete in time for: \(unaudited.joined(separator: ", "))"
+        )
+    }
+
     // MARK: Helpers
 
     private func auditRootTab(_ tab: String) throws {

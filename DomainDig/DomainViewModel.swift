@@ -1019,6 +1019,11 @@ final class DomainViewModel {
     }
 
     func refreshMonitoringState() {
+        #if DEBUG
+        // Runs right after fixture seeding in the app task (and again on every
+        // scene activation); the disk reload below would wipe the fixtures.
+        if auditFixturesActive { return }
+        #endif
         DataMigrationService.migrateIfNeeded()
         trackedDomains = Self.loadTrackedDomains()
         history = Self.loadHistoryEntries()
@@ -1036,6 +1041,10 @@ final class DomainViewModel {
     }
 
     func refreshPersistedData() {
+        #if DEBUG
+        // A reload from disk would silently replace the in-memory fixtures.
+        if auditFixturesActive { return }
+        #endif
         recentSearches = DomainDataPortabilityService.loadRecentSearches()
         savedDomains = DomainDataPortabilityService.loadSavedDomains()
         trackedDomains = Self.loadTrackedDomains()
@@ -2614,7 +2623,25 @@ final class DomainViewModel {
         persistHistory()
     }
 
+    #if DEBUG
+    /// True when this session was launched with `DOMAIN_DIG_SEED_FIXTURES`.
+    /// Blocks tracked-domain persistence, widget-store writes, and persisted-data
+    /// reloads so fixture data stays strictly in-memory — the audit suite relies
+    /// on every launch starting from the same state.
+    private(set) var auditFixturesActive = false
+
+    func seedAuditFixturesIfRequested() {
+        guard AuditFixtures.requested, !auditFixturesActive else { return }
+        auditFixturesActive = true
+        trackedDomains = AuditFixtures.trackedDomains
+        batchResults = AuditFixtures.batchResults
+    }
+    #endif
+
     private func persistTrackedDomains() {
+        #if DEBUG
+        if auditFixturesActive { return }
+        #endif
         if trackedDomainsPersistenceSuspended {
             trackedDomainsPersistenceDirty = true
             return

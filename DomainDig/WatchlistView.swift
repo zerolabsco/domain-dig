@@ -435,19 +435,20 @@ struct WatchlistRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing + 1) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if trackedDomain.isPinned {
-                    Image(systemName: "pin.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color(.statusWarning))
+            // Side-by-side while it fits; at accessibility sizes the badge drops
+            // below the domain instead of squeezing it into "hea lt…" while the
+            // badge letter-wraps down the screen. ViewThatFits picks the wide
+            // layout whenever it genuinely fits, so default sizes keep density.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    domainTitle
+                    Spacer(minLength: 8)
+                    statusBadge
                 }
-                Text(trackedDomain.domain)
-                    .font(appDensity.font(.callout))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Spacer(minLength: 8)
-                statusBadge
+                VStack(alignment: .leading, spacing: 6) {
+                    domainTitle
+                    statusBadge
+                }
             }
 
             Text("Updated \(trackedDomain.updatedAt.formatted(date: .abbreviated, time: .shortened))")
@@ -460,14 +461,9 @@ struct WatchlistRowView: View {
                     .foregroundStyle(Color(.appTextSecondary))
             }
 
-            HStack(spacing: 8) {
-                Text(trackedDomain.monitoringEnabled ? "Monitoring on" : "Monitoring off")
-                if let lastMonitoredAt = trackedDomain.lastMonitoredAt {
-                    Text("Checked \(lastMonitoredAt.formatted(date: .omitted, time: .shortened))")
-                }
-                if let lastAlertAt = trackedDomain.lastAlertAt {
-                    Text("Alert \(lastAlertAt.formatted(date: .omitted, time: .shortened))")
-                }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { monitoringMetadata }
+                VStack(alignment: .leading, spacing: 2) { monitoringMetadata }
             }
             .font(appDensity.font(.caption2))
             .foregroundStyle(Color(.appTextSecondary))
@@ -489,6 +485,33 @@ struct WatchlistRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
         .modifier(WatchlistRowAccessibility(trackedDomain: trackedDomain, isRefreshing: isRefreshing))
+    }
+
+    @ViewBuilder
+    private var monitoringMetadata: some View {
+        Text(trackedDomain.monitoringEnabled ? "Monitoring on" : "Monitoring off")
+        if let lastMonitoredAt = trackedDomain.lastMonitoredAt {
+            Text("Checked \(lastMonitoredAt.formatted(date: .omitted, time: .shortened))")
+        }
+        if let lastAlertAt = trackedDomain.lastAlertAt {
+            Text("Alert \(lastAlertAt.formatted(date: .omitted, time: .shortened))")
+        }
+    }
+
+    private var domainTitle: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            if trackedDomain.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.caption2)
+                    .foregroundStyle(Color(.statusWarning))
+            }
+            Text(trackedDomain.domain)
+                .font(appDensity.font(.callout))
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private func availabilityLabel(_ status: DomainAvailabilityStatus?) -> String {

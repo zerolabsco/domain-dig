@@ -245,6 +245,11 @@ struct AppStatusBadgeView: View {
             }
             Text(model.title)
         }
+        // Never compress. Squeezed beside a long domain at accessibility sizes,
+        // the capsule otherwise wraps one character per line into a
+        // screen-height pill. Taking natural width instead forces the row's
+        // ViewThatFits onto its stacked layout, which is the intended fallback.
+        .fixedSize()
         .font(appDensity.font(.caption, weight: .semibold))
         .foregroundStyle(model.foregroundColor)
         .padding(.horizontal, 9)
