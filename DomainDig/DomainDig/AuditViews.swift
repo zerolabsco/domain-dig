@@ -261,6 +261,8 @@ struct AuditSessionDetailView: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                            .accessibilityAddTraits(item.isComplete ? .isSelected : [])
+                            .accessibilityHint(item.isComplete ? "Marks incomplete" : "Marks complete")
                         }
                     }
                     .listRowBackground(Color(.appSurface))
@@ -479,6 +481,7 @@ private struct AuditFindingEditorView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .accessibilityAddTraits(selectedAreas.contains(area) ? .isSelected : [])
                     }
                 }
 

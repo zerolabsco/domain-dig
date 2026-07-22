@@ -106,6 +106,7 @@ struct WatchlistView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .accessibilityLabel("Add domain")
 
                 if !viewModel.filteredTrackedDomains.isEmpty {
                     Menu {
@@ -181,6 +182,7 @@ struct WatchlistView: View {
                     } label: {
                         Image(systemName: "line.3.horizontal.decrease.circle")
                     }
+                    .accessibilityLabel("Filter and sort")
 
                     EditButton()
                 }
@@ -485,6 +487,7 @@ struct WatchlistRowView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+        .modifier(WatchlistRowAccessibility(trackedDomain: trackedDomain, isRefreshing: isRefreshing))
     }
 
     private func availabilityLabel(_ status: DomainAvailabilityStatus?) -> String {
@@ -538,6 +541,34 @@ struct WatchlistRowView: View {
             return .init(title: "Expiring \(days)", systemImage: "exclamationmark.triangle.fill", foregroundColor: Color(.statusWarning), backgroundColor: Color(.statusWarningSurface))
         case .none:
             return .init(title: "Valid", systemImage: "lock.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface))
+        }
+    }
+}
+
+/// Row-level VoiceOver treatment for a tracked domain: domain as label,
+/// availability as value, the rest on the More Content rotor. Same rationale as
+/// the batch row — up to nine text elements would be one unnavigable utterance.
+private struct WatchlistRowAccessibility: ViewModifier {
+    let trackedDomain: TrackedDomain
+    let isRefreshing: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(trackedDomain.domain)
+            .accessibilityValue(isRefreshing ? "Refreshing" : AppStatusFactory.availability(trackedDomain.lastKnownAvailability).title)
+            .accessibilityCustomContent("Certificate", certificateContent, importance: .high)
+            .accessibilityCustomContent("Monitoring", trackedDomain.monitoringEnabled ? "on" : "off")
+            .accessibilityCustomContent("Updated", trackedDomain.updatedAt.formatted(date: .abbreviated, time: .shortened))
+            .accessibilityCustomContent("Pinned", trackedDomain.isPinned ? "yes" : "no")
+    }
+
+    private var certificateContent: String {
+        let days = trackedDomain.certificateDaysRemaining.map { "\($0) days" } ?? "unknown"
+        switch trackedDomain.certificateWarningLevel {
+        case .critical: return "invalid, \(days)"
+        case .warning: return "expiring, \(days)"
+        case .none: return "valid"
         }
     }
 }

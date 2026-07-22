@@ -208,6 +208,49 @@ pre-commit that blocks every commit. A hook routinely bypassed with
   needs `max(scaled, AppLayout.minimumTapTarget)` or it drops under 44pt for
   users who prefer smaller text.
 
+## VoiceOver conventions
+
+- **Dense rows use combine-for-summary, custom-content-for-detail.**
+  `BatchResultRowView` and `WatchlistRowView` each hold 8–9 text elements.
+  Reading them inline makes a long sweep unnavigable, so each row is one element:
+  `.accessibilityElement(children: .ignore)` + domain label + status value, with
+  the rest on `.accessibilityCustomContent(...)`. `.high` importance is spoken
+  inline; everything else reaches the More Content rotor on a vertical swipe.
+  Rows with only 3–4 elements (the portfolio activity/attention/expiry rows) are
+  left to `NavigationLink`'s automatic combine — custom content is for the dense
+  case, per WWDC21-10121.
+- **The custom-content chain must live in a `ViewModifier`.** Inlined onto a row
+  body, six `.accessibilityCustomContent` calls plus the visual layout blow the
+  Swift type-checker's budget ("unable to type-check in reasonable time").
+  `BatchRowAccessibility` / `WatchlistRowAccessibility` exist for that reason.
+- **Splitting a `Label` exposes its icon; combining a header swallows its
+  trailing controls.** Two opposite traps. A decorative icon pulled out of a
+  `Label` needs `.accessibilityHidden(true)`. A header built as a `Button` must
+  *not* get `.accessibilityElement(children: .combine)` if its label contains
+  other controls (`CollapsibleSectionView`'s `trailing()` holds Track/Pin) —
+  combine would merge them into the header and make them unreachable.
+- **Label-in-name (WCAG 2.5.3).** Every `accessibilityLabel` added to a control
+  with visible text keeps that text, so Voice Control still works. Free-form
+  labels are used only where the control is genuinely icon-only.
+- **Technical strings** get `speechStyle: .technical` on `InfoRowViewData`, which
+  applies `.speechAlwaysIncludesPunctuation()` and
+  `.accessibilityTextContentType(.sourceCode)`. Set today on DNS record values
+  and cipher suites; extend it wherever the view model emits a fingerprint,
+  serial, or record string.
+
+### What the automated audit cannot check
+
+`performAccessibilityAudit()` validates descriptions, traits, contrast, hit
+regions, and clipping. It does **not** exercise VoiceOver speech, the More
+Content rotor, custom-content ordering, or announcements. Those are verified by
+construction and a manual VoiceOver pass (Phase 6), not by the suite. A green
+audit is necessary, not sufficient, for the row and speech work.
+
+Additionally, the dense rows (`BatchResultRowView`, `WatchlistRowView`) and the
+widget never render in the audit — the test simulator has no tracked domains or
+batch results. Their treatment is unverified by the suite for the same reason the
+Phase 3 `ViewThatFits` work was deferred: absence of findings is absence of data.
+
 ## Notes
 
 - **Disabled controls are a false positive, and are suppressed.** WCAG 1.4.3

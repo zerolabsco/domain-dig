@@ -42,6 +42,7 @@ struct WorkflowsView: View {
                 } label: {
                     Image(systemName: "plus.circle")
                 }
+                .accessibilityLabel("Create workflow")
 
                 if !viewModel.workflows.isEmpty {
                     EditButton()
@@ -133,6 +134,7 @@ private struct WorkflowRowView: View {
                     Image(systemName: "person.2.fill")
                         .font(.caption2)
                         .foregroundStyle(Color(.statusInfo))
+                        .accessibilityLabel("Shared")
                 }
                 Text(workflow.name)
                     .font(appDensity.font(.callout, design: .default, weight: .semibold))
@@ -563,6 +565,7 @@ struct WorkflowRunSummaryView: View {
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
+                    .accessibilityLabel("Export summary")
 
                     if let workflow = viewModel.workflow(withID: summary.workflowID) {
                         Button {
@@ -570,6 +573,7 @@ struct WorkflowRunSummaryView: View {
                         } label: {
                             Image(systemName: "arrow.clockwise")
                         }
+                        .accessibilityLabel("Re-run workflow")
                         .disabled(viewModel.batchLookupRunning)
                     }
                 }
@@ -640,6 +644,7 @@ struct WorkflowBulkAddSheet: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .accessibilityAddTraits(selectedDomains.contains(domain) ? .isSelected : [])
                     }
                 }
 

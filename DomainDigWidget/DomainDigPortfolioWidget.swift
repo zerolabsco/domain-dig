@@ -97,18 +97,21 @@ struct DomainDigWidgetView: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                countPill(data.healthyCount, Color(.statusPositive))
-                countPill(data.warningCount, Color(.statusWarning))
-                countPill(data.criticalCount, Color(.statusCritical))
+                countPill(data.healthyCount, Color(.statusPositive), "healthy")
+                countPill(data.warningCount, Color(.statusWarning), "warning")
+                countPill(data.criticalCount, Color(.statusCritical), "critical")
             }
         }
     }
 
-    private func countPill(_ value: Int, _ color: Color) -> some View {
+    private func countPill(_ value: Int, _ color: Color, _ label: String) -> some View {
         HStack(spacing: 3) {
             Circle().fill(color).frame(width: 7, height: 7)
             Text("\(value)").font(.caption).fontWeight(.medium)
         }
+        // A coloured dot and a number say nothing on their own.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(value) \(label)")
     }
 
     // MARK: Medium / Large
@@ -176,6 +179,31 @@ struct DomainDigWidgetView: View {
                 .font(.caption2)
                 .foregroundStyle(Color(.appTextSecondary))
         }
+        // The status is a silent 8pt dot and the cert countdown is bare ("12d"),
+        // both meaningless to VoiceOver. Collapse the row into one spoken phrase.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(rowAccessibilityLabel(domain))
+    }
+
+    private func rowAccessibilityLabel(_ domain: DomainDigWidgetDomain) -> String {
+        var parts = [domain.domain, statusLabel(domain.status)]
+        if domain.isPinned { parts.append("pinned") }
+        parts.append(certAccessibilityLabel(domain))
+        return parts.joined(separator: ", ")
+    }
+
+    private func statusLabel(_ status: DomainDigWidgetStatus) -> String {
+        switch status {
+        case .healthy: return "healthy"
+        case .warning: return "warning"
+        case .critical: return "critical"
+        }
+    }
+
+    private func certAccessibilityLabel(_ domain: DomainDigWidgetDomain) -> String {
+        guard let days = domain.certDaysRemaining else { return "certificate status unknown" }
+        if days < 0 { return "certificate expired" }
+        return "certificate expires in \(days) day\(days == 1 ? "" : "s")"
     }
 
     private func certLabel(for domain: DomainDigWidgetDomain) -> String {
