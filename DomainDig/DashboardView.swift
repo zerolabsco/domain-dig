@@ -390,19 +390,31 @@ private struct PortfolioExpiryRow: View {
     let state: PortfolioDomainStatus
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(state.trackedDomain.domain)
-                    .font(appDensity.font(.callout))
-                    .foregroundStyle(.primary)
-                Text(expirySubtitle)
-                    .font(appDensity.font(.caption))
-                    .foregroundStyle(Color(.appTextSecondary))
+        // Wide while it fits; stacked at accessibility sizes so the badge does
+        // not letter-wrap beside a long domain.
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                expiryText
+                Spacer()
+                AppStatusBadgeView(model: badgeModel)
             }
-            Spacer()
-            AppStatusBadgeView(model: badgeModel)
+            VStack(alignment: .leading, spacing: 6) {
+                expiryText
+                AppStatusBadgeView(model: badgeModel)
+            }
         }
         .padding(.vertical, 4)
+    }
+
+    private var expiryText: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(state.trackedDomain.domain)
+                .font(appDensity.font(.callout))
+                .foregroundStyle(.primary)
+            Text(expirySubtitle)
+                .font(appDensity.font(.caption))
+                .foregroundStyle(Color(.appTextSecondary))
+        }
     }
 
     private var expirySubtitle: String {

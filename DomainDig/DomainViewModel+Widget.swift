@@ -5,6 +5,11 @@ extension DomainViewModel {
     /// Publishes the current portfolio state to the App Group container so the
     /// widget can render it, then asks WidgetKit to refresh its timelines.
     func refreshWidgetData() {
+        #if DEBUG
+        // Fixture sessions must not write fixture domains into the shared
+        // widget store — it is an App Group file that outlives the launch.
+        if auditFixturesActive { return }
+        #endif
         let data = portfolioDashboardData
         let snapshot = data.snapshot
 

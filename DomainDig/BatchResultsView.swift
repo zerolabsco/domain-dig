@@ -59,16 +59,22 @@ struct BatchResultRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: appDensity.metrics.rowSpacing + 1) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(result.domain)
-                    .font(appDensity.font(.callout))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                Spacer(minLength: 8)
-                Text(result.resultSource.label.lowercased())
-                    .font(appDensity.font(.caption2))
-                    .foregroundStyle(Color(.appTextSecondary))
-                AppStatusBadgeView(model: quickStatusBadge)
+            // Same reflow as WatchlistRowView: wide while it fits, stacked at
+            // accessibility sizes so the badge cannot letter-wrap vertically.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    domainTitle
+                    Spacer(minLength: 8)
+                    sourceLabel
+                    AppStatusBadgeView(model: quickStatusBadge)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    domainTitle
+                    HStack(spacing: 8) {
+                        AppStatusBadgeView(model: quickStatusBadge)
+                        sourceLabel
+                    }
+                }
             }
 
             HStack(spacing: 10) {
@@ -131,6 +137,21 @@ struct BatchResultRowView: View {
             changeLabel: changeContentLabel,
             changeValue: changeContentValue
         ))
+    }
+
+    private var domainTitle: some View {
+        Text(result.domain)
+            .font(appDensity.font(.callout))
+            .foregroundStyle(.primary)
+            .lineLimit(3)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var sourceLabel: some View {
+        Text(result.resultSource.label.lowercased())
+            .font(appDensity.font(.caption2))
+            .foregroundStyle(Color(.appTextSecondary))
     }
 
     private var changeContentLabel: String {

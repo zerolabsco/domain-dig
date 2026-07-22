@@ -43,11 +43,20 @@ enum AccessibilityAuditHarness {
     /// How many times to retry an audit that misses its internal deadline.
     private static let auditAttempts = 3
 
+    /// Launch argument that seeds deterministic in-memory tracked domains and
+    /// batch results (DEBUG builds only; never persisted). Without it the dense
+    /// rows and portfolio sections render nothing, which is how five phases of
+    /// row treatment went unmeasured.
+    private static let seedFixturesArgument = "DOMAIN_DIG_SEED_FIXTURES"
+
     /// Launches the app with feature gating lifted, optionally at a specific
-    /// content size category.
-    static func launch(contentSizeCategory: String? = nil) -> XCUIApplication {
+    /// content size category and with the audit fixtures seeded.
+    static func launch(contentSizeCategory: String? = nil, seeded: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [forceProPlusArgument]
+        if seeded {
+            app.launchArguments.append(seedFixturesArgument)
+        }
         if let contentSizeCategory {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", contentSizeCategory]
         }
