@@ -182,6 +182,7 @@ struct ContentView: View {
                             Image(systemName: "xmark.circle")
                                 .foregroundStyle(Color(.appTextSecondary))
                         }
+                        .accessibilityLabel("Clear results")
                     }
                 }
             }
@@ -194,6 +195,15 @@ struct ContentView: View {
         }
         .onChange(of: viewModel.searchedDomain) { _, _ in
             collapsedSections = defaultCollapsedSections
+        }
+        .onChange(of: viewModel.resultsLoaded) { wasLoaded, isLoaded in
+            // Single-lookup completion has no single view-model moment
+            // (`resultsLoaded` is derived from many loading flags), so the
+            // announcement is posted from the view where the transition is
+            // observable. The batch path announces from the view model directly.
+            guard !wasLoaded, isLoaded, viewModel.hasRun else { return }
+            let summary = AppStatusFactory.availability(viewModel.availabilityResult?.status).title
+            AppAccessibility.announce("Lookup complete for \(viewModel.searchedDomain). \(summary).")
         }
         .onChange(of: viewModel.rerunNavigationToken) { _, _ in
             navigationPath = NavigationPath()
@@ -544,6 +554,7 @@ struct ContentView: View {
                         .font(appDensity.font(.body, design: .default))
                         .foregroundStyle(Color(.appTextSecondary))
                 }
+                .accessibilityLabel("Actions")
                 Button {
                     viewModel.toggleSavedDomain()
                 } label: {
@@ -551,6 +562,9 @@ struct ContentView: View {
                         .font(appDensity.font(.body, design: .default))
                         .foregroundStyle(viewModel.isCurrentDomainSaved ? Color(.statusWarning) : .secondary)
                 }
+                .accessibilityLabel("Save domain")
+                .accessibilityValue(viewModel.isCurrentDomainSaved ? "Saved" : "Not saved")
+                .accessibilityAddTraits(viewModel.isCurrentDomainSaved ? .isSelected : [])
                 Menu {
                     Button("Export TXT") {
                         shareSingleResults(format: .text)
@@ -583,6 +597,7 @@ struct ContentView: View {
                         .font(appDensity.font(.body, design: .default))
                         .foregroundStyle(Color(.appTextSecondary))
                 }
+                .accessibilityLabel("Export")
             }
         }
     }
@@ -1345,6 +1360,9 @@ struct DomainSectionView: View {
                     }
                     .buttonStyle(.bordered)
                     .font(appDensity.font(.caption))
+                    .accessibilityLabel("Pin domain")
+                    .accessibilityValue(trackedDomain.isPinned ? "Pinned" : "Not pinned")
+                    .accessibilityAddTraits(trackedDomain.isPinned ? .isSelected : [])
                     if let onEditNote {
                         Button("Note") {
                             onEditNote()
@@ -2415,6 +2433,7 @@ struct SectionTitleView: View {
         Text(title)
             .font(appDensity.font(.headline, design: .default, weight: .semibold))
             .foregroundStyle(.primary)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -2570,12 +2589,7 @@ struct LabeledValueRow: View {
                     Text(row.label)
                         .font(appDensity.font(.caption2))
                         .foregroundStyle(Color(.appTextSecondary))
-                    Text(row.value)
-                        .font(appDensity.font(.caption))
-                        .foregroundStyle(ResultColors.color(for: row.tone))
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
+                    valueText
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
@@ -2586,6 +2600,31 @@ struct LabeledValueRow: View {
             }
         }
         .frame(minHeight: appDensity.metrics.rowMinHeight, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private var valueText: some View {
+        let base = Text(row.value)
+            .font(appDensity.font(.caption))
+            .foregroundStyle(ResultColors.color(for: row.tone))
+
+        switch row.speechStyle {
+        case .plain:
+            base
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+        case .technical:
+            // Record values and identifiers: keep punctuation audible (SPF/DMARC
+            // separators are semantically load-bearing) and let VoiceOver use its
+            // code-reading heuristics.
+            base
+                .speechAlwaysIncludesPunctuation()
+                .accessibilityTextContentType(.sourceCode)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+        }
     }
 }
 

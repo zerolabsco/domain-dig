@@ -63,6 +63,7 @@ struct TimelineView: View {
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                 }
+                .accessibilityLabel("Group timeline")
 
                 Button("Compare") {
                     if viewModel.selectedSnapshots.count == 2 {

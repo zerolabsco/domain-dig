@@ -251,6 +251,10 @@ struct AppStatusBadgeView: View {
         .padding(.vertical, 5)
         .background(model.backgroundColor)
         .clipShape(Capsule())
+        // Read as one word ("Critical"), not "icon, Critical". The symbol
+        // duplicates the title for VoiceOver.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(model.title)
     }
 }
 
@@ -301,6 +305,19 @@ enum AppClipboard {
         #elseif canImport(AppKit)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(value, forType: .string)
+        #endif
+    }
+}
+
+enum AppAccessibility {
+    /// Speaks a status update through VoiceOver without moving focus. Used at
+    /// lookup and sweep completion so a blind user hears the result land instead
+    /// of having to hunt for whether anything changed.
+    static func announce(_ message: String) {
+        #if canImport(UIKit)
+        var announcement = AttributedString(message)
+        announcement.accessibilitySpeechAnnouncementPriority = .high
+        AccessibilityNotification.Announcement(announcement).post()
         #endif
     }
 }
@@ -438,11 +455,19 @@ struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
                     Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color(.appTextSecondary))
+                        .accessibilityHidden(true)
                 }
                 .contentShape(Rectangle())
                 .frame(minHeight: appDensity.metrics.controlMinHeight, alignment: .center)
             }
             .buttonStyle(.plain)
+            // A header that is also the expand/collapse control. The chevron is
+            // decorative; state and hint carry it to VoiceOver instead. No
+            // `children: .combine` here — `trailing()` may hold its own controls
+            // (Track, Pin), and combining would swallow them into the header.
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityValue(isCollapsed ? "Collapsed" : "Expanded")
+            .accessibilityHint(isCollapsed ? "Expands the section" : "Collapses the section")
 
             if !isCollapsed {
                 content()

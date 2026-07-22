@@ -17,11 +17,24 @@ struct SummaryFieldViewData: Identifiable {
     let tone: ResultTone
 }
 
+/// How VoiceOver should pronounce a row's value.
+///
+/// DNS records, cipher suites, and the like are read as prose by default, which
+/// mangles load-bearing punctuation (`;`, `~`, `_`) and technical tokens. See
+/// `Docs/ACCESSIBILITY.md`.
+enum RowSpeechStyle {
+    /// Normal prose.
+    case plain
+    /// Record values and identifiers: include punctuation, use code heuristics.
+    case technical
+}
+
 struct InfoRowViewData: Identifiable {
     let id = UUID()
     let label: String
     let value: String
     let tone: ResultTone
+    var speechStyle: RowSpeechStyle = .plain
 }
 
 struct SectionMessageViewData {
@@ -3036,6 +3049,9 @@ final class DomainViewModel {
         )
         latestBatchSweepSummary = summary
         SweepActivityController.shared.end(changed: changedCount, warnings: warningCount)
+        AppAccessibility.announce(
+            "Sweep complete. \(summary.results.count) domains, \(changedCount) changed, \(warningCount) warnings."
+        )
 
         if source == .workflow, let activeWorkflowRunID, let activeWorkflowRunName {
             let workflowReports: [DomainReport] = summary.results.compactMap { result in
@@ -4088,8 +4104,8 @@ final class DomainViewModel {
         snapshot.dnsSections.map { section in
             DNSRecordSectionViewData(
                 title: section.recordType.rawValue,
-                rows: section.records.map { InfoRowViewData(label: "TTL \($0.ttl)", value: $0.value, tone: .primary) },
-                wildcardRows: section.wildcardRecords.map { InfoRowViewData(label: "TTL \($0.ttl)", value: $0.value, tone: .primary) },
+                rows: section.records.map { InfoRowViewData(label: "TTL \($0.ttl)", value: $0.value, tone: .primary, speechStyle: .technical) },
+                wildcardRows: section.wildcardRecords.map { InfoRowViewData(label: "TTL \($0.ttl)", value: $0.value, tone: .primary, speechStyle: .technical) },
                 wildcardTitle: section.wildcardRecords.isEmpty ? nil : "*.\(snapshot.domain)",
                 message: section.error.map { SectionMessageViewData(text: $0, isError: true) } ??
                     ((section.records.isEmpty && section.wildcardRecords.isEmpty) ? SectionMessageViewData(text: "No records found", isError: false) : nil)
@@ -4126,7 +4142,7 @@ final class DomainViewModel {
             rows.append(InfoRowViewData(label: "TLS Version", value: tlsVersion, tone: .secondary))
         }
         if let cipherSuite = sslInfo.cipherSuite {
-            rows.append(InfoRowViewData(label: "Cipher Suite", value: cipherSuite, tone: .secondary))
+            rows.append(InfoRowViewData(label: "Cipher Suite", value: cipherSuite, tone: .secondary, speechStyle: .technical))
         }
         if let hstsPreloaded = snapshot.hstsPreloaded {
             rows.append(InfoRowViewData(label: "HSTS Preload", value: hstsPreloaded ? "Preloaded" : "Not preloaded", tone: hstsPreloaded ? .success : .secondary))

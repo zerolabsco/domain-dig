@@ -166,6 +166,7 @@ struct DashboardView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
+                    .accessibilityLabel("Refresh all tracked domains")
                     .disabled(viewModel.batchLookupRunning)
                 }
             }

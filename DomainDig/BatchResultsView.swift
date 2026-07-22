@@ -116,6 +116,39 @@ struct BatchResultRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
         .frame(minHeight: appDensity.metrics.rowMinHeight + 12, alignment: .topLeading)
+        // One VoiceOver stop per row: domain as the label, status as the value,
+        // everything else on the More Content rotor. Reading all eight text
+        // elements inline would make a 200-domain sweep unnavigable. `.high`
+        // importance is spoken without the rotor; the rest waits for a swipe.
+        // Extracted to a modifier — inlined, the chain broke the type-checker.
+        .modifier(BatchRowAccessibility(
+            domain: result.domain,
+            status: "\(quickStatusBadge.title), \(availabilityText)",
+            risk: riskDescription,
+            ip: result.primaryIP ?? "none",
+            checked: result.timestamp.formatted(date: .abbreviated, time: .shortened),
+            source: result.resultSource.label,
+            changeLabel: changeContentLabel,
+            changeValue: changeContentValue
+        ))
+    }
+
+    private var changeContentLabel: String {
+        result.changeClassification != nil ? "Impact" : "Status"
+    }
+
+    private var changeContentValue: String {
+        if let change = result.changeClassification {
+            return change.title
+        }
+        return result.errorMessage ?? result.summaryMessage ?? quickStatusBadge.title
+    }
+
+    private var riskDescription: String {
+        if let score = result.riskScore, let level = result.riskLevel {
+            return "\(score), \(level.title)"
+        }
+        return "not scored"
     }
 
     private var availabilityText: String {
@@ -162,5 +195,32 @@ struct BatchResultRowView: View {
         case .failed:
             return .init(title: "Failed", systemImage: "xmark.circle.fill", foregroundColor: Color(.statusCritical), backgroundColor: Color(.statusCriticalSurface))
         }
+    }
+}
+
+/// Row-level VoiceOver treatment for a batch result: a single element whose
+/// label is the domain and whose value is the status, with the remaining fields
+/// on the More Content rotor. Extracted from the row body because inlining the
+/// full modifier chain broke Swift's type-checker.
+private struct BatchRowAccessibility: ViewModifier {
+    let domain: String
+    let status: String
+    let risk: String
+    let ip: String
+    let checked: String
+    let source: String
+    let changeLabel: String
+    let changeValue: String
+
+    func body(content: Content) -> some View {
+        content
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(domain)
+            .accessibilityValue(status)
+            .accessibilityCustomContent("Risk", risk, importance: .high)
+            .accessibilityCustomContent("IP address", ip)
+            .accessibilityCustomContent("Checked", checked)
+            .accessibilityCustomContent("Source", source)
+            .accessibilityCustomContent(LocalizedStringResource(stringLiteral: changeLabel), changeValue)
     }
 }
