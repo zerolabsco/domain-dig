@@ -168,6 +168,7 @@ private struct TimelineRow: View {
 }
 
 struct TimelineDiffView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var viewModel: DomainViewModel
     let diff: DomainDiff
     @Binding var focusedSectionID: String?
@@ -218,7 +219,7 @@ struct TimelineDiffView: View {
 
     private func scroll(proxy: ScrollViewProxy) {
         guard let focusedSectionID else { return }
-        withAnimation {
+        withAnimation(reduceMotion ? nil : .default) {
             proxy.scrollTo(focusedSectionID, anchor: .top)
         }
     }

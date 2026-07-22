@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @Environment(\.appDensity) private var appDensity
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @Bindable var viewModel: DomainViewModel
     @State private var collapsedGroups = Set<String>()
 
@@ -44,15 +45,33 @@ struct DashboardView: View {
                                 Button {
                                     viewModel.dashboardFilter = filter
                                 } label: {
-                                    Text(filter.title)
-                                        .font(appDensity.font(.caption, weight: .semibold))
-                                        .foregroundStyle(viewModel.dashboardFilter == filter ? Color(.appOnAccent) : Color.primary)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(viewModel.dashboardFilter == filter ? Color(.statusInfo) : Color(.appSurfaceElevated))
-                                        .clipShape(Capsule())
+                                    let isSelected = viewModel.dashboardFilter == filter
+                                    HStack(spacing: 4) {
+                                        // Selection is a fill-colour change; under
+                                        // Differentiate Without Color add a
+                                        // checkmark + border so it does not depend
+                                        // on hue alone.
+                                        if isSelected, differentiateWithoutColor {
+                                            Image(systemName: "checkmark")
+                                                .font(.caption2.weight(.bold))
+                                        }
+                                        Text(filter.title)
+                                            .font(appDensity.font(.caption, weight: .semibold))
+                                    }
+                                    .foregroundStyle(isSelected ? Color(.appOnAccent) : Color.primary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(isSelected ? Color(.statusInfo) : Color(.appSurfaceElevated))
+                                    .overlay(
+                                        Capsule().strokeBorder(
+                                            Color.primary,
+                                            lineWidth: isSelected && differentiateWithoutColor ? 1.5 : 0
+                                        )
+                                    )
+                                    .clipShape(Capsule())
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityAddTraits(viewModel.dashboardFilter == filter ? .isSelected : [])
                             }
                         }
                         .padding(.vertical, 4)
@@ -198,10 +217,18 @@ struct DashboardView: View {
                     // Was a fixed 28pt, which ignored Dynamic Type entirely.
                     .font(.system(.title, design: .rounded, weight: .bold))
                     .foregroundStyle(.primary)
-                HStack {
-                    Circle()
-                        .fill(tint)
-                        .frame(width: 8, height: 8)
+                HStack(spacing: 5) {
+                    // A symbol under Differentiate Without Color (where a bare
+                    // colour dot conveys nothing), a plain dot otherwise.
+                    if differentiateWithoutColor {
+                        Image(systemName: symbol(for: filter))
+                            .font(.caption2)
+                            .foregroundStyle(tint)
+                    } else {
+                        Circle()
+                            .fill(tint)
+                            .frame(width: 8, height: 8)
+                    }
                     Text(filter.title)
                         .font(appDensity.font(.caption2, design: .default, weight: .semibold))
                         .foregroundStyle(tint)
@@ -213,6 +240,18 @@ struct DashboardView: View {
             .clipShape(RoundedRectangle(cornerRadius: appDensity.metrics.cardCornerRadius))
         }
         .buttonStyle(.plain)
+    }
+
+    private func symbol(for filter: PortfolioFilterOption) -> String {
+        switch filter {
+        case .all: return "square.grid.2x2.fill"
+        case .healthy: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .critical: return "exclamationmark.octagon.fill"
+        case .changed: return "arrow.triangle.2.circlepath"
+        case .expiring: return "clock.badge.exclamationmark.fill"
+        case .unreachable: return "wifi.slash"
+        }
     }
 
     private func cardBackground(for filter: PortfolioFilterOption) -> some ShapeStyle {

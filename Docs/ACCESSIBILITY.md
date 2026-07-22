@@ -238,6 +238,31 @@ pre-commit that blocks every commit. A hook routinely bypassed with
   and cipher suites; extend it wherever the view model emits a fingerprint,
   serial, or record string.
 
+## Color independence, motion, transparency
+
+- **Status is never colour-only.** In-app badges already pair a symbol with the
+  colour. The widget status dot is now an SF Symbol
+  (`checkmark.circle.fill` / `exclamationmark.triangle.fill` /
+  `exclamationmark.octagon.fill`) — the same vocabulary as the badges, so a
+  status reads consistently across surfaces and survives greyscale.
+- **`accessibilityDifferentiateWithoutColor`** adds redundant shape only when the
+  user asks for it, avoiding clutter otherwise: the Dashboard summary-card dot
+  becomes a per-filter symbol, the selected quick-filter chip gains a checkmark
+  and border (selection was fill-colour only), and `LabeledValueRow` prefixes a
+  warning/failure symbol.
+- **`accessibilityReduceMotion`** guards all five animation sites via
+  `withAnimation(reduceMotion ? nil : …)` / `.animation(reduceMotion ? nil : …)`:
+  `AppCopyButton`'s check cross-fade, `CollapsibleSectionView`'s expand/collapse,
+  `TimelineDiffView`'s scroll, and `WatchlistView`'s list reorder.
+- **`accessibilityReduceTransparency`** swaps the single `.thinMaterial` for an
+  opaque `AppSurfaceElevated` capsule.
+
+These cannot be verified by `simctl`, which toggles only Increase Contrast — the
+other three settings live in the simulator's Settings app. They are correct by
+construction and build-clean; their runtime behaviour is part of the Phase 6
+manual pass. `SweepActivityController` was dropped from the motion list: it is
+pure ActivityKit lifecycle with no animation to guard.
+
 ### What the automated audit cannot check
 
 `performAccessibilityAudit()` validates descriptions, traits, contrast, hit

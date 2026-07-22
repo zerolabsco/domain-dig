@@ -260,6 +260,7 @@ struct AppStatusBadgeView: View {
 
 struct AppCopyButton: View {
     @Environment(\.appDensity) private var appDensity
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var didCopy = false
 
     /// Grows with Dynamic Type. The `max(_, minimumTapTarget)` floor matters
@@ -274,13 +275,13 @@ struct AppCopyButton: View {
         Button {
             AppClipboard.copy(value)
             AppHaptics.copy()
-            withAnimation(.easeInOut(duration: 0.18)) {
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
                 didCopy = true
             }
             Task {
                 try? await Task.sleep(nanoseconds: 900_000_000)
                 await MainActor.run {
-                    withAnimation(.easeInOut(duration: 0.18)) {
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
                         didCopy = false
                     }
                 }
@@ -411,6 +412,7 @@ struct EmptyStateCardView: View {
 
 struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
     @Environment(\.appDensity) private var appDensity
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let title: String
     @Binding var isCollapsed: Bool
@@ -435,7 +437,7 @@ struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: appDensity.metrics.cardSpacing) {
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
                     isCollapsed.toggle()
                 }
             } label: {
