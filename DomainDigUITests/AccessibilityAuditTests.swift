@@ -89,7 +89,7 @@ final class AccessibilityAuditTests: XCTestCase {
     func testSeededDashboard() throws {
         let app = AccessibilityAuditHarness.launch(seeded: true)
         app.selectRootTab("Dashboard")
-        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-dashboard", test: self)
+        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-dashboard", test: self, reportOnly: true)
         try XCTSkipUnless(audited, "Audit did not complete in time for seeded Dashboard")
     }
 
@@ -100,7 +100,7 @@ final class AccessibilityAuditTests: XCTestCase {
         let trackedDomains = app.buttons["Tracked Domains"]
         XCTAssertTrue(trackedDomains.waitForExistence(timeout: 5))
         trackedDomains.tap()
-        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-tracked-domains", test: self)
+        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-tracked-domains", test: self, reportOnly: true)
         try XCTSkipUnless(audited, "Audit did not complete in time for seeded Tracked Domains")
     }
 
@@ -108,7 +108,7 @@ final class AccessibilityAuditTests: XCTestCase {
     func testSeededBatchResults() throws {
         let app = AccessibilityAuditHarness.launch(seeded: true)
         app.selectRootTab("Inspect")
-        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-batch", test: self)
+        let audited = try AccessibilityAuditHarness.audit(app, screen: "seeded-batch", test: self, reportOnly: true)
         try XCTSkipUnless(audited, "Audit did not complete in time for seeded batch results")
     }
 
@@ -123,12 +123,12 @@ final class AccessibilityAuditTests: XCTestCase {
         var unaudited: [String] = []
 
         app.selectRootTab("Dashboard")
-        if try !AccessibilityAuditHarness.audit(app, screen: "seeded-dashboard-accessibilityXXXL", test: self) {
+        if try !AccessibilityAuditHarness.audit(app, screen: "seeded-dashboard-accessibilityXXXL", test: self, reportOnly: true) {
             unaudited.append("Dashboard")
         }
 
         app.selectRootTab("Inspect")
-        if try !AccessibilityAuditHarness.audit(app, screen: "seeded-batch-accessibilityXXXL", test: self) {
+        if try !AccessibilityAuditHarness.audit(app, screen: "seeded-batch-accessibilityXXXL", test: self, reportOnly: true) {
             unaudited.append("Inspect batch")
         }
 
@@ -136,7 +136,7 @@ final class AccessibilityAuditTests: XCTestCase {
         let trackedDomains = app.buttons["Tracked Domains"]
         if trackedDomains.waitForExistence(timeout: 5) {
             trackedDomains.tap()
-            if try !AccessibilityAuditHarness.audit(app, screen: "seeded-tracked-domains-accessibilityXXXL", test: self) {
+            if try !AccessibilityAuditHarness.audit(app, screen: "seeded-tracked-domains-accessibilityXXXL", test: self, reportOnly: true) {
                 unaudited.append("Tracked Domains")
             }
         }

@@ -110,27 +110,38 @@ Users override it under Settings → Display.
 Dark mode reports 18 findings and light mode 21; the three extra are the section
 headers above. Everything the app actually controls passes in both schemes.
 
-## Findings are reported, not enforced
+## Enforcement — the ratchet is engaged
 
-The audit surfaces violations that exist today, so failing on all of them would
-block every unrelated change until the whole pass lands. Instead, findings are
-logged and attached to the result bundle tagged `[report]` or `[FAIL]`.
+With phases 1–5 landed, `AccessibilityAuditHarness.enforcedAuditTypes` enforces
+**`.textClipped`, `.dynamicType`, `.hitRegion`, `.elementDetection`,
+`.sufficientElementDescription`, `.trait`** on the empty-state test suite. A
+named finding in any of these fails CI — regressions in five phases of work are
+now gated, not merely reported.
 
-Enforcement is the committed constant
-`AccessibilityAuditHarness.enforcedAuditTypes`. Widen it as each phase clears a
-category:
+Three deliberate carve-outs, each with its evidence:
 
-| After phase | Enforce |
-| --- | --- |
-| 2 — semantic colors + light mode | `.contrast` |
-| 3 — Dynamic Type + reflow | `.textClipped`, `.dynamicType`, `.hitRegion` |
-| 4 — VoiceOver | `.elementDetection`, `.sufficientElementDescription`, `.trait` |
+1. **`.contrast` stays report-only.** The two long-standing Settings findings
+   are rows scrolled under the translucent tab bar; their attribution flips
+   between a row name and nil run-to-run, so no suppression is narrow enough to
+   keep CI stable. The centralised palette in `Shared/Colors.xcassets` is the
+   actual guard against contrast regressions.
+2. **The seeded tests run `reportOnly`.** Bisecting the row/badge accessibility
+   modifiers showed the audit degrades on `children: .ignore` content — the
+   *correct* VoiceOver treatment for dense rows — emitting unattributed
+   contrast/dynamicType failures on rows that measure 6–7:1 and render
+   correctly. Their burndown still prints; it just doesn't gate.
+3. **Characterised noise is suppressed narrowly and always logged** with a
+   `[noise: reason]` marker — disabled controls (WCAG 1.4.3 exempt), "nearly
+   passed" near-misses, system field placeholders (clipped at any length —
+   proven by shortening them to no effect), and unattributed
+   clipped/dynamic-type artifacts. Nothing disappears silently; see
+   `noiseReason(for:)` for each rule's provenance.
 
-A constant rather than a CI setting, for two reasons. Environment variables do
-not work: neither a plain `xcodebuild` env var nor a `TEST_RUNNER_`-prefixed
-build setting reaches the UI test process, so the toggle silently did nothing.
-And a committed value makes "when did contrast become enforced?" answerable with
-`git blame` instead of CI tribal knowledge.
+Enforcement is a committed constant rather than a CI setting, for two reasons.
+Environment variables do not work: neither a plain `xcodebuild` env var nor a
+`TEST_RUNNER_`-prefixed build setting reaches the UI test process, so the toggle
+silently did nothing. And a committed value makes "when did clipping become
+enforced?" answerable with `git blame` instead of CI tribal knowledge.
 
 ## Why coverage is split between local and CI
 
