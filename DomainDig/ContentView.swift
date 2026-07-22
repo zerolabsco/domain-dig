@@ -1352,7 +1352,16 @@ struct DomainSectionView: View {
         CollapsibleSectionView(title: "Domain", isCollapsed: $isCollapsed) {
             if let trackedDomain {
                 HStack(spacing: 8) {
-                    AppStatusBadgeView(model: .init(title: "Tracked", systemImage: "eye.fill", foregroundColor: Color(.statusPositive), backgroundColor: Color(.statusPositiveSurface)))
+                    // Icon-only: the header also carries Pin and Note, and the
+                    // full "Tracked" pill compresses at larger text sizes.
+                    // VoiceOver still hears the word via the label.
+                    Image(systemName: "eye.fill")
+                        .font(appDensity.font(.caption))
+                        .foregroundStyle(Color(.statusPositive))
+                        .padding(6)
+                        .background(Color(.statusPositiveSurface), in: Circle())
+                        .fixedSize()
+                        .accessibilityLabel("Tracked")
                     Button {
                         onTogglePinned()
                     } label: {
@@ -1369,6 +1378,8 @@ struct DomainSectionView: View {
                         }
                         .buttonStyle(.bordered)
                         .font(appDensity.font(.caption))
+                        // Never compress into a vertical letter column.
+                        .fixedSize()
                     }
                 }
             } else {
@@ -1378,6 +1389,7 @@ struct DomainSectionView: View {
                 }
                 .buttonStyle(.bordered)
                 .font(appDensity.font(.caption))
+                .fixedSize()
             }
         } content: {
             CardView(allowsHorizontalScroll: false) {

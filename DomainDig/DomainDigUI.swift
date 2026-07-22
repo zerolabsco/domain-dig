@@ -446,23 +446,26 @@ struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
                     isCollapsed.toggle()
                 }
             } label: {
-                HStack(alignment: .center, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(title)
-                            .font(appDensity.font(.headline, weight: .semibold))
-                            .foregroundStyle(.primary)
-                        if let subtitle {
-                            Text(subtitle)
-                                .font(appDensity.font(.caption))
-                                .foregroundStyle(Color(.appTextSecondary))
-                        }
+                // One line while the title, trailing controls, and chevron
+                // genuinely fit; otherwise the trailing controls drop below the
+                // title. Without this, a squeezed trailing button letter-wraps
+                // vertically ("N o t e" as a screen-tall capsule) at larger
+                // Dynamic Type sizes — same pathology as the row badges.
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center, spacing: 10) {
+                        titleBlock
+                        Spacer(minLength: 8)
+                        trailing()
+                        chevron
                     }
-                    Spacer(minLength: 8)
-                    trailing()
-                    Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color(.appTextSecondary))
-                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .center, spacing: 10) {
+                            titleBlock
+                            Spacer(minLength: 8)
+                            chevron
+                        }
+                        trailing()
+                    }
                 }
                 .contentShape(Rectangle())
                 .frame(minHeight: appDensity.metrics.controlMinHeight, alignment: .center)
@@ -481,6 +484,29 @@ struct CollapsibleSectionView<HeaderTrailing: View, Content: View>: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+    }
+
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(appDensity.font(.headline, weight: .semibold))
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.leading)
+            if let subtitle {
+                Text(subtitle)
+                    .font(appDensity.font(.caption))
+                    .foregroundStyle(Color(.appTextSecondary))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var chevron: some View {
+        Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Color(.appTextSecondary))
+            .accessibilityHidden(true)
     }
 }
 
