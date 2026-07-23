@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.8.3`.
+Current version: `v4.9.0`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -185,6 +185,65 @@ hits on SwiftUI `$binding` shorthand in `AuditModeView`, which cannot be
 renamed. These want a *Won't Fix* / *Safe* resolution in SonarCloud rather than
 a code change.
 
+## v4.9.0 Minor: Accessibility, Appearance & Engineering Health — ✅ shipped
+
+Goal: make the app usable by every iOS user — full accessibility pass (#21),
+light mode, and the engineering scaffolding to keep both from regressing.
+
+- **Semantic colour system** — every hard-coded colour replaced with adaptive
+  colorsets in `Shared/Colors.xcassets` (Any/Dark + High Contrast variants),
+  shared by app, widget, and share extension via the synchronized `Shared`
+  group. Every status colour clears WCAG AA on its page, its card, and its
+  badge surface, in both schemes; measured, not asserted. The accent is now
+  blue (`#0000FF` light / `#4DA3FF` dark), split into foreground
+  (`StatusInfo`), fill (`AccentFill`), and on-fill (`AppOnAccent`) roles
+  because one value cannot serve as both text-on-dark and fill-behind-white.
+  `AppStatusTone` pairs each status foreground with an authored surface.
+- **Light mode unlocked** — the 16 scattered `.preferredColorScheme(.dark)`
+  calls removed; appearance (System/Light/Dark) is applied once at the
+  `WindowGroup` and exposed under Settings → Display. `.secondary` (3.29:1 on a
+  light card) replaced with `AppTextSecondary` across 191 sites.
+- **Dynamic Type & reflow** — `Label`-clipped empty-state titles fixed, the
+  44pt tap-target floor enforced (`AppCopyButton` was 30×30;
+  `controlMinHeight` was 42), `CardView`'s horizontal-scroll default flipped
+  to reflow, dense rows (`WatchlistRowView`, `BatchResultRowView`,
+  `PortfolioExpiryRow`) and the collapsible section headers rebuilt on
+  `ViewThatFits` so badges and buttons can never letter-wrap vertically, and
+  the widget clamped at `accessibility1` (fixed canvas, no scroll).
+- **VoiceOver** — labels on every icon-only control (label-in-name preserved
+  for Voice Control), selected-state on all toggles, badges read as one word,
+  heading-rotor navigation, dense rows collapsed to one element with the
+  detail on the More Content rotor (`accessibilityCustomContent`), technical
+  strings (DNS records, cipher suites) spoken with punctuation, and lookup/
+  sweep completion announcements. Widget rows read as a single phrase.
+- **Colour independence, motion, transparency** — widget status uses the badge
+  symbol vocabulary instead of colour-only dots; `differentiateWithoutColor`
+  adds symbols/borders on demand; all five animation sites honour
+  `reduceMotion`; the one material honours `reduceTransparency`.
+- **Accessibility audit harness** — `DomainDigUITests` runs
+  `performAccessibilityAudit()` over every primary screen at default and
+  AccessibilityXXXL, on CI (newest runtime, clean merge-result checkout) and
+  locally (`Scripts/audit-a11y.sh`, real floor runtime, wired to an opt-in
+  pre-push hook). `DOMAIN_DIG_SEED_FIXTURES` seeds deterministic in-memory
+  rows so the dense paths actually render under audit. The **enforcement
+  ratchet is engaged**: named findings in six categories fail CI, with
+  narrowly characterised, always-logged noise suppressions. Manual
+  verification checklist in `Docs/ACCESSIBILITY_VERIFICATION.md`; findings
+  burndown 20 → 11 with every remaining item characterised as system noise.
+- **Swift 6 language mode** (#27) — all three product targets build under
+  `SWIFT_VERSION = 6.0` with zero warnings. `SMTPChannel` became an actor
+  (fixing a real `CheckedContinuation` double-resume hazard),
+  `SweepActivityController` stores a Sendable activity id, and the remaining
+  isolation issues were resolved layer by layer. The UITests target stays on
+  Swift 5 (XCTest override isolation), recorded as a decision.
+- **Project hygiene** — the misleading project-level deployment target
+  (26.2 shadowing the real 17.6) reconciled; CI selects simulators
+  floor-aware instead of first-match.
+
+Deferred: the Phase 6 manual device passes (VoiceOver walkthrough, Voice
+Control, iPad Full Keyboard Access, Liquid Glass runtime check) are tracked in
+`Docs/ACCESSIBILITY_VERIFICATION.md` and #21 — they close on device, not in CI.
+
 ## v5.0.0 Major: Contract Stabilization & Engineering Health
 
 Goal: earn long-term compatibility promises — and pay down the debt that the
@@ -194,10 +253,11 @@ feature releases above will accumulate.
   and settings.
 - Stabilize the public local API response contract; document compatibility
   guarantees and planned deprecations.
-- **Establish a test target.** The project currently has no XCTest target and no
-  tests; add one and cover the deterministic core first — `DomainReportBuilder`,
-  `DomainReportExporter`, `DomainDataPortabilityService` (merge/replace dedup),
-  and `DiffService` — before locking down external contracts.
+- **Extend the test net to the deterministic core.** v4.9.0 established
+  `DomainDigUITests` (accessibility audit + enforcement gate); unit coverage of
+  `DomainReportBuilder`, `DomainReportExporter`, `DomainDataPortabilityService`
+  (merge/replace dedup), and `DiffService` is still needed before locking down
+  external contracts.
 - **Decompose the god-files** behind that test net: `DomainViewModel.swift`
   (~4.7k lines) and `ContentView.swift` (~3.8k lines) into focused units
   (audit, monitoring, workflows, portability).
