@@ -6,13 +6,13 @@ import Foundation
 /// `DomainReportBuilder`) and returns a concise summary. Usable from
 /// Shortcuts, Spotlight, the Action button, and Siri.
 struct InspectDomainIntent: AppIntent {
-    static var title: LocalizedStringResource = "Inspect Domain"
-    static var description = IntentDescription(
+    static let title: LocalizedStringResource = "Inspect Domain"
+    static let description = IntentDescription(
         "Run a DomainDig inspection and return a summary of availability, risk, TLS, email security, and certificate health."
     )
 
     // Read-only inspection; no need to foreground the app.
-    static var openAppWhenRun = false
+    static let openAppWhenRun = false
 
     @Parameter(
         title: "Domain",
@@ -44,6 +44,7 @@ struct InspectDomainIntent: AppIntent {
     }
 
     /// Multi-line summary suitable for a returned Shortcuts text value.
+    @MainActor
     static func summaryText(for report: DomainReport) -> String {
         let dnssec: String
         switch report.dns.dnssecSigned {
@@ -68,6 +69,7 @@ struct InspectDomainIntent: AppIntent {
     }
 
     /// Short spoken/dialog line for Siri and the Shortcuts result banner.
+    @MainActor
     static func spokenSummary(for report: DomainReport) -> String {
         "\(report.domain) is \(report.availability.rawValue). Risk \(report.riskAssessment.level.title.lowercased()), health \(report.health.title.lowercased())."
     }
@@ -89,12 +91,12 @@ enum InspectDomainError: Error, CustomLocalizedStringResourceConvertible {
 /// existing view-model path (premium limits, monitoring, history linking,
 /// cloud-sync recording, and the paywall when over the free limit).
 struct AddToWatchlistIntent: AppIntent {
-    static var title: LocalizedStringResource = "Add Domain to Watchlist"
-    static var description = IntentDescription(
+    static let title: LocalizedStringResource = "Add Domain to Watchlist"
+    static let description = IntentDescription(
         "Open DomainDig and add a domain to your watchlist."
     )
 
-    static var openAppWhenRun = true
+    static let openAppWhenRun = true
 
     @Parameter(
         title: "Domain",
@@ -128,12 +130,12 @@ struct AddToWatchlistIntent: AppIntent {
 /// through the existing view-model batch path (`refreshAllTrackedDomains`), which
 /// enforces the batch feature gate and surfaces the paywall when needed.
 struct RunSweepIntent: AppIntent {
-    static var title: LocalizedStringResource = "Run Watchlist Sweep"
-    static var description = IntentDescription(
+    static let title: LocalizedStringResource = "Run Watchlist Sweep"
+    static let description = IntentDescription(
         "Open DomainDig and re-inspect every domain on your watchlist."
     )
 
-    static var openAppWhenRun = true
+    static let openAppWhenRun = true
 
     @MainActor
     func perform() async throws -> some IntentResult {

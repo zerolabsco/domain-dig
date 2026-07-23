@@ -24,14 +24,17 @@ final class ShareViewController: UIViewController {
             label.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -24)
         ])
 
-        extractSharedDomain { [weak self] domain in
-            DispatchQueue.main.async {
-                self?.finish(domain: domain)
-            }
+        // Task inherits this view controller's MainActor context, so finish()
+        // lands back on main without a manual dispatch. The continuation form
+        // also avoids sending a non-Sendable completion into loadItem's
+        // @Sendable handler. (#27)
+        Task { [weak self] in
+            let domain = await self?.extractSharedDomain()
+            self?.finish(domain: domain ?? nil)
         }
     }
 
-    private func extractSharedDomain(completion: @escaping (String?) -> Void) {
+    private func extractSharedDomain() async -> String? {
         let providers = (extensionContext?.inputItems ?? [])
             .compactMap { $0 as? NSExtensionItem }
             .flatMap { $0.attachments ?? [] }
@@ -39,14 +42,15 @@ final class ShareViewController: UIViewController {
         guard let provider = providers.first(where: {
             $0.hasItemConformingToTypeIdentifier(UTType.url.identifier)
         }) else {
-            completion(nil)
-            return
+            return nil
         }
 
-        provider.loadItem(forTypeIdentifier: UTType.url.identifier) { item, _ in
-            let url = item as? URL ?? (item as? Data).flatMap { URL(dataRepresentation: $0, relativeTo: nil) }
-            let host = url?.host?.trimmingCharacters(in: .whitespacesAndNewlines)
-            completion(host?.isEmpty == false ? host : nil)
+        return await withCheckedContinuation { continuation in
+            provider.loadItem(forTypeIdentifier: UTType.url.identifier) { item, _ in
+                let url = item as? URL ?? (item as? Data).flatMap { URL(dataRepresentation: $0, relativeTo: nil) }
+                let host = url?.host?.trimmingCharacters(in: .whitespacesAndNewlines)
+                continuation.resume(returning: host?.isEmpty == false ? host : nil)
+            }
         }
     }
 

@@ -1,9 +1,17 @@
 import Foundation
 
-struct CachedLookupResult<Value> {
+/// Opted out of the project's MainActor default isolation: this is a plain
+/// value pair constructed inside `actor LookupRuntime`, and a MainActor-bound
+/// memberwise init cannot be called from there under Swift 6.
+nonisolated struct CachedLookupResult<Value> {
     let value: Value
     let source: LookupResultSource
 }
+
+/// Opting out of MainActor isolation also opted out of the implicit
+/// Sendable that globally-isolated types get, which is what lets this cross
+/// from `actor LookupRuntime` back to its callers.
+extension CachedLookupResult: Sendable where Value: Sendable {}
 
 actor LookupRuntime {
     static let shared = LookupRuntime()

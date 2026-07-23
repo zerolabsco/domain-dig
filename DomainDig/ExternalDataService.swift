@@ -738,7 +738,10 @@ actor ExternalDataService {
         }
     }
 
-    private static let iso8601DateFormatter: ISO8601DateFormatter = {
+    // ISO8601DateFormatter is documented thread-safe ("ISO8601DateFormatter is
+    // thread-safe" — Apple docs), so sharing one instance across contexts is
+    // sound; the annotation records that the compiler cannot see it. (#27)
+    private nonisolated(unsafe) static let iso8601DateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter

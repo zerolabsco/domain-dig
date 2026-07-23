@@ -106,7 +106,10 @@ struct PortScanService {
         }
     }
 
-    private static func printableBanner(from data: Data?, error: Error?) -> String? {
+    /// Pure data transformation, called from the connection's background queue —
+    /// `nonisolated` opts it out of the project's MainActor default, which would
+    /// otherwise make this call a data-race diagnostic under Swift 6.
+    private nonisolated static func printableBanner(from data: Data?, error: Error?) -> String? {
         guard error == nil,
               let data,
               !data.isEmpty,
