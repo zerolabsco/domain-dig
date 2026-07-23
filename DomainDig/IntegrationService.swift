@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import os
 import Observation
 import Security
 
@@ -749,11 +750,17 @@ private enum SMTPClient {
         try await channel.sendRaw(body + "\r\n.\r\n")
         _ = try await channel.readResponse(expecting: [250])
         _ = try await channel.sendCommand("QUIT", expecting: [221])
-        channel.cancel()
+        await channel.cancel()
     }
 }
 
-private final class SMTPChannel {
+/// An actor, not a MainActor class. The previous shape inherited the project's
+/// MainActor default while running its receive loop on a background dispatch
+/// queue, so `parsedLines`/`lineWaiters`/`receiveBuffer` were declared
+/// main-actor-protected and mutated off it — concurrent mutation while resuming
+/// a `CheckedContinuation` can double-resume, which traps. The actor serialises
+/// all of it and forces the Network callbacks to hop in explicitly. (Issue #27.)
+private actor SMTPChannel {
     private let connection: NWConnection
     private var parsedLines: [String] = []
     private var lineWaiters: [CheckedContinuation<String, Error>] = []
@@ -765,25 +772,35 @@ private final class SMTPChannel {
 
     func start() async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            connection.stateUpdateHandler = { [weak self] state in
+            // The state handler can fire `.ready` and later `.failed` (or
+            // `.failed` twice); resuming a continuation twice traps. The lock
+            // also keeps the closure Sendable-clean without touching actor state
+            // from the connection's queue.
+            let hasResumed = OSAllocatedUnfairLock(initialState: false)
+            connection.stateUpdateHandler = { state in
+                let isFirst: () -> Bool = {
+                    hasResumed.withLock { resumed in
+                        if resumed { return false }
+                        resumed = true
+                        return true
+                    }
+                }
                 switch state {
                 case .ready:
-                    self?.scheduleReceiveLoop()
-                    continuation.resume()
+                    if isFirst() { continuation.resume() }
                 case .failed(let error):
-                    continuation.resume(throwing: error)
+                    if isFirst() { continuation.resume(throwing: error) }
+                case .cancelled:
+                    if isFirst() { continuation.resume(throwing: IntegrationError.streamClosed) }
                 default:
                     break
                 }
             }
             connection.start(queue: .global(qos: .utility))
         }
-    }
-
-    private func scheduleReceiveLoop() {
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            self?.startReceiveLoop()
-        }
+        // Started from the actor once the connection is ready, replacing the old
+        // dispatch-queue hop. TCP buffers anything that arrives in the gap.
+        startReceiveLoop()
     }
 
     func cancel() {
@@ -845,26 +862,33 @@ private final class SMTPChannel {
     }
 
     private func startReceiveLoop() {
+        // The completion runs on the connection's queue; hop back onto the
+        // actor before touching any state.
         connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] data, _, isComplete, error in
             guard let self else { return }
-
-            if let error {
-                self.failWaiters(with: error)
-                return
+            Task {
+                await self.handleReceive(data: data, isComplete: isComplete, error: error)
             }
-
-            if let data, !data.isEmpty {
-                self.receiveBuffer.append(data)
-                self.flushBuffer()
-            }
-
-            if isComplete {
-                self.failWaiters(with: IntegrationError.streamClosed)
-                return
-            }
-
-            self.startReceiveLoop()
         }
+    }
+
+    private func handleReceive(data: Data?, isComplete: Bool, error: Error?) {
+        if let error {
+            failWaiters(with: error)
+            return
+        }
+
+        if let data, !data.isEmpty {
+            receiveBuffer.append(data)
+            flushBuffer()
+        }
+
+        if isComplete {
+            failWaiters(with: IntegrationError.streamClosed)
+            return
+        }
+
+        startReceiveLoop()
     }
 
     private func flushBuffer() {

@@ -103,7 +103,10 @@ struct HTTPHeadersService {
 }
 
 private final class TaskMetricsDelegate: NSObject, URLSessionTaskDelegate {
-    private(set) var metrics: URLSessionTaskMetrics?
+    // Written from the session's delegate queue, read only after the request
+    // has completed — URLSession guarantees didFinishCollecting is delivered
+    // before the task finishes, so the accesses are sequenced. (#27)
+    nonisolated(unsafe) private(set) var metrics: URLSessionTaskMetrics?
 
     func urlSession(
         _ _: URLSession,
