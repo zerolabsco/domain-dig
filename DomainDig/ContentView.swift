@@ -3029,6 +3029,10 @@ private struct LocalAPISettingsView: View {
                     localAPIService.copyToken()
                 }
 
+                Button("Copy cURL Command") {
+                    localAPIService.copyCurlCommand()
+                }
+
                 Button("Rotate Token") {
                     localAPIService.rotateToken()
                 }
