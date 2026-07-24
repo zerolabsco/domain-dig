@@ -372,10 +372,6 @@ private final class LocalAPIServer: @unchecked Sendable {
         let parameters = NWParameters.tcp
         parameters.acceptLocalOnly = true
         parameters.allowLocalEndpointReuse = true
-        parameters.requiredLocalEndpoint = .hostPort(
-            host: .ipv4(IPv4Address.loopback),
-            port: NWEndpoint.Port(rawValue: UInt16(port)) ?? .any
-        )
 
         let listener: NWListener
         do {
@@ -384,7 +380,10 @@ private final class LocalAPIServer: @unchecked Sendable {
                 on: NWEndpoint.Port(rawValue: UInt16(port)) ?? .any
             )
         } catch {
-            throw LocalAPIServerError.serverStartFailed("Could not start Local API on port \(port).")
+            stateLogger("Failed: \(error.localizedDescription)")
+            throw LocalAPIServerError.serverStartFailed(
+                "Could not start Local API on port \(port): \(error.localizedDescription)"
+            )
         }
 
         listener.newConnectionHandler = { [weak self] connection in
