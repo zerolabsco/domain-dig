@@ -201,8 +201,40 @@ enum AccessibilityAuditHarness {
             return "unattributed, audit artifact on ignored/link content"
         }
 
+        // iOS-27-only Settings `Section` header dynamicType finding. On iOS 27.0
+        // (and only there) the audit reports "font sizes partially unsupported"
+        // against a Settings section header — the same system-rendered headers
+        // already carved out for the contrast near-miss above. Proof it is a
+        // system-chrome artifact, not an app defect:
+        //   • Each is a plain `Section("Services")` etc. (ContentView.swift ~2768);
+        //     the app sets no font, so the scaling is UIKit's `.footnote` header.
+        //   • Version-specific: absent on the iOS 18.6 floor and on the 26.x
+        //     runtime CI runs (both audit clean); it surfaces only under 27.0.
+        //     ACCESSIBILITY.md's coverage table records the same asymmetry
+        //     ("dynamicType finding 18.6 missed").
+        //   • Attribution is unstable run-to-run across the header set
+        //     (Tier/Preferences/Services), exactly like the documented contrast
+        //     flip — so it lands on whichever header the traversal reaches first.
+        // Overriding every Section header with a custom scaling `Text` to chase
+        // this was rejected for the contrast case (ACCESSIBILITY.md) for trading
+        // platform convention for nothing; the same holds here. Scoped to
+        // dynamicType on the exact Settings header titles so a real regression
+        // on app-controlled text still enforces.
+        if issue.auditType.contains(.dynamicType),
+           let label = issue.element?.label,
+           settingsSectionHeaders.contains(label) {
+            return "iOS-rendered Settings section header, app sets no font (27.0-only)"
+        }
+
         return nil
     }
+
+    /// The Settings screen's `Section(_:)` header titles. UIKit renders these;
+    /// the app passes only a string literal. Used to scope the section-header
+    /// dynamicType carve-out narrowly (see `noiseReason`).
+    private static let settingsSectionHeaders: Set<String> = [
+        "Tier", "Preferences", "Services", "Data", "About"
+    ]
 
     /// `XCUIAccessibilityAuditType` is an option set whose description is just a
     /// raw bitmask, which makes the burndown list unreadable. Resolve it against
