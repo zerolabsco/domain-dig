@@ -57,6 +57,10 @@ enum ShareableEntity: Identifiable, Hashable {
     }
 }
 
+private enum CloudZone {
+    static let name = "DomainDigZone"
+}
+
 private enum CloudRecordType {
     static let trackedDomain = "TrackedDomain"
     static let workflow = "DomainWorkflow"
@@ -129,11 +133,6 @@ private enum SyncDatabaseScope {
     case sharedDatabase
 }
 
-private struct SharedRecord<Value> {
-    var record: CKRecord
-    var value: Value
-}
-
 private struct MergedSyncPayload {
     var payload: SyncPayload
     var hadConflict: Bool
@@ -154,6 +153,7 @@ final class CloudSyncService {
     private var container: CKContainer?
     private var privateDatabase: CKDatabase?
     private var sharedDatabase: CKDatabase?
+    private var didEnsureZone = false
     private let defaults: UserDefaults
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -359,6 +359,8 @@ final class CloudSyncService {
             throw CloudSyncRuntimeError.missingEntitlement
         }
 
+        try await ensureCustomZone(in: database)
+
         switch entity {
         case .trackedDomain(let domain):
             let normalized = Self.normalizeDomain(domain)
@@ -543,31 +545,19 @@ final class CloudSyncService {
     }
 
     private func fetchRemotePayload() async throws -> SyncPayload {
-        let privateTrackedDomains = try await fetchTrackedDomainRecords(in: .privateDatabase)
-        let sharedTrackedDomains = try await fetchTrackedDomainRecords(in: .sharedDatabase)
-        let privateWorkflows = try await fetchWorkflowRecords(in: .privateDatabase)
-        let sharedWorkflows = try await fetchWorkflowRecords(in: .sharedDatabase)
+        let privateRecords = try await fetchZoneRecords(in: .privateDatabase)
+        let sharedRecords = try await fetchZoneRecords(in: .sharedDatabase)
 
-        let appSettingsRecords: [SyncedAppSettings] = try await fetchRecords(
-            ofType: CloudRecordType.appSettings,
-            in: .privateDatabase
-        )
-        let monitoringSettingsRecords: [SyncedMonitoringSettings] = try await fetchRecords(
-            ofType: CloudRecordType.monitoringSettings,
-            in: .privateDatabase
-        )
-        let domainNotes: [SyncedDomainNote] = try await fetchRecords(
-            ofType: CloudRecordType.domainNote,
-            in: .privateDatabase
-        )
-        let historyMetadata: [SyncedHistoryMetadata] = try await fetchRecords(
-            ofType: CloudRecordType.historyMetadata,
-            in: .privateDatabase
-        )
-        let tombstones: [SyncTombstone] = try await fetchRecords(
-            ofType: CloudRecordType.tombstone,
-            in: .privateDatabase
-        )
+        let privateTrackedDomains = try await trackedDomains(from: privateRecords, in: .privateDatabase)
+        let sharedTrackedDomains = try await trackedDomains(from: sharedRecords, in: .sharedDatabase)
+        let privateWorkflows = try await workflows(from: privateRecords, in: .privateDatabase)
+        let sharedWorkflows = try await workflows(from: sharedRecords, in: .sharedDatabase)
+
+        let appSettingsRecords: [SyncedAppSettings] = decodeRecords(privateRecords, ofType: CloudRecordType.appSettings)
+        let monitoringSettingsRecords: [SyncedMonitoringSettings] = decodeRecords(privateRecords, ofType: CloudRecordType.monitoringSettings)
+        let domainNotes: [SyncedDomainNote] = decodeRecords(privateRecords, ofType: CloudRecordType.domainNote)
+        let historyMetadata: [SyncedHistoryMetadata] = decodeRecords(privateRecords, ofType: CloudRecordType.historyMetadata)
+        let tombstones: [SyncTombstone] = decodeRecords(privateRecords, ofType: CloudRecordType.tombstone)
 
         let appSettings = appSettingsRecords.max(by: { $0.updatedAt < $1.updatedAt })
             ?? SyncedAppSettings(snapshot: DomainDataPortabilityService.loadAppSettings(), updatedAt: .distantPast)
@@ -589,6 +579,8 @@ final class CloudSyncService {
         guard let privateDatabase = cloudKitDatabase(in: .privateDatabase) else {
             throw CloudSyncRuntimeError.missingEntitlement
         }
+
+        try await ensureCustomZone(in: privateDatabase)
 
         var privateRecordsToSave: [CKRecord] = []
         var sharedRecordsToSave: [CKRecord] = []
@@ -626,11 +618,11 @@ final class CloudSyncService {
             switch tombstone.entityType {
             case .trackedDomain:
                 let identifier = tombstone.identifier
-                recordIDsToDelete.append(CKRecord.ID(recordName: trackedDomainRecordName(for: identifier)))
-                recordIDsToDelete.append(CKRecord.ID(recordName: domainNoteRecordName(for: identifier)))
-                recordIDsToDelete.append(CKRecord.ID(recordName: historyMetadataRecordName(for: identifier)))
+                recordIDsToDelete.append(CKRecord.ID(recordName: trackedDomainRecordName(for: identifier), zoneID: customZoneID))
+                recordIDsToDelete.append(CKRecord.ID(recordName: domainNoteRecordName(for: identifier), zoneID: customZoneID))
+                recordIDsToDelete.append(CKRecord.ID(recordName: historyMetadataRecordName(for: identifier), zoneID: customZoneID))
             case .workflow:
-                recordIDsToDelete.append(CKRecord.ID(recordName: workflowRecordName(for: tombstone.identifier)))
+                recordIDsToDelete.append(CKRecord.ID(recordName: workflowRecordName(for: tombstone.identifier), zoneID: customZoneID))
             }
         }
 
@@ -1051,7 +1043,12 @@ final class CloudSyncService {
         }
     }
 
-    private func fetchRecords<T: Decodable>(ofType recordType: String, in scope: SyncDatabaseScope) async throws -> [T] {
+    /// Fetches every record in `scope` via `CKFetchRecordZoneChangesOperation`,
+    /// which — unlike a `CKQuery` — needs no queryable schema indexes and works
+    /// on a brand-new zone. The private database holds the user's own records in
+    /// a single custom zone; the shared database exposes one zone per accepted
+    /// share, so every shared zone is fetched.
+    private func fetchZoneRecords(in scope: SyncDatabaseScope) async throws -> [CKRecord] {
         guard let database = cloudKitDatabase(in: scope) else {
             if scope == .sharedDatabase {
                 return []
@@ -1059,99 +1056,108 @@ final class CloudSyncService {
             throw CloudSyncRuntimeError.missingEntitlement
         }
 
-        let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
+        let zoneIDs: [CKRecordZone.ID]
+        switch scope {
+        case .privateDatabase:
+            try await ensureCustomZone(in: database)
+            zoneIDs = [customZoneID]
+        case .sharedDatabase:
+            zoneIDs = try await database.allRecordZones().map(\.zoneID)
+        }
+
+        guard !zoneIDs.isEmpty else { return [] }
+        return try await fetchZoneChanges(in: database, zoneIDs: zoneIDs)
+    }
+
+    private func fetchZoneChanges(in database: CKDatabase, zoneIDs: [CKRecordZone.ID]) async throws -> [CKRecord] {
+        // A nil change token requests every record in the zone. The server may
+        // truncate a large response and set `moreComing`, so keep re-fetching
+        // the still-truncated zones with their latest tokens until all drain.
+        var tokensByZone: [CKRecordZone.ID: CKServerChangeToken?] = [:]
+        for zoneID in zoneIDs {
+            tokensByZone[zoneID] = .some(nil)
+        }
+
+        var records: [CKRecord] = []
+        while !tokensByZone.isEmpty {
+            tokensByZone = try await withCheckedThrowingContinuation { continuation in
+                var moreByZone: [CKRecordZone.ID: CKServerChangeToken?] = [:]
+                let configurations = tokensByZone.mapValues { token -> CKFetchRecordZoneChangesOperation.ZoneConfiguration in
+                    let configuration = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
+                    configuration.previousServerChangeToken = token ?? nil
+                    return configuration
+                }
+
+                let operation = CKFetchRecordZoneChangesOperation(
+                    recordZoneIDs: Array(tokensByZone.keys),
+                    configurationsByRecordZoneID: configurations
+                )
+                operation.recordWasChangedBlock = { _, result in
+                    if case .success(let record) = result {
+                        records.append(record)
+                    }
+                }
+                operation.recordZoneFetchResultBlock = { zoneID, result in
+                    if case .success(let value) = result, value.moreComing {
+                        moreByZone[zoneID] = .some(value.serverChangeToken)
+                    }
+                }
+                operation.fetchRecordZoneChangesResultBlock = { result in
+                    switch result {
+                    case .success:
+                        continuation.resume(returning: moreByZone)
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+                database.add(operation)
+            }
+        }
+
+        return records
+    }
+
+    private func decodeRecords<T: Decodable>(_ records: [CKRecord], ofType recordType: String) -> [T] {
         var results: [T] = []
-        var cursor: CKQueryOperation.Cursor?
-
-        repeat {
-            let batch: (matchResults: [(CKRecord.ID, Result<CKRecord, any Error>)], queryCursor: CKQueryOperation.Cursor?)
-            if let cursor {
-                batch = try await database.records(continuingMatchFrom: cursor, desiredKeys: nil, resultsLimit: 200)
+        for record in records where record.recordType == recordType {
+            guard let payload = record[CloudRecordKey.payload] as? Data else { continue }
+            if let decoded = try? decoder.decode(T.self, from: payload) {
+                results.append(decoded)
             } else {
-                batch = try await database.records(matching: query, inZoneWith: nil, desiredKeys: nil, resultsLimit: 200)
+                lastErrorMessage = "Some iCloud records were skipped because they could not be decoded."
             }
-
-            for (_, result) in batch.matchResults {
-                switch result {
-                case .success(let record):
-                    guard let payload = record[CloudRecordKey.payload] as? Data else { continue }
-                    if let decoded = try? decoder.decode(T.self, from: payload) {
-                        results.append(decoded)
-                    } else {
-                        lastErrorMessage = "Some iCloud records were skipped because they could not be decoded."
-                    }
-                case .failure:
-                    continue
-                }
-            }
-
-            cursor = batch.queryCursor
-        } while cursor != nil
-
-        return results
-    }
-
-    private func fetchSharedRecords<T: Decodable>(
-        ofType recordType: String,
-        in scope: SyncDatabaseScope
-    ) async throws -> [SharedRecord<T>] {
-        guard let database = cloudKitDatabase(in: scope) else {
-            if scope == .sharedDatabase {
-                return []
-            }
-            throw CloudSyncRuntimeError.missingEntitlement
         }
-
-        let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
-        var results: [SharedRecord<T>] = []
-        var cursor: CKQueryOperation.Cursor?
-
-        repeat {
-            let batch: (matchResults: [(CKRecord.ID, Result<CKRecord, any Error>)], queryCursor: CKQueryOperation.Cursor?)
-            if let cursor {
-                batch = try await database.records(continuingMatchFrom: cursor, desiredKeys: nil, resultsLimit: 200)
-            } else {
-                batch = try await database.records(matching: query, inZoneWith: nil, desiredKeys: nil, resultsLimit: 200)
-            }
-
-            for (_, result) in batch.matchResults {
-                switch result {
-                case .success(let record):
-                    guard let payload = record[CloudRecordKey.payload] as? Data else { continue }
-                    if let decoded = try? decoder.decode(T.self, from: payload) {
-                        results.append(SharedRecord(record: record, value: decoded))
-                    } else {
-                        lastErrorMessage = "Some iCloud records were skipped because they could not be decoded."
-                    }
-                case .failure:
-                    continue
-                }
-            }
-
-            cursor = batch.queryCursor
-        } while cursor != nil
-
         return results
     }
 
-    private func fetchTrackedDomainRecords(in scope: SyncDatabaseScope) async throws -> [TrackedDomain] {
-        let records: [SharedRecord<TrackedDomain>] = try await fetchSharedRecords(ofType: CloudRecordType.trackedDomain, in: scope)
-        let shares = try await sharesByRecordID(for: records.map(\.record), in: scope)
+    private func trackedDomains(from records: [CKRecord], in scope: SyncDatabaseScope) async throws -> [TrackedDomain] {
+        let matching = records.filter { $0.recordType == CloudRecordType.trackedDomain }
+        let shares = try await sharesByRecordID(for: matching, in: scope)
 
-        return records.map { entry in
-            var trackedDomain = Self.payloadTrackedDomain(entry.value)
-            trackedDomain.collaboration = collaborationMetadata(for: entry.record, share: shares[entry.record.recordID], scope: scope)
+        return matching.compactMap { record in
+            guard let payload = record[CloudRecordKey.payload] as? Data,
+                  let decoded = try? decoder.decode(TrackedDomain.self, from: payload) else {
+                lastErrorMessage = "Some iCloud records were skipped because they could not be decoded."
+                return nil
+            }
+            var trackedDomain = Self.payloadTrackedDomain(decoded)
+            trackedDomain.collaboration = collaborationMetadata(for: record, share: shares[record.recordID], scope: scope)
             return trackedDomain
         }
     }
 
-    private func fetchWorkflowRecords(in scope: SyncDatabaseScope) async throws -> [DomainWorkflow] {
-        let records: [SharedRecord<DomainWorkflow>] = try await fetchSharedRecords(ofType: CloudRecordType.workflow, in: scope)
-        let shares = try await sharesByRecordID(for: records.map(\.record), in: scope)
+    private func workflows(from records: [CKRecord], in scope: SyncDatabaseScope) async throws -> [DomainWorkflow] {
+        let matching = records.filter { $0.recordType == CloudRecordType.workflow }
+        let shares = try await sharesByRecordID(for: matching, in: scope)
 
-        return records.map { entry in
-            var workflow = normalizedWorkflow(entry.value)
-            workflow.collaboration = collaborationMetadata(for: entry.record, share: shares[entry.record.recordID], scope: scope)
+        return matching.compactMap { record in
+            guard let payload = record[CloudRecordKey.payload] as? Data,
+                  let decoded = try? decoder.decode(DomainWorkflow.self, from: payload) else {
+                lastErrorMessage = "Some iCloud records were skipped because they could not be decoded."
+                return nil
+            }
+            var workflow = normalizedWorkflow(decoded)
+            workflow.collaboration = collaborationMetadata(for: record, share: shares[record.recordID], scope: scope)
             return workflow
         }
     }
@@ -1318,7 +1324,7 @@ final class CloudSyncService {
         payload: T,
         extraFields: [String: CKRecordValue]
     ) -> CKRecord {
-        let record = CKRecord(recordType: type, recordID: CKRecord.ID(recordName: recordName))
+        let record = CKRecord(recordType: type, recordID: CKRecord.ID(recordName: recordName, zoneID: customZoneID))
         record[CloudRecordKey.payload] = (try? encoder.encode(payload)) as CKRecordValue?
         for (key, value) in extraFields {
             record[key] = value
@@ -1391,6 +1397,22 @@ final class CloudSyncService {
         let container = CKContainer.default()
         self.container = container
         return container
+    }
+
+    /// The user's own records live in a single custom zone. A custom zone (as
+    /// opposed to the default zone) is what lets the sync read every record with
+    /// `CKFetchRecordZoneChangesOperation`, which needs no queryable schema
+    /// indexes, and is also a prerequisite for CloudKit sharing.
+    private var customZoneID: CKRecordZone.ID {
+        CKRecordZone.ID(zoneName: CloudZone.name, ownerName: CKCurrentUserDefaultName)
+    }
+
+    /// Creates the custom zone if it does not exist yet. Saving an existing zone
+    /// is a no-op, so this is safe to call before every push and fetch.
+    private func ensureCustomZone(in database: CKDatabase) async throws {
+        if didEnsureZone { return }
+        _ = try await database.modifyRecordZones(saving: [CKRecordZone(zoneID: customZoneID)], deleting: [])
+        didEnsureZone = true
     }
 
     private func cloudKitDatabase(in scope: SyncDatabaseScope) -> CKDatabase? {
