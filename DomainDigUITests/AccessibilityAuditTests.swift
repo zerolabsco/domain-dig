@@ -112,6 +112,48 @@ final class AccessibilityAuditTests: XCTestCase {
         try XCTSkipUnless(audited, "Audit did not complete in time for seeded batch results")
     }
 
+    /// The seeded screens at an **intermediate** accessibility size.
+    ///
+    /// The default/`AccessibilityXXXL` pair brackets the range but skips the
+    /// middle band, and two production layout bugs lived exactly there — a
+    /// bordered button letter-wrapping vertically at a merely-large size, which
+    /// neither endpoint reproduced. `AccessibilityL` samples that band across the
+    /// dense seeded screens so a regression in it cannot slip between the two
+    /// existing test points. Reports rather than gates, matching the other
+    /// seeded audits.
+    func testSeededScreensAtIntermediateAccessibilitySize() throws {
+        let app = AccessibilityAuditHarness.launch(
+            contentSizeCategory: "UICTContentSizeCategoryAccessibilityL",
+            seeded: true
+        )
+
+        var unaudited: [String] = []
+
+        app.selectRootTab("Dashboard")
+        if try !AccessibilityAuditHarness.audit(app, screen: "seeded-dashboard-accessibilityL", test: self, reportOnly: true) {
+            unaudited.append("Dashboard")
+        }
+
+        app.selectRootTab("Inspect")
+        if try !AccessibilityAuditHarness.audit(app, screen: "seeded-batch-accessibilityL", test: self, reportOnly: true) {
+            unaudited.append("Inspect batch")
+        }
+
+        app.selectRootTab("Settings")
+        let trackedDomains = app.buttons["Tracked Domains"]
+        if trackedDomains.waitForExistence(timeout: 5) {
+            trackedDomains.tap()
+            if try !AccessibilityAuditHarness.audit(app, screen: "seeded-tracked-domains-accessibilityL", test: self, reportOnly: true) {
+                unaudited.append("Tracked Domains")
+            }
+        }
+
+        try XCTSkipUnless(
+            unaudited.isEmpty,
+            "Audit did not complete in time for: \(unaudited.joined(separator: ", "))"
+        )
+    }
+
     /// The seeded screens again at the largest accessibility size — the case the
     /// deferred ViewThatFits work exists for.
     func testSeededScreensAtLargestAccessibilitySize() throws {
