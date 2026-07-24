@@ -4,8 +4,8 @@
 
 |Version|Supported|
 |-------|---------|
-| 1.x   | ✅ Yes  |
-| < 1.0 | ❌ No   |
+| 4.x   | ✅ Yes  |
+| < 4.0 | ❌ No   |
 
 ---
 
@@ -14,7 +14,7 @@
 If you discover a security vulnerability, **do not open a public issue**.
 Instead:
 
-1. **Email** your report to [security@cleberg.net](mailto:security@cleberg.net).
+1. **Email** your report to [security@zerolabs.sh](mailto:security@zerolabs.sh).
   Include:
   - A detailed description of the vulnerability
   - Steps to reproduce
