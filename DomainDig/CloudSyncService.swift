@@ -336,9 +336,7 @@ final class CloudSyncService {
     }
 
     func acceptShare(metadata: CKShare.Metadata) async throws {
-        guard let container = cloudKitContainer() else {
-            throw CloudSyncRuntimeError.missingEntitlement
-        }
+        let container = cloudKitContainer()
 
         if metadata.participantStatus == .pending {
             _ = try await container.accept(metadata)
@@ -1019,19 +1017,19 @@ final class CloudSyncService {
     }
 
     private func accountStatus() async -> AvailabilityState {
-        guard let container = cloudKitContainer() else {
-            return .missingEntitlement
-        }
+        let container = cloudKitContainer()
 
         return await withCheckedContinuation { continuation in
             container.accountStatus { status, error in
                 if let error {
-                    let ckError = error as? CKError
-                    if ckError?.code == .notAuthenticated {
+                    switch (error as? CKError)?.code {
+                    case .notAuthenticated:
                         continuation.resume(returning: AvailabilityState.noAccount)
-                        return
+                    case .missingEntitlement, .badContainer, .permissionFailure:
+                        continuation.resume(returning: AvailabilityState.missingEntitlement)
+                    default:
+                        continuation.resume(returning: AvailabilityState.unknown)
                     }
-                    continuation.resume(returning: AvailabilityState.unknown)
                     return
                 }
 
@@ -1385,18 +1383,14 @@ final class CloudSyncService {
             .lowercased() ?? ""
     }
 
-    private func cloudKitContainer() -> CKContainer? {
+    private func cloudKitContainer() -> CKContainer {
         if let container {
             return container
         }
 
-        if isEntitlementConfigurationAvailable() {
-            let container = CKContainer.default()
-            self.container = container
-            return container
-        }
-
-        return nil
+        let container = CKContainer.default()
+        self.container = container
+        return container
     }
 
     private func cloudKitDatabase(in scope: SyncDatabaseScope) -> CKDatabase? {
@@ -1411,9 +1405,7 @@ final class CloudSyncService {
             }
         }
 
-        guard let container = cloudKitContainer() else {
-            return nil
-        }
+        let container = cloudKitContainer()
 
         switch scope {
         case .privateDatabase:
@@ -1425,25 +1417,6 @@ final class CloudSyncService {
             self.sharedDatabase = database
             return database
         }
-    }
-
-    private func isEntitlementConfigurationAvailable() -> Bool {
-        if Bundle.main.object(forInfoDictionaryKey: "com.apple.developer.icloud-container-identifiers") != nil {
-            return true
-        }
-
-        if Bundle.main.object(forInfoDictionaryKey: "com.apple.developer.ubiquity-container-identifiers") != nil {
-            return true
-        }
-
-        if let entitlementsURL = Bundle.main.url(forResource: "archived-expanded-entitlements", withExtension: "xcent"),
-           let data = try? Data(contentsOf: entitlementsURL),
-           let contents = String(data: data, encoding: .utf8) {
-            return contents.contains("com.apple.developer.icloud-services")
-                && (contents.contains("CloudKit") || contents.contains("CloudKit-Anonymous"))
-        }
-
-        return false
     }
 
     private var missingEntitlementMessage: String {
