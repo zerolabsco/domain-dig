@@ -142,6 +142,11 @@ final class LocalAPIService {
         AppClipboard.copy(config.token)
     }
 
+    func copyCurlCommand() {
+        guard !config.token.isEmpty else { return }
+        AppClipboard.copy("curl -H \"Authorization: Bearer \(config.token)\" \(address)/portfolio")
+    }
+
     func localSecretReferences() -> [String] {
         [LocalAPISecretStore.reference]
     }
