@@ -227,9 +227,18 @@ light mode, and the engineering scaffolding to keep both from regressing.
   pre-push hook). `DOMAIN_DIG_SEED_FIXTURES` seeds deterministic in-memory
   rows so the dense paths actually render under audit. The **enforcement
   ratchet is engaged**: named findings in six categories fail CI, with
-  narrowly characterised, always-logged noise suppressions. Manual
-  verification checklist in `Docs/ACCESSIBILITY_VERIFICATION.md`; findings
-  burndown 20 → 11 with every remaining item characterised as system noise.
+  narrowly characterised, always-logged noise suppressions. Findings burndown
+  20 → 11, with every remaining item characterised as system noise.
+- **Phase 6 verification** — the simulator-executable half of the manual pass
+  was run and converted into permanent tests: `AccessibilityMetadataTests`
+  asserts the icon-only control labels, toggle selected-states, and dense-row
+  label/value pairs; `AccessibilityScreenshotTests` captures both appearances
+  across classic chrome and Liquid Glass. A middle-band Dynamic Type sweep was
+  added after two real layout bugs turned up *between* the default and
+  AccessibilityXXXL test points. The pass also caught a genuine enforced
+  `.dynamicType` failure on iOS 27.0 against UIKit-rendered Settings section
+  headers; the app applies no font to those, so it is carved out by exact
+  header title, scoped to that one audit type.
 - **Swift 6 language mode** (#27) — all three product targets build under
   `SWIFT_VERSION = 6.0` with zero warnings. `SMTPChannel` became an actor
   (fixing a real `CheckedContinuation` double-resume hazard),
@@ -240,9 +249,20 @@ light mode, and the engineering scaffolding to keep both from regressing.
   (26.2 shadowing the real 17.6) reconciled; CI selects simulators
   floor-aware instead of first-match.
 
-Deferred: the Phase 6 manual device passes (VoiceOver walkthrough, Voice
-Control, iPad Full Keyboard Access, Liquid Glass runtime check) are tracked in
-`Docs/ACCESSIBILITY_VERIFICATION.md` and #21 — they close on device, not in CI.
+Deferred — genuinely physical-device-only, since the Simulator cannot run
+VoiceOver or Voice Control at all:
+
+- **VoiceOver speech**, the More Content rotor, custom-content ordering, and the
+  spoken lookup/sweep announcements. The underlying metadata (labels, values,
+  selected states) *is* asserted in `AccessibilityMetadataTests`; what remains
+  unverified is how it is spoken.
+- **Voice Control** activation of every control by its printed label (WCAG
+  2.5.3).
+- **iPad Full Keyboard Access** focus order across the split layout.
+- **Smart Invert**.
+
+The Liquid Glass (iOS 26+) runtime check is **done** — it ran on simulator
+alongside the classic-chrome floor.
 
 ## v5.0.0 Major: Contract Stabilization & Engineering Health
 
