@@ -811,12 +811,13 @@ struct WebSectionView: View {
                             Text(redirect.url)
                                 .font(appDensity.font(.caption))
                                 .textSelection(.enabled)
-                            AppCopyButton(value: redirect.url, label: "Copy redirect URL")
                             if redirect.isFinal {
                                 Text("(final)")
                                     .font(appDensity.font(.caption2))
                                     .foregroundStyle(Color(.appTextSecondary))
                             }
+                            Spacer(minLength: 8)
+                            AppCopyButton(value: redirect.url, label: "Copy redirect URL")
                         }
                     }
                 }
