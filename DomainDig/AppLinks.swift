@@ -3,12 +3,11 @@ import Foundation
 /// Centralized external destinations, kept in one place so URLs and the App Store
 /// identifier can be swapped without touching any view.
 ///
-/// TODO(release): `appStoreID` is a placeholder until the App Store listing is
-/// live — the listing/review/share URLs derive from it. `documentation` points
-/// at the repository README for now; swap in a dedicated docs site if one lands.
+/// `documentation` points at the repository README for now; swap in a dedicated
+/// docs site if one lands.
 enum AppLinks {
-    /// App Store numeric identifier. Placeholder until the listing is published.
-    static let appStoreID = "0000000000"
+    /// App Store numeric identifier; the listing/review/share URLs derive from it.
+    static let appStoreID = "6760368004"
 
     static let sourceCode = url("https://github.com/zerolabsco/domain-dig")
     static let documentation = url("https://github.com/zerolabsco/domain-dig#readme")
