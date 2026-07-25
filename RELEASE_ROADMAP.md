@@ -264,30 +264,60 @@ VoiceOver or Voice Control at all:
 The Liquid Glass (iOS 26+) runtime check is **done** — it ran on simulator
 alongside the classic-chrome floor.
 
-## v5.0.0 Major: Contract Stabilization & Engineering Health
+## v5.0.0 Major: Contract Stabilization & Engineering Health — ✅ engineering complete (release cut pending)
 
-Goal: earn long-term compatibility promises — and pay down the debt that the
-feature releases above will accumulate.
+Goal: earn long-term compatibility promises — and pay down the debt the feature
+releases above accumulated. All four workstreams have landed on `main`; cutting
+the release itself (version bump and submission) is the only remaining step.
 
-- Define migration policy for persisted snapshots, backups, audits, workflows,
-  and settings.
-- Stabilize the public local API response contract; document compatibility
-  guarantees and planned deprecations.
-- **Extend the test net to the deterministic core.** v4.9.0 established
-  `DomainDigUITests` (accessibility audit + enforcement gate); unit coverage of
-  `DomainReportBuilder`, `DomainReportExporter`, `DomainDataPortabilityService`
-  (merge/replace dedup), and `DiffService` is still needed before locking down
-  external contracts.
-- **Decompose the god-files** behind that test net: `DomainViewModel.swift`
-  (~4.7k lines) and `ContentView.swift` (~3.8k lines) into focused units
-  (audit, monitoring, workflows, portability).
+- **Deterministic-core test net — done first**, as the cross-cutting note below
+  required. Added `DomainDigTests`, the project's first XCTest unit target,
+  hosted by the app with `@testable import`. `SnapshotFixture` builds the deep
+  `LookupSnapshot`/`DomainReport` models through the real builder; 58 tests cover
+  `DiffService`, `DomainReportBuilder`, `DomainReportExporter`,
+  `DomainDataPortabilityService` (merge/replace dedup), the migration runner, and
+  the Local API contract. Runs in CI and the pre-push hook. (#43)
+- **Local API `v1` contract stabilized.** `LocalAPIContract` is the single source
+  of truth for the wire version and JSON encoder; the response envelope and every
+  payload are promoted to a first-class, documented contract.
+  `Docs/local-api.md` documents each endpoint, the envelope, the encoding
+  conventions (notably: absent optionals are omitted, not null), and a
+  semantic-version compatibility policy. 16 golden structure tests pin the JSON
+  shape so a renamed/removed field fails CI. (#45)
+- **Versioned store-migration policy** for persisted snapshots, backups, audits,
+  workflows, and settings. `DataMigrationService` became a forward-only,
+  idempotent, never-downgrades runner keyed by an integer store schema version,
+  replacing the one-shot boolean marker. `Docs/data-migration.md` documents the
+  policy, the two independent version lines (on-device store vs. backup export),
+  and when to use lenient decoding vs. a migration step; legacy-fixture tests
+  cover it. (#46)
+- **God-files decomposed** behind that test net, one behavior-preserving slice
+  per PR (each built clean with 58/58 tests, no logic changes):
+  - `DomainViewModel.swift` **4864 → 4170 lines** — audit, monitoring, export,
+    workflow, and history surfaces moved to `DomainViewModel+*.swift`
+    extensions. (#47–#51)
+  - `ContentView.swift` **3881 → 1625 lines** — Settings screens to
+    `SettingsViews.swift` and the nine result section views to
+    `ResultSectionViews.swift`. (#52–#53)
+
+  Left in place deliberately: the tightly-coupled inspection core (the section
+  runners, `performLookup`/`saveHistoryEntry`, batch orchestration) and a few
+  remaining `ContentView` cards/primitives. Splitting the inspection core further
+  is a *design* change — extracting a collaborator object — not a mechanical move,
+  so it is deferred rather than forced through visibility promotions.
+
+Remaining to cut the release: bump `MARKETING_VERSION` 4.9.0 → 5.0.0 and
+increment `CURRENT_PROJECT_VERSION`, keep `AppVersion.current` in sync, and
+archive/submit.
 
 ## Cross-cutting note
 
 New feature surfaces (widgets, intents, extensions) each add a target and a
-persistence/entitlement seam. This project still has **no XCTest target** —
-v4.5.0 through v4.7.0 all shipped without the characterization-test safety net
-originally recommended before v4.7.0. That gap is now larger (comparison,
-reputation, and tags/saved-views all touch persisted models with hand-written
-backward-compatible decoders) and should be the very first thing v5.0.0 does,
-not a later item within it.
+persistence/entitlement seam. Through v4.9.0 the project had **no XCTest unit
+target** — v4.5.0 through v4.7.0 all shipped without the characterization-test
+safety net originally recommended before v4.7.0, and that gap only grew
+(comparison, reputation, and tags/saved-views all touch persisted models with
+hand-written backward-compatible decoders). v5.0.0 closed it first: the
+`DomainDigTests` deterministic-core net went in before anything else, which is
+what made stabilizing the external contracts and decomposing the god-files safe
+to attempt.
