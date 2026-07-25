@@ -40,6 +40,16 @@
                ReferencedContainer = "container:DomainDig.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "77CB8BAE320E7119E3283122"
+               BuildableName = "DomainDigTests.xctest"
+               BlueprintName = "DomainDigTests"
+               ReferencedContainer = "container:DomainDig.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

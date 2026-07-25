@@ -6,8 +6,10 @@ name: Build
 #
 # This runs `xcodebuild test`, which also compiles the app, the widget, and the
 # share extension (the DomainDig scheme's build action pulls both in as
-# dependencies). The test target is DomainDigUITests — an accessibility audit
-# suite; see DomainDigUITests/AccessibilityAuditHarness.swift.
+# dependencies). The scheme has two test targets: DomainDigUITests — an
+# accessibility audit suite; see DomainDigUITests/AccessibilityAuditHarness.swift
+# — and DomainDigTests — unit coverage of the deterministic core (report builder,
+# exporter, diff, portability dedup).
 #
 # WHAT THIS JOB IS FOR, given the audit also runs locally:
 # a clean checkout of the merge result. A local hook runs against the working
