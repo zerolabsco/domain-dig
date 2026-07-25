@@ -53,6 +53,16 @@ xcodebuild -project DomainDig.xcodeproj -scheme DomainDig -destination 'platform
 
 The app and local API share the canonical report pipeline through `DomainInspectionService`, `DomainReportBuilder`, and `DomainReportExporter`. The Local API's endpoints, response envelope, and `v1` compatibility policy are documented in [Docs/local-api.md](Docs/local-api.md). How the on-device store evolves across app versions is documented in [Docs/data-migration.md](Docs/data-migration.md).
 
+### Tests
+
+Unit coverage of the deterministic core — `DomainReportBuilder`, `DomainReportExporter`, `DiffService`, `DomainDataPortabilityService` (merge/replace dedup), the migration runner, and the Local API contract — lives in the `DomainDigTests` target:
+
+```sh
+xcodebuild test -project DomainDig.xcodeproj -scheme DomainDig -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:DomainDigTests
+```
+
+The `DomainDig` scheme's test action runs both `DomainDigTests` and the `DomainDigUITests` accessibility audit, so a plain `xcodebuild test` (and CI) exercises both.
+
 ### Accessibility Audit
 
 `DomainDigUITests` runs `performAccessibilityAudit()` over every primary screen,
@@ -79,7 +89,7 @@ between this script and CI.
 
 ## Release Planning
 
-See `RELEASE_ROADMAP.md` for the semver release plan from `v4.4.1` through the planned `v5.0.0` stabilization milestone.
+See `RELEASE_ROADMAP.md` for the semver release history from `v4.4.1` through the `v5.0.0` contract-stabilization milestone.
 
 ## Contributing
 
@@ -95,4 +105,4 @@ This project is licensed under the MIT License. See `LICENSE`.
 
 ## Contact
 
-Questions or feedback: hello@cleberg.net
+Questions or feedback: hello@zerolabs.sh

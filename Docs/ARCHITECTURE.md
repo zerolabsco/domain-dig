@@ -1,4 +1,4 @@
-# DomainDig v4.4.1 Architecture
+# DomainDig Architecture
 
 ## Overview
 
@@ -19,9 +19,9 @@ Inspection flow:
 - `LookupRuntime`: orchestrates section services for a single inspection.
 - `DomainInspectionService`: builds inspection snapshots with provenance, cache state, and failure metadata.
 - `DomainReportBuilder`: assembles summaries, insights, risk scoring, workflow context, and report metadata.
-- `DomainReportExporter`: renders TXT, CSV, and JSON output for app and local API use.
-- `DomainViewModel`: coordinates SwiftUI state, persistence, audit sessions, monitoring, workflows, batch operations, imports, and exports.
-- SwiftUI views: render screens and invoke view-model actions.
+- `DomainReportExporter`: renders TXT, CSV, JSON, Markdown, and PDF output for app and local API use.
+- `DomainViewModel`: coordinates SwiftUI state, persistence, audit sessions, monitoring, workflows, batch operations, imports, and exports. Its surface is split by concern across `DomainViewModel+Audit`, `+Monitoring`, `+Export`, `+Workflows`, `+History`, and `+Widget` extensions; the core type keeps the stored state and the inspection pipeline.
+- SwiftUI views: render screens and invoke view-model actions. The largest view file was decomposed too — Settings screens live in `SettingsViews.swift` and the result detail sections in `ResultSectionViews.swift`.
 
 ## Audit Mode
 
@@ -76,7 +76,16 @@ The app remains local-first. Purchase and entitlement code is local app infrastr
 - `DomainReportExporter`
 - `LocalAPIModels`
 
-The major-version roadmap calls for a stronger compatibility promise around this local API contract in `v5.0.0`.
+`v5.0.0` stabilized this contract: `LocalAPIContract` is the single source of truth for the `v1` wire version and JSON encoder, the response envelope and payloads are documented, and the shape is regression-locked by `LocalAPIContractTests`. See [local-api.md](local-api.md) for the endpoint and compatibility reference, and [data-migration.md](data-migration.md) for how the persisted store is versioned across app updates.
+
+## Testing
+
+Two test targets run from the `DomainDig` scheme's test action:
+
+- `DomainDigTests` — unit coverage of the deterministic core: `DomainReportBuilder`, `DomainReportExporter`, `DiffService`, `DomainDataPortabilityService` (merge/replace dedup), the store-migration runner, and the Local API contract. `SnapshotFixture` builds the deep `LookupSnapshot`/`DomainReport` models through the real builder so tests construct inputs without wiring every field.
+- `DomainDigUITests` — Apple's `performAccessibilityAudit()` over every primary screen at default and largest Dynamic Type, plus metadata and screenshot assertions. See [ACCESSIBILITY.md](ACCESSIBILITY.md).
+
+A plain `xcodebuild test` (and CI) runs both. The unit net went in first in `v5.0.0` and is what made the god-file decomposition safe to attempt.
 
 ## Xcode Project Structure
 
