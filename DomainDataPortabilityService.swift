@@ -342,12 +342,69 @@ enum DataPortabilityCSV {
     }
 }
 
+/// Versioned migration runner for the on-device persisted store.
+///
+/// The store is a set of independent JSON blobs in `UserDefaults` (tracked
+/// domains, history, audits, workflows, monitoring settings/logs, app settings).
+/// Most model evolution is handled additively by the models' own lenient
+/// decoders (`decodeIfPresent` with defaults), which need no migration at all.
+/// This runner exists only for changes lenient decoding can't express: dropping
+/// a renamed storage key, re-normalizing existing rows, or reshaping a blob.
+///
+/// `currentStoreSchemaVersion` is bumped whenever such a step is added. Each step
+/// runs exactly once, in ascending order, and must be safe to run on any prior
+/// state — including an empty store. A store written by a newer build (a higher
+/// version than this build knows) is left untouched; migrations never downgrade.
+/// The policy is documented in `Docs/data-migration.md`.
 enum DataMigrationService {
-    private static let migrationMarkerKey = "data.migrations.v3_4_0"
+    /// The schema version this build expects the on-device store to be at.
+    static let currentStoreSchemaVersion = 1
+
+    /// UserDefaults key holding the store's current schema version.
+    static let storeSchemaVersionKey = "data.storeSchemaVersion"
+
+    /// Pre-versioning installs recorded that the one-shot v1 normalization had
+    /// run using this boolean marker; `true` means the store is already at v1.
+    private static let legacyNormalizationMarkerKey = "data.migrations.v3_4_0"
+
+    /// The store's current schema version. Absent on pre-versioning installs: a
+    /// set legacy marker means v1 already ran, otherwise the store is fresh or
+    /// never-migrated at v0.
+    static func storeSchemaVersion(defaults: UserDefaults = .standard) -> Int {
+        if let version = defaults.object(forKey: storeSchemaVersionKey) as? Int {
+            return version
+        }
+        return defaults.bool(forKey: legacyNormalizationMarkerKey) ? 1 : 0
+    }
 
     static func migrateIfNeeded(defaults: UserDefaults = .standard) {
-        guard !defaults.bool(forKey: migrationMarkerKey) else { return }
+        // At or ahead of this build's version: nothing to do, and never rewrite
+        // a store a newer build may have reshaped (forward compatibility).
+        guard storeSchemaVersion(defaults: defaults) < currentStoreSchemaVersion else { return }
 
+        var version = storeSchemaVersion(defaults: defaults)
+        while version < currentStoreSchemaVersion {
+            let target = version + 1
+            runMigration(to: target, defaults: defaults)
+            defaults.set(target, forKey: storeSchemaVersionKey)
+            version = target
+        }
+    }
+
+    private static func runMigration(to version: Int, defaults: UserDefaults) {
+        switch version {
+        case 1:
+            normalizeAllStores(defaults: defaults)
+        default:
+            break
+        }
+    }
+
+    /// v1: load every store through its deduplicating loader and write it back.
+    /// This consolidates duplicate rows, drops the legacy `watchedDomains` key
+    /// (via `saveTrackedDomains`), and sanitizes monitoring settings against the
+    /// surviving tracked domains. Safe on an empty store (every step is a no-op).
+    private static func normalizeAllStores(defaults: UserDefaults) {
         let trackedDomains = DomainDataPortabilityService.loadTrackedDomains(defaults: defaults)
         DomainDataPortabilityService.saveTrackedDomains(trackedDomains, defaults: defaults)
 
@@ -366,8 +423,6 @@ enum DataMigrationService {
 
         let monitoringLogs = DomainDataPortabilityService.loadMonitoringLogs(defaults: defaults)
         DomainDataPortabilityService.saveMonitoringLogs(monitoringLogs, defaults: defaults)
-
-        defaults.set(true, forKey: migrationMarkerKey)
     }
 }
 

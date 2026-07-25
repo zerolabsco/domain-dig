@@ -51,7 +51,7 @@ Network inspection requests are made only to perform the requested domain checks
 xcodebuild -project DomainDig.xcodeproj -scheme DomainDig -destination 'platform=iOS Simulator,name=iPhone 16' build
 ```
 
-The app and local API share the canonical report pipeline through `DomainInspectionService`, `DomainReportBuilder`, and `DomainReportExporter`. The Local API's endpoints, response envelope, and `v1` compatibility policy are documented in [Docs/local-api.md](Docs/local-api.md).
+The app and local API share the canonical report pipeline through `DomainInspectionService`, `DomainReportBuilder`, and `DomainReportExporter`. The Local API's endpoints, response envelope, and `v1` compatibility policy are documented in [Docs/local-api.md](Docs/local-api.md). How the on-device store evolves across app versions is documented in [Docs/data-migration.md](Docs/data-migration.md).
 
 ### Accessibility Audit
 

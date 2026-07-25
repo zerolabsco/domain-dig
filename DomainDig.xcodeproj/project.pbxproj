@@ -10,6 +10,7 @@
 		05F775C7E0743AF727B008EE /* LocalAPIContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7572DA0A838E0A044F045260 /* LocalAPIContract.swift */; };
 		38316D90539394C2CC7C12BE /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE8B269A01CC5E593DA3DFC2 /* Foundation.framework */; };
 		47CD3BB1AE143733A73E0E5B /* DomainReportExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D7C7D97A4006831572F468 /* DomainReportExporterTests.swift */; };
+		4F96CEB875EC3501E784CE39 /* DataMigrationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435AFB3F99D579D3D7B58279 /* DataMigrationServiceTests.swift */; };
 		81359F63C7A23454B8FA0141 /* DomainReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82320955416797CFE59464A /* DomainReportBuilderTests.swift */; };
 		8BBFEF092F9874AE00E8E144 /* DomainInspectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */; };
 		8BBFEF0A2F9874AE00E8E144 /* DomainReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */; };
@@ -75,6 +76,7 @@
 /* Begin PBXFileReference section */
 		0D85A44C5F315A1644AC9073 /* LocalAPIContractTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAPIContractTests.swift; sourceTree = "<group>"; };
 		15A25DF2B8BB52589D49986B /* DiffServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiffServiceTests.swift; sourceTree = "<group>"; };
+		435AFB3F99D579D3D7B58279 /* DataMigrationServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DataMigrationServiceTests.swift; sourceTree = "<group>"; };
 		54D7C7D97A4006831572F468 /* DomainReportExporterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainReportExporterTests.swift; sourceTree = "<group>"; };
 		5CA789D3607B55E3612E6FFA /* SnapshotFixture.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotFixture.swift; sourceTree = "<group>"; };
 		7572DA0A838E0A044F045260 /* LocalAPIContract.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAPIContract.swift; sourceTree = "<group>"; };
@@ -229,6 +231,7 @@
 				54D7C7D97A4006831572F468 /* DomainReportExporterTests.swift */,
 				CC948A02EC0184228BC4630E /* DomainDataPortabilityServiceTests.swift */,
 				0D85A44C5F315A1644AC9073 /* LocalAPIContractTests.swift */,
+				435AFB3F99D579D3D7B58279 /* DataMigrationServiceTests.swift */,
 			);
 			name = DomainDigTests;
 			path = DomainDigTests;
@@ -487,6 +490,7 @@
 				C7CA9E02B0DC2708DE7A8563 /* DomainDataPortabilityServiceTests.swift in Sources */,
 				A5AF921BC1C2E6E940CC05DC /* SnapshotFixture.swift in Sources */,
 				EA12012CDB4C21ABB4217D86 /* LocalAPIContractTests.swift in Sources */,
+				4F96CEB875EC3501E784CE39 /* DataMigrationServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
