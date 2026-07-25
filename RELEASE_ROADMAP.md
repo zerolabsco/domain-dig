@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v4.9.0`.
+Current version: `v5.0.0`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -264,11 +264,11 @@ VoiceOver or Voice Control at all:
 The Liquid Glass (iOS 26+) runtime check is **done** — it ran on simulator
 alongside the classic-chrome floor.
 
-## v5.0.0 Major: Contract Stabilization & Engineering Health — ✅ engineering complete (release cut pending)
+## v5.0.0 Major: Contract Stabilization & Engineering Health — ✅ shipped
 
 Goal: earn long-term compatibility promises — and pay down the debt the feature
-releases above accumulated. All four workstreams have landed on `main`; cutting
-the release itself (version bump and submission) is the only remaining step.
+releases above accumulated. All four workstreams landed on `main` behind the new
+test net.
 
 - **Deterministic-core test net — done first**, as the cross-cutting note below
   required. Added `DomainDigTests`, the project's first XCTest unit target,
@@ -306,9 +306,9 @@ the release itself (version bump and submission) is the only remaining step.
   is a *design* change — extracting a collaborator object — not a mechanical move,
   so it is deferred rather than forced through visibility promotions.
 
-Remaining to cut the release: bump `MARKETING_VERSION` 4.9.0 → 5.0.0 and
-increment `CURRENT_PROJECT_VERSION`, keep `AppVersion.current` in sync, and
-archive/submit.
+Release cut: `MARKETING_VERSION` 4.9.0 → 5.0.0, `CURRENT_PROJECT_VERSION`
+44 → 45, and `AppVersion.current` bumped in lockstep. App Store archive/submit is
+the only step left, and it is a manual action outside the repo.
 
 ## Cross-cutting note
 
