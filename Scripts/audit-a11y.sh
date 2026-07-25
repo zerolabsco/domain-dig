@@ -43,14 +43,14 @@ DEPLOYMENT_TARGET=$(
     | awk -F' = ' '/ IPHONEOS_DEPLOYMENT_TARGET = /{print $2; exit}'
 )
 
-if [ -z "${DEPLOYMENT_TARGET:-}" ]; then
+if [[ -z "${DEPLOYMENT_TARGET:-}" ]]; then
   echo "error: could not read IPHONEOS_DEPLOYMENT_TARGET" >&2
   exit 1
 fi
 
 DT_MAJOR="${DEPLOYMENT_TARGET%%.*}"
 DT_MINOR="${DEPLOYMENT_TARGET##*.}"
-[ "$DT_MINOR" = "$DEPLOYMENT_TARGET" ] && DT_MINOR=0
+[[ "$DT_MINOR" = "$DEPLOYMENT_TARGET" ]] && DT_MINOR=0
 FLOOR_RANK=$(( DT_MAJOR * 1000 + DT_MINOR ))
 
 echo "    deployment target: $DEPLOYMENT_TARGET (rank $FLOOR_RANK)"
@@ -82,7 +82,7 @@ run_tier() {
   local sim udid label
 
   sim=$(select_sim "$which")
-  if [ -z "$sim" ]; then
+  if [[ -z "$sim" ]]; then
     echo "error: no iPhone simulator at or above iOS $DEPLOYMENT_TARGET installed" >&2
     echo "hint: install one with 'xcodebuild -downloadPlatform iOS'" >&2
     return 1
@@ -94,7 +94,7 @@ run_tier() {
   echo
   echo "==> $which: $label"
 
-  if [ "$which" = "floor" ] && [ "$(echo "$sim" | jq -r .rank)" -ge $(( (DT_MAJOR + 1) * 1000 )) ]; then
+  if [[ "$which" = "floor" ]] && [[ "$(echo "$sim" | jq -r .rank)" -ge $(( (DT_MAJOR + 1) * 1000 )) ]]; then
     echo "    NOTE: nearest installed runtime is a major version above the $DEPLOYMENT_TARGET"
     echo "          deployment target, so this is not true floor coverage."
   fi
@@ -113,7 +113,7 @@ run_tier() {
 }
 
 status=0
-if [ "$TIER" = "both" ]; then
+if [[ "$TIER" = "both" ]]; then
   run_tier floor || status=1
   run_tier current || status=1
 else
@@ -121,7 +121,7 @@ else
 fi
 
 echo
-if [ "$status" -eq 0 ]; then
+if [[ "$status" -eq 0 ]]; then
   echo "==> Done. Findings above are the burndown list for issue #21."
   echo "    They are reported, not enforced — widen"
   echo "    AccessibilityAuditHarness.enforcedAuditTypes as each phase lands."
