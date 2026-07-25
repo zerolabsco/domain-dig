@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		38316D90539394C2CC7C12BE /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE8B269A01CC5E593DA3DFC2 /* Foundation.framework */; };
+		47CD3BB1AE143733A73E0E5B /* DomainReportExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D7C7D97A4006831572F468 /* DomainReportExporterTests.swift */; };
+		81359F63C7A23454B8FA0141 /* DomainReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82320955416797CFE59464A /* DomainReportBuilderTests.swift */; };
 		8BBFEF092F9874AE00E8E144 /* DomainInspectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */; };
 		8BBFEF0A2F9874AE00E8E144 /* DomainReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */; };
 		8BBFEF0B2F9874AE00E8E144 /* DomainReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */; };
@@ -16,9 +19,19 @@
 		8BDA00010000000000000002 /* DomainDigWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8BDB00010000000000000002 /* DomainDigShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BDB00010000000000000001 /* DomainDigShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
+		A5AF921BC1C2E6E940CC05DC /* SnapshotFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA789D3607B55E3612E6FFA /* SnapshotFixture.swift */; };
+		C7CA9E02B0DC2708DE7A8563 /* DomainDataPortabilityServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC948A02EC0184228BC4630E /* DomainDataPortabilityServiceTests.swift */; };
+		E959C4D24DAAB3CB80D854B2 /* DiffServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A25DF2B8BB52589D49986B /* DiffServiceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		57D61F819B6EA1C654237C8F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8B7800612F6090E300933221 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8B7800682F6090E300933221;
+			remoteInfo = DomainDig;
+		};
 		8BDA00010000000000000003 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8B7800612F6090E300933221 /* Project object */;
@@ -58,6 +71,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		15A25DF2B8BB52589D49986B /* DiffServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiffServiceTests.swift; sourceTree = "<group>"; };
+		54D7C7D97A4006831572F468 /* DomainReportExporterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainReportExporterTests.swift; sourceTree = "<group>"; };
+		5CA789D3607B55E3612E6FFA /* SnapshotFixture.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotFixture.swift; sourceTree = "<group>"; };
 		8B6472EF300EBFA30018E10A /* SyncedProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = SyncedProducts.storekit; sourceTree = "<group>"; };
 		8B7800692F6090E300933221 /* DomainDig.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DomainDig.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainInspectionService.swift; sourceTree = "<group>"; };
@@ -70,6 +86,10 @@
 		8BDB00010000000000000001 /* DomainDigShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DomainDigShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BDC00010000000000000001 /* DomainDigUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DomainDigUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityService.swift; sourceTree = "<group>"; };
+		A77F7ED29E7C6669F5E61C04 /* DomainDigTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DomainDigTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC948A02EC0184228BC4630E /* DomainDataPortabilityServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityServiceTests.swift; sourceTree = "<group>"; };
+		DE8B269A01CC5E593DA3DFC2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		E82320955416797CFE59464A /* DomainReportBuilderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainReportBuilderTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -109,6 +129,8 @@
 		};
 		8BDA0001000000000000000D /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = Shared;
 			sourceTree = "<group>";
 		};
@@ -130,12 +152,22 @@
 		};
 		8BDC0001000000000000000E /* DomainDigUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = DomainDigUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		68EB2A07F42245EE1B09B018 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38316D90539394C2CC7C12BE /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8B7800662F6090E300933221 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -167,6 +199,36 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		12026CD045DFB45E9E37D207 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E4CAAB98268DE269071F04E3 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		2B31A5F9F390F512E966D4B1 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				5CA789D3607B55E3612E6FFA /* SnapshotFixture.swift */,
+			);
+			name = Fixtures;
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		7CC29A88387286DE8B4D17B3 /* DomainDigTests */ = {
+			isa = PBXGroup;
+			children = (
+				2B31A5F9F390F512E966D4B1 /* Fixtures */,
+				15A25DF2B8BB52589D49986B /* DiffServiceTests.swift */,
+				E82320955416797CFE59464A /* DomainReportBuilderTests.swift */,
+				54D7C7D97A4006831572F468 /* DomainReportExporterTests.swift */,
+				CC948A02EC0184228BC4630E /* DomainDataPortabilityServiceTests.swift */,
+			);
+			name = DomainDigTests;
+			path = DomainDigTests;
+			sourceTree = "<group>";
+		};
 		8B7800602F6090E300933221 = {
 			isa = PBXGroup;
 			children = (
@@ -184,6 +246,8 @@
 				8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */,
 				8BCA3CBC2F9C8D57004B742C /* LocalAPIModels.swift */,
 				8BCA3CBD2F9C8D57004B742C /* LocalAPIService.swift */,
+				12026CD045DFB45E9E37D207 /* Frameworks */,
+				7CC29A88387286DE8B4D17B3 /* DomainDigTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -194,13 +258,40 @@
 				8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */,
 				8BDB00010000000000000001 /* DomainDigShareExtension.appex */,
 				8BDC00010000000000000001 /* DomainDigUITests.xctest */,
+				A77F7ED29E7C6669F5E61C04 /* DomainDigTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		E4CAAB98268DE269071F04E3 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				DE8B269A01CC5E593DA3DFC2 /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		77CB8BAE320E7119E3283122 /* DomainDigTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 108E5397EABF84F5A56080A9 /* Build configuration list for PBXNativeTarget "DomainDigTests" */;
+			buildPhases = (
+				34C44EAF4B4DA8C10B33208D /* Sources */,
+				68EB2A07F42245EE1B09B018 /* Frameworks */,
+				A5B47E96AE4B6A13198132C2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D17881CF5E934733B8E99DE8 /* PBXTargetDependency */,
+			);
+			name = DomainDigTests;
+			productName = DomainDigTests;
+			productReference = A77F7ED29E7C6669F5E61C04 /* DomainDigTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		8B7800682F6090E300933221 /* DomainDig */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8B7800742F6090E400933221 /* Build configuration list for PBXNativeTarget "DomainDig" */;
@@ -221,8 +312,6 @@
 				8BDA0001000000000000000D /* Shared */,
 			);
 			name = DomainDig;
-			packageProductDependencies = (
-			);
 			productName = DomainDig;
 			productReference = 8B7800692F6090E300933221 /* DomainDig.app */;
 			productType = "com.apple.product-type.application";
@@ -244,8 +333,6 @@
 				8BDA0001000000000000000E /* DomainDigWidget */,
 			);
 			name = DomainDigWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = DomainDigWidgetExtension;
 			productReference = 8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -267,8 +354,6 @@
 				8BDB0001000000000000000E /* DomainDigShareExtension */,
 			);
 			name = DomainDigShareExtension;
-			packageProductDependencies = (
-			);
 			productName = DomainDigShareExtension;
 			productReference = 8BDB00010000000000000001 /* DomainDigShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -290,8 +375,6 @@
 				8BDC0001000000000000000E /* DomainDigUITests */,
 			);
 			name = DomainDigUITests;
-			packageProductDependencies = (
-			);
 			productName = DomainDigUITests;
 			productReference = 8BDC00010000000000000001 /* DomainDigUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -344,6 +427,7 @@
 				8BDA00010000000000000006 /* DomainDigWidgetExtension */,
 				8BDB00010000000000000006 /* DomainDigShareExtension */,
 				8BDC00010000000000000006 /* DomainDigUITests */,
+				77CB8BAE320E7119E3283122 /* DomainDigTests */,
 			);
 		};
 /* End PBXProject section */
@@ -377,9 +461,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A5B47E96AE4B6A13198132C2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		34C44EAF4B4DA8C10B33208D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E959C4D24DAAB3CB80D854B2 /* DiffServiceTests.swift in Sources */,
+				81359F63C7A23454B8FA0141 /* DomainReportBuilderTests.swift in Sources */,
+				47CD3BB1AE143733A73E0E5B /* DomainReportExporterTests.swift in Sources */,
+				C7CA9E02B0DC2708DE7A8563 /* DomainDataPortabilityServiceTests.swift in Sources */,
+				A5AF921BC1C2E6E940CC05DC /* SnapshotFixture.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8B7800652F6090E300933221 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -433,9 +536,38 @@
 			target = 8B7800682F6090E300933221 /* DomainDig */;
 			targetProxy = 8BDC00010000000000000003 /* PBXContainerItemProxy */;
 		};
+		D17881CF5E934733B8E99DE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DomainDig;
+			target = 8B7800682F6090E300933221 /* DomainDig */;
+			targetProxy = 57D61F819B6EA1C654237C8F /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		87FD0A9B1630561EDC7F2A3D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 44;
+				DEVELOPMENT_TEAM = ZCNAX3VL9D;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				MARKETING_VERSION = 4.9.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDigTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DomainDig.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DomainDig";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		8B7800722F6090E400933221 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -787,9 +919,40 @@
 			};
 			name = Release;
 		};
+		A6C716A4AC78E316F1378CBB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 44;
+				DEVELOPMENT_TEAM = ZCNAX3VL9D;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				MARKETING_VERSION = 4.9.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDigTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DomainDig.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DomainDig";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		108E5397EABF84F5A56080A9 /* Build configuration list for PBXNativeTarget "DomainDigTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				87FD0A9B1630561EDC7F2A3D /* Release */,
+				A6C716A4AC78E316F1378CBB /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		8B7800642F6090E300933221 /* Build configuration list for PBXProject "DomainDig" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
