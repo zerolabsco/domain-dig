@@ -1,14 +1,11 @@
-import StoreKit
 import SwiftUI
 
 /// Settings → App Info. Shows app/build metadata and links out to docs, source,
 /// privacy, support, and the App Store. The actionable rows are driven by a
 /// single declarative `AppInfoRow` model so titles, icons, and destinations live
-/// in one place; only the Rate and Share rows are special-cased (a StoreKit
-/// action and a `ShareLink` view, respectively).
+/// in one place; only the Share row is special-cased (a `ShareLink` view).
 struct AppInfoView: View {
     @Environment(\.openURL) private var openURL
-    @Environment(\.requestReview) private var requestReview
     @State private var cloudSyncService = CloudSyncService.shared
     @State private var activeSheet: AppInfoSheet?
 
@@ -29,20 +26,20 @@ struct AppInfoView: View {
                 ForEach(supportRows) { row($0) }
             }
 
-            Section("Support the App") {
+            Section {
                 Button {
-                    requestReview()
+                    openURL(AppLinks.writeReview)
                 } label: {
                     Label("Rate DomainDig", systemImage: "star")
                 }
+                .accessibilityHint("Opens the App Store")
 
                 ShareLink(item: AppLinks.appStoreListing) {
                     Label("Share DomainDig", systemImage: "square.and.arrow.up")
                 }
                 .accessibilityHint("Opens the share sheet")
-            }
-
-            Section {
+            } header: {
+                Text("Support the App")
             } footer: {
                 Text(AppLinks.copyright)
                     .frame(maxWidth: .infinity, alignment: .center)
