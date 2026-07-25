@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v5.0.0`.
+Current version: `v5.0.1`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -309,6 +309,17 @@ test net.
 Release cut: `MARKETING_VERSION` 4.9.0 → 5.0.0, `CURRENT_PROJECT_VERSION`
 44 → 45, and `AppVersion.current` bumped in lockstep. App Store archive/submit is
 the only step left, and it is a manual action outside the repo.
+
+## v5.0.1 Patch: Owner entitlement — ✅ shipped
+
+- **Owner Pro+ allowlist.** `OwnerAccess` identifies the app owner by their
+  CloudKit user-record ID (an opaque, per-Apple-ID value scoped to the app's
+  container). `PurchaseService` resolves it against CloudKit once per launch and,
+  on a match, grants `.proPlus` — persisted so it applies instantly and offline
+  thereafter. It only ever elevates the tier and defers to the existing `#if
+  DEBUG` overrides, so real purchases and free/pro testing are unaffected.
+- Release cut: `MARKETING_VERSION` 5.0.0 → 5.0.1, `CURRENT_PROJECT_VERSION`
+  45 → 46, `AppVersion.current` in lockstep.
 
 ## Cross-cutting note
 

@@ -34,6 +34,20 @@ final class PurchaseService {
     private static let debugForceProPlusArgument = "DOMAIN_DIG_FORCE_PRO_PLUS"
     #endif
 
+    private static let ownerEntitlementKey = "purchase.ownerEntitlement"
+
+    /// Whether the owner allowlist has confirmed this device's iCloud user as the
+    /// owner. Persisted so the grant is instant on later launches and survives
+    /// offline, when CloudKit cannot be reached.
+    static var ownerEntitlementGranted: Bool {
+        UserDefaults.standard.bool(forKey: ownerEntitlementKey)
+    }
+
+    private static var storedEntitlement: CachedEntitlement? {
+        guard let data = UserDefaults.standard.data(forKey: entitlementCacheKey) else { return nil }
+        return try? JSONDecoder().decode(CachedEntitlement.self, from: data)
+    }
+
     static var cachedEntitlement: CachedEntitlement? {
         #if DEBUG
         if let forcedEntitlement = debugForcedEntitlement {
@@ -41,12 +55,17 @@ final class PurchaseService {
         }
         #endif
 
-        guard let data = UserDefaults.standard.data(forKey: entitlementCacheKey) else { return nil }
-        return try? JSONDecoder().decode(CachedEntitlement.self, from: data)
+        return storedEntitlement
     }
 
     static var cachedTier: FeatureTier {
-        cachedEntitlement?.tier ?? .free
+        #if DEBUG
+        // A debug override wins outright so free/pro tiers remain testable on the
+        // owner's own device.
+        if let forcedEntitlement = debugForcedEntitlement { return forcedEntitlement.tier }
+        #endif
+        if ownerEntitlementGranted { return .proPlus }
+        return storedEntitlement?.tier ?? .free
     }
 
     var products: [Product] = []
@@ -64,8 +83,10 @@ final class PurchaseService {
         currentTier = Self.cachedTier
         activeProductID = Self.cachedEntitlement?.activeProductID
         applyDebugOverrideIfNeeded()
+        applyOwnerOverrideIfNeeded()
         updatesTask = observeTransactionUpdates()
         Task {
+            await resolveOwnerEntitlementIfNeeded()
             await refreshProducts()
             await refreshEntitlements()
         }
@@ -118,6 +139,7 @@ final class PurchaseService {
         currentTier = tier(for: activeProductID)
         persistCurrentEntitlement()
         applyDebugOverrideIfNeeded()
+        applyOwnerOverrideIfNeeded()
     }
 
     func purchase(_ product: Product) async {
@@ -249,6 +271,31 @@ final class PurchaseService {
         currentTier = forcedEntitlement.tier
         activeProductID = forcedEntitlement.activeProductID
         #endif
+    }
+
+    /// Elevates the current tier to Pro+ when the device's iCloud user has been
+    /// confirmed as the owner. Only ever elevates, and defers to a debug override
+    /// so free/pro tiers stay testable on the owner's own device.
+    private func applyOwnerOverrideIfNeeded() {
+        #if DEBUG
+        if Self.debugForcedEntitlement != nil { return }
+        #endif
+        guard Self.ownerEntitlementGranted else { return }
+        currentTier = .proPlus
+    }
+
+    /// Resolves the owner allowlist against CloudKit once per launch. On a match
+    /// it records the grant so future launches apply it synchronously and offline.
+    private func resolveOwnerEntitlementIfNeeded() async {
+        guard OwnerAccess.isConfigured else { return }
+        if Self.ownerEntitlementGranted {
+            applyOwnerOverrideIfNeeded()
+            return
+        }
+        if await OwnerAccess.isOwner() {
+            UserDefaults.standard.set(true, forKey: Self.ownerEntitlementKey)
+            applyOwnerOverrideIfNeeded()
+        }
     }
 
     private func verifiedTransaction(from result: VerificationResult<Transaction>) throws -> Transaction {
