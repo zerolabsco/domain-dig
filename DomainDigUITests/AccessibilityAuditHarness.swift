@@ -184,10 +184,10 @@ enum AccessibilityAuditHarness {
         // and the search field's hit region at accessibility sizes is the
         // system's own control. Reading `elementType` here is safe; reading
         // `frame` is not (it kills element attribution for the whole audit).
-        if let type = issue.element?.elementType, type == .searchField || type == .textField {
-            if issue.auditType.contains(.textClipped) || issue.auditType.contains(.hitRegion) {
-                return "system field placeholder/hit region, length-independent"
-            }
+        if let type = issue.element?.elementType,
+           type == .searchField || type == .textField,
+           issue.auditType.contains(.textClipped) || issue.auditType.contains(.hitRegion) {
+            return "system field placeholder/hit region, length-independent"
         }
 
         // Unattributed clipped-text/dynamic-type findings. Bisection showed the
