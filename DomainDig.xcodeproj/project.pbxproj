@@ -21,6 +21,7 @@
 		8BDA00010000000000000002 /* DomainDigWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BDA00010000000000000001 /* DomainDigWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8BDB00010000000000000002 /* DomainDigShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BDB00010000000000000001 /* DomainDigShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
+		99024E91EED2275FD80E83A9 /* AppInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499B99A1866999A38AC475F5 /* AppInfoTests.swift */; };
 		A5AF921BC1C2E6E940CC05DC /* SnapshotFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA789D3607B55E3612E6FFA /* SnapshotFixture.swift */; };
 		C7CA9E02B0DC2708DE7A8563 /* DomainDataPortabilityServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC948A02EC0184228BC4630E /* DomainDataPortabilityServiceTests.swift */; };
 		E959C4D24DAAB3CB80D854B2 /* DiffServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A25DF2B8BB52589D49986B /* DiffServiceTests.swift */; };
@@ -77,6 +78,7 @@
 		0D85A44C5F315A1644AC9073 /* LocalAPIContractTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAPIContractTests.swift; sourceTree = "<group>"; };
 		15A25DF2B8BB52589D49986B /* DiffServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiffServiceTests.swift; sourceTree = "<group>"; };
 		435AFB3F99D579D3D7B58279 /* DataMigrationServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DataMigrationServiceTests.swift; sourceTree = "<group>"; };
+		499B99A1866999A38AC475F5 /* AppInfoTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppInfoTests.swift; sourceTree = "<group>"; };
 		54D7C7D97A4006831572F468 /* DomainReportExporterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainReportExporterTests.swift; sourceTree = "<group>"; };
 		5CA789D3607B55E3612E6FFA /* SnapshotFixture.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotFixture.swift; sourceTree = "<group>"; };
 		7572DA0A838E0A044F045260 /* LocalAPIContract.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAPIContract.swift; sourceTree = "<group>"; };
@@ -232,6 +234,7 @@
 				CC948A02EC0184228BC4630E /* DomainDataPortabilityServiceTests.swift */,
 				0D85A44C5F315A1644AC9073 /* LocalAPIContractTests.swift */,
 				435AFB3F99D579D3D7B58279 /* DataMigrationServiceTests.swift */,
+				499B99A1866999A38AC475F5 /* AppInfoTests.swift */,
 			);
 			name = DomainDigTests;
 			path = DomainDigTests;
@@ -491,6 +494,7 @@
 				A5AF921BC1C2E6E940CC05DC /* SnapshotFixture.swift in Sources */,
 				EA12012CDB4C21ABB4217D86 /* LocalAPIContractTests.swift in Sources */,
 				4F96CEB875EC3501E784CE39 /* DataMigrationServiceTests.swift in Sources */,
+				99024E91EED2275FD80E83A9 /* AppInfoTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
