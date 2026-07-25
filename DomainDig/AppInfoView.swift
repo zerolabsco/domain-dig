@@ -8,6 +8,9 @@ struct AppInfoView: View {
     @Environment(\.openURL) private var openURL
     @State private var cloudSyncService = CloudSyncService.shared
     @State private var activeSheet: AppInfoSheet?
+    #if DEBUG
+    @State private var developerRecordName: String?
+    #endif
 
     var body: some View {
         Form {
@@ -44,6 +47,27 @@ struct AppInfoView: View {
                 Text(AppLinks.copyright)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
+
+            #if DEBUG
+            Section {
+                HStack(alignment: .top, spacing: 8) {
+                    Text(developerRecordName ?? "Fetching…")
+                        .font(.system(.footnote, design: .monospaced))
+                        .textSelection(.enabled)
+                    Spacer(minLength: 8)
+                    if let developerRecordName {
+                        AppCopyButton(value: developerRecordName, label: "Copy iCloud record ID")
+                    }
+                }
+            } header: {
+                Text("Developer")
+            } footer: {
+                Text("Your CloudKit user-record ID for this app, used to configure the owner allowlist. DEBUG builds only.")
+            }
+            .task {
+                developerRecordName = await OwnerAccess.currentUserRecordName() ?? "Unavailable (sign into iCloud)"
+            }
+            #endif
         }
         .navigationTitle("App Info")
         .task {
