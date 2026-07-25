@@ -1,0 +1,113 @@
+# DomainDig Local API — `v1`
+
+The Local API exposes DomainDig's canonical report data to on-device automation
+(Shortcuts, scripts, integrations). It is **off by default** and, when enabled,
+binds only to loopback.
+
+- **Base URL:** `http://127.0.0.1:<port>` (default port `47821`, configurable in
+  Settings → Local API)
+- **Binding:** loopback only (`acceptLocalOnly`); never reachable off-device
+- **Content type:** every response is `application/json`
+- **Version:** `v1` (reported in every response envelope)
+
+This document is the stable contract. The response shape is pinned by
+`DomainDigTests/LocalAPIContractTests.swift`; `LocalAPIContract` (in
+`LocalAPIContract.swift`) is the single source of truth for the version string
+and the JSON encoder.
+
+## Authentication
+
+Every request requires the token shown in Settings → Local API, supplied either
+way:
+
+```
+Authorization: Bearer <token>
+```
+```
+X-API-Token: <token>
+```
+
+A missing or wrong token returns `401 unauthorized`. Settings → Local API has a
+**Copy cURL Command** button that emits a ready-to-run authenticated request.
+
+## Response envelope
+
+Every response — success or error — is wrapped in the same envelope:
+
+```json
+{
+  "success": true,
+  "version": "v1",
+  "data": { "...": "payload, present on success" }
+}
+```
+```json
+{
+  "success": false,
+  "version": "v1",
+  "error": { "code": "not_found", "message": "The requested Local API route does not exist." }
+}
+```
+
+- On success, `data` holds the endpoint payload and `error` is **omitted**.
+- On failure, `error` holds a machine `code` plus a human `message`, and `data`
+  is **omitted**.
+
+### Encoding conventions
+
+- **Dates** are ISO-8601 UTC strings, e.g. `"2023-11-14T22:13:20Z"`.
+- **Absent optional fields are omitted, not `null`.** Consumers must treat a
+  missing key as "not present."
+- Object keys are emitted in sorted order (deterministic output; not
+  contractually meaningful — do not depend on key order).
+
+## Endpoints
+
+| Method | Path | Payload (`data`) fields |
+|--------|------|-------------------------|
+| GET | `/portfolio` | `summary` → `{ totalDomains, healthyCount, warningCount, criticalCount, changedLast24h, expiringSoonCount, unreachableCount }` |
+| GET | `/domains` | `domains: [TrackedDomain]` |
+| GET | `/domains/{domain}` | `domain`, `trackedDomain?` (`TrackedDomain`), `latestReport?` (`DomainReport`) |
+| GET | `/domains/{domain}/history` | `domain`, `history: [HistoryEntry]` |
+| GET | `/events` | `events: [{ timestamp, domain, summary, status, severity }]` |
+| GET | `/monitoring` | `isEnabled`, `scope` (`"allTracked"` \| `"selectedOnly"`), `alertsEnabled`, `monitoredDomains: [{ domain, monitoringEnabled, lastMonitoredAt?, lastAlertAt?, certificateWarningLevel }]` |
+| POST | `/inspect` | body `{ "domain": "example.com" }` → `report` (`DomainReport`) |
+| POST | `/inspect/{domain}` | `report` (`DomainReport`) |
+| POST | `/monitoring/{domain}/enable` | `domain`, `monitoringEnabled` |
+| POST | `/monitoring/{domain}/disable` | `domain`, `monitoringEnabled` |
+
+`certificateWarningLevel` encodes as `"none"`, `"warning"`, or `"critical"`.
+
+`DomainReport` is the app's canonical report model (the same shape the JSON
+export produces); see `DomainReportBuilder.swift` for its fields. It is a large
+object and is treated as an additive contract: new fields may appear without a
+version bump.
+
+## Error codes
+
+| HTTP | `code` | When |
+|------|--------|------|
+| 400 | `bad_request` | The HTTP request line/path could not be parsed |
+| 400 | `invalid_body` | `POST /inspect` body was not `{ "domain": "…" }` |
+| 400 | `invalid_domain` | A path/body domain was empty or invalid |
+| 401 | `unauthorized` | Missing or incorrect token |
+| 404 | `not_found` | No such route |
+| 404 | `domain_not_found` | No local data / tracked domain for the given name |
+| 500 | `encoding_failed` | The response could not be encoded |
+| 500 | `internal_error` | The request handler failed unexpectedly |
+
+## Compatibility policy
+
+The `version` field follows a semantic-version-style promise:
+
+- **Backward-compatible changes keep `version` at `v1`.** Adding a new endpoint,
+  or adding a new field to an existing payload, is non-breaking. **Consumers
+  must ignore unknown fields.**
+- **Breaking changes bump `version`.** Renaming or removing a field, changing a
+  field's type, or changing the meaning/units of an existing field requires a new
+  version, an update to this document, and an update to
+  `LocalAPIContractTests.swift`.
+
+There are currently no deprecated fields or endpoints. When a field is
+deprecated, it will be listed here with the version in which it becomes eligible
+for removal, and will remain present for at least one subsequent version.

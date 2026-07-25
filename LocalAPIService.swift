@@ -3,8 +3,6 @@ import Network
 import Observation
 import Security
 
-private let localAPIVersion = "v1"
-
 private enum LocalAPIServerError: LocalizedError {
     case missingSecret
     case secretPersistenceFailed
@@ -508,12 +506,7 @@ private final class LocalAPIServer: @unchecked Sendable {
 }
 
 private struct LocalAPIRequestHandler {
-    private let encoder: JSONEncoder = {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.sortedKeys]
-        return encoder
-    }()
+    private let encoder = LocalAPIContract.makeEncoder()
 
     private let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
@@ -606,7 +599,7 @@ private struct LocalAPIRequestHandler {
     }
 
     private func successResponse<Value: Encodable>(_ value: Value) -> LocalAPIHTTPResponse {
-        let envelope = LocalAPIEnvelope(success: true, data: value, error: nil, version: localAPIVersion)
+        let envelope = LocalAPIEnvelope(success: true, data: value, error: nil, version: LocalAPIContract.version)
         guard let body = try? encoder.encode(envelope) else {
             return .error(statusCode: 500, code: "encoding_failed", message: "Could not encode the Local API response.")
         }
@@ -836,12 +829,10 @@ private struct LocalAPIHTTPResponse {
             success: false,
             data: nil,
             error: LocalAPIErrorPayload(code: code, message: message),
-            version: localAPIVersion
+            version: LocalAPIContract.version
         )
 
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let body = (try? encoder.encode(payload)) ?? Data()
+        let body = (try? LocalAPIContract.makeEncoder().encode(payload)) ?? Data()
         return LocalAPIHTTPResponse(statusCode: statusCode, body: body)
     }
 
@@ -951,25 +942,25 @@ private enum LocalAPIHTTPParser {
     }
 }
 
-private struct LocalAPIEnvelope<DataPayload: Encodable>: Encodable {
+struct LocalAPIEnvelope<DataPayload: Encodable>: Encodable {
     let success: Bool
     let data: DataPayload?
     let error: LocalAPIErrorPayload?
     let version: String
 }
 
-private struct LocalAPIErrorPayload: Encodable {
+struct LocalAPIErrorPayload: Encodable {
     let code: String
     let message: String
 }
 
-private struct EmptyPayload: Encodable {}
+struct EmptyPayload: Encodable {}
 
-private struct PortfolioPayload: Encodable {
+struct PortfolioPayload: Encodable {
     let summary: PortfolioSummary
 }
 
-private struct PortfolioSummary: Encodable {
+struct PortfolioSummary: Encodable {
     let totalDomains: Int
     let healthyCount: Int
     let warningCount: Int
@@ -979,26 +970,26 @@ private struct PortfolioSummary: Encodable {
     let unreachableCount: Int
 }
 
-private struct DomainListPayload: Encodable {
+struct DomainListPayload: Encodable {
     let domains: [TrackedDomain]
 }
 
-private struct DomainDetailPayload: Encodable {
+struct DomainDetailPayload: Encodable {
     let domain: String
     let trackedDomain: TrackedDomain?
     let latestReport: DomainReport?
 }
 
-private struct DomainHistoryPayload: Encodable {
+struct DomainHistoryPayload: Encodable {
     let domain: String
     let history: [HistoryEntry]
 }
 
-private struct RecentEventsPayload: Encodable {
+struct RecentEventsPayload: Encodable {
     let events: [RecentEventPayload]
 }
 
-private struct RecentEventPayload: Encodable {
+struct RecentEventPayload: Encodable {
     let timestamp: Date
     let domain: String
     let summary: String
@@ -1006,14 +997,14 @@ private struct RecentEventPayload: Encodable {
     let severity: String
 }
 
-private struct MonitoringPayload: Encodable {
+struct MonitoringPayload: Encodable {
     let isEnabled: Bool
     let scope: MonitoringScope
     let alertsEnabled: Bool
     let monitoredDomains: [MonitoringDomainPayload]
 }
 
-private struct MonitoringDomainPayload: Encodable {
+struct MonitoringDomainPayload: Encodable {
     let domain: String
     let monitoringEnabled: Bool
     let lastMonitoredAt: Date?
@@ -1021,15 +1012,15 @@ private struct MonitoringDomainPayload: Encodable {
     let certificateWarningLevel: CertificateWarningLevel
 }
 
-private struct MonitoringMutationPayload: Encodable {
+struct MonitoringMutationPayload: Encodable {
     let domain: String
     let monitoringEnabled: Bool
 }
 
-private struct InspectRequestPayload: Decodable {
+struct InspectRequestPayload: Decodable {
     let domain: String
 }
 
-private struct InspectResponsePayload: Encodable {
+struct InspectResponsePayload: Encodable {
     let report: DomainReport
 }
