@@ -1,0 +1,9 @@
+{
+  "version": "5.0.0",
+  "highlights": [
+    "The Local API now has a documented, versioned \"v1\" response contract, so scripts and automation you build against it stay stable across updates.",
+    "A versioned migration system keeps your tracked domains, history, audits, and settings safe and correctly upgraded across app versions.",
+    "A large internal cleanup: the two biggest source files were decomposed into focused units behind a new unit-test safety net, for faster and safer future releases.",
+    "App Info now links to documentation, source, privacy, and support, and can prefill an issue report with your app and device versions."
+  ]
+}

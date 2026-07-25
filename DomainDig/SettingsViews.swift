@@ -105,7 +105,7 @@ struct SettingsView: View {
 
             Section("About") {
                 NavigationLink("App Info") {
-                    AboutSettingsView()
+                    AppInfoView()
                 }
             }
         }
@@ -1066,28 +1066,6 @@ private struct DataManagementSettingsView: View {
             }
 
             isDeletingAllData = false
-        }
-    }
-}
-
-private struct AboutSettingsView: View {
-    @State private var cloudSyncService = CloudSyncService.shared
-
-    private var appVersion: String {
-        AppVersion.current
-    }
-
-    var body: some View {
-        Form {
-            Section("About") {
-                LabeledContent("Version", value: appVersion)
-                LabeledContent("Storage", value: cloudSyncService.isEnabled ? "Local-first + iCloud" : "Local-only")
-                LabeledContent("Backup Schema", value: "v\(DomainDigBackup.currentSchemaVersion)")
-            }
-        }
-        .navigationTitle("App Info")
-        .task {
-            await cloudSyncService.refreshAvailability()
         }
     }
 }
