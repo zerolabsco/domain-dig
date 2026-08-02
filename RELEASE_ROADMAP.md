@@ -6,7 +6,7 @@ ports, geolocation, subdomains, availability). The next several releases invest
 in *reach and surfacing* — getting that data onto more iOS surfaces and into more
 workflows — rather than adding raw protocol checks.
 
-Current version: `v5.0.1`.
+Current version: `v5.0.2`.
 
 ## v4.4.1 Patch: Release Readiness — ✅ shipped
 
@@ -320,6 +320,18 @@ the only step left, and it is a manual action outside the repo.
   DEBUG` overrides, so real purchases and free/pro testing are unaffected.
 - Release cut: `MARKETING_VERSION` 5.0.0 → 5.0.1, `CURRENT_PROJECT_VERSION`
   45 → 46, `AppVersion.current` in lockstep.
+
+## v5.0.2 Patch: krazywarez migration — ✅ shipped
+
+- **Org/domain migration.** Moved all outward-facing references from
+  `zerolabsco`/`zerolabs.sh` to `krazywarez`/`krz.sh`: source, documentation,
+  privacy, and support links in `AppLinks`, the support email (`root@krz.sh`),
+  the SonarCloud project badges, the `DomainDebugLog` logging subsystem, and the
+  docs (`README`, `SECURITY`, `ACCESSIBILITY`). Stable identity — bundle IDs, App
+  Group, iCloud/CloudKit container, and background-task identifiers — stays on
+  `net.cleberg.DomainDig`, tied to the existing App Store listing.
+- Release cut: `MARKETING_VERSION` 5.0.1 → 5.0.2, `CURRENT_PROJECT_VERSION`
+  46 → 47, `AppVersion.current` in lockstep.
 
 ## Cross-cutting note
 
