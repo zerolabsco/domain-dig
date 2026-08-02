@@ -4,7 +4,7 @@
 primary screen. The audit checks contrast, hit-region size, clipped text at
 large Dynamic Type, element descriptions, trait correctness, and Dynamic Type
 support — the same ground the accessibility pass tracked in
-[issue #21](https://github.com/zerolabsco/domain-dig/issues/21) covers.
+[issue #21](https://github.com/krazywarez/domain-dig/issues/21) covers.
 
 ## The colour palette
 

@@ -7,7 +7,7 @@ enum DomainDebugLog {
 #else
     static let enabled = false
 #endif
-    private static let logger = Logger(subsystem: "co.zerolabs.domain-dig", category: "Debug")
+    private static let logger = Logger(subsystem: "co.krz.domain-dig", category: "Debug")
 
     static func debug(_ message: String) {
         guard enabled else { return }
