@@ -105,4 +105,4 @@ This project is licensed under the MIT License. See `LICENSE`.
 
 ## Contact
 
-Questions or feedback: hello@zerolabs.sh
+Questions or feedback: root@krz.sh
