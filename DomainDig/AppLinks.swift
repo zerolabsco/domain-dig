@@ -9,9 +9,9 @@ enum AppLinks {
     /// App Store numeric identifier; the listing/review/share URLs derive from it.
     static let appStoreID = "6760368004"
 
-    static let sourceCode = url("https://github.com/zerolabsco/domain-dig")
-    static let documentation = url("https://github.com/zerolabsco/domain-dig#readme")
-    static let privacyPolicy = url("https://zerolabs.sh/domaindig/privacy-policy/")
+    static let sourceCode = url("https://github.com/krazywarez/domain-dig")
+    static let documentation = url("https://github.com/krazywarez/domain-dig#readme")
+    static let privacyPolicy = url("https://krz.sh/domaindig/privacy-policy/")
     static let supportEmail = "root@krz.sh"
 
     static var appStoreListing: URL { url("https://apps.apple.com/app/id\(appStoreID)") }

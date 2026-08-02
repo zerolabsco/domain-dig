@@ -1,12 +1,12 @@
 # DomainDig
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=zerolabsco_domain-dig&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=zerolabsco_domain-dig)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=krz_domain-dig&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=krz_domain-dig)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=krz_domain-dig&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=krz_domain-dig)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=krz_domain-dig&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=krz_domain-dig)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=krz_domain-dig&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=krz_domain-dig)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[![App Store Badge](https://zerolabs.sh/storebutton.svg)](https://apps.apple.com/us/app/domaindig/id6760368004)
+[![App Store Badge](https://krz.sh/storebutton.svg)](https://apps.apple.com/us/app/domaindig/id6760368004)
 
 DomainDig is a local-first iOS domain inspection toolkit for DNS, web, ownership, monitoring, reporting, and audit workflows. The app gathers a point-in-time domain snapshot, normalizes it into a canonical `DomainReport`, and keeps user data on device unless the user exports, shares, or syncs it.
 
@@ -39,7 +39,7 @@ Network inspection requests are made only to perform the requested domain checks
 
 1. Clone the repository.
    ```sh
-   git clone https://github.com/zerolabsco/domain-dig.git
+   git clone https://github.com/krazywarez/domain-dig.git
    ```
 2. Open `DomainDig.xcodeproj` in Xcode.
 3. Select the `DomainDig` scheme.

@@ -14,7 +14,7 @@
 If you discover a security vulnerability, **do not open a public issue**.
 Instead:
 
-1. **Email** your report to [security@zerolabs.sh](mailto:security@zerolabs.sh).
+1. **Email** your report to [security@krz.sh](mailto:security@krz.sh).
   Include:
   - A detailed description of the vulnerability
   - Steps to reproduce
