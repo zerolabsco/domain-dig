@@ -77,7 +77,7 @@ backup export/import). Its contract:
 4. Add a `DataMigrationServiceTests` case that seeds a pre-`N` fixture, runs
    `migrateIfNeeded`, and asserts the upgrade plus the version stamp.
 5. If the change also alters the export shape, bump
-   `DomainDigBackup.currentSchemaVersion` and update `Docs/local-api.md` /
+   `DomainDigBackup.currentSchemaVersion` and update `Docs/local-api.txt` /
    backup validation as needed.
 
 ## Backup import compatibility

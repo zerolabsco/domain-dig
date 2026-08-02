@@ -76,14 +76,14 @@ The app remains local-first. Purchase and entitlement code is local app infrastr
 - `DomainReportExporter`
 - `LocalAPIModels`
 
-`v5.0.0` stabilized this contract: `LocalAPIContract` is the single source of truth for the `v1` wire version and JSON encoder, the response envelope and payloads are documented, and the shape is regression-locked by `LocalAPIContractTests`. See [local-api.md](local-api.md) for the endpoint and compatibility reference, and [data-migration.md](data-migration.md) for how the persisted store is versioned across app updates.
+`v5.0.0` stabilized this contract: `LocalAPIContract` is the single source of truth for the `v1` wire version and JSON encoder, the response envelope and payloads are documented, and the shape is regression-locked by `LocalAPIContractTests`. See [local-api.txt](local-api.txt) for the endpoint and compatibility reference, and [data-migration.txt](data-migration.txt) for how the persisted store is versioned across app updates.
 
 ## Testing
 
 Two test targets run from the `DomainDig` scheme's test action:
 
 - `DomainDigTests` — unit coverage of the deterministic core: `DomainReportBuilder`, `DomainReportExporter`, `DiffService`, `DomainDataPortabilityService` (merge/replace dedup), the store-migration runner, and the Local API contract. `SnapshotFixture` builds the deep `LookupSnapshot`/`DomainReport` models through the real builder so tests construct inputs without wiring every field.
-- `DomainDigUITests` — Apple's `performAccessibilityAudit()` over every primary screen at default and largest Dynamic Type, plus metadata and screenshot assertions. See [ACCESSIBILITY.md](ACCESSIBILITY.md).
+- `DomainDigUITests` — Apple's `performAccessibilityAudit()` over every primary screen at default and largest Dynamic Type, plus metadata and screenshot assertions. See [ACCESSIBILITY.txt](ACCESSIBILITY.txt).
 
 A plain `xcodebuild test` (and CI) runs both. The unit net went in first in `v5.0.0` and is what made the god-file decomposition safe to attempt.
 

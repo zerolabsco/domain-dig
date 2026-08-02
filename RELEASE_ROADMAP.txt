@@ -280,14 +280,14 @@ test net.
 - **Local API `v1` contract stabilized.** `LocalAPIContract` is the single source
   of truth for the wire version and JSON encoder; the response envelope and every
   payload are promoted to a first-class, documented contract.
-  `Docs/local-api.md` documents each endpoint, the envelope, the encoding
+  `Docs/local-api.txt` documents each endpoint, the envelope, the encoding
   conventions (notably: absent optionals are omitted, not null), and a
   semantic-version compatibility policy. 16 golden structure tests pin the JSON
   shape so a renamed/removed field fails CI. (#45)
 - **Versioned store-migration policy** for persisted snapshots, backups, audits,
   workflows, and settings. `DataMigrationService` became a forward-only,
   idempotent, never-downgrades runner keyed by an integer store schema version,
-  replacing the one-shot boolean marker. `Docs/data-migration.md` documents the
+  replacing the one-shot boolean marker. `Docs/data-migration.txt` documents the
   policy, the two independent version lines (on-device store vs. backup export),
   and when to use lenient decoding vs. a migration step; legacy-fixture tests
   cover it. (#46)
