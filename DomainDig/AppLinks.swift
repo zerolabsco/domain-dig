@@ -12,7 +12,7 @@ enum AppLinks {
     static let sourceCode = url("https://github.com/zerolabsco/domain-dig")
     static let documentation = url("https://github.com/zerolabsco/domain-dig#readme")
     static let privacyPolicy = url("https://zerolabs.sh/domaindig/privacy-policy/")
-    static let supportEmail = "hello@zerolabs.sh"
+    static let supportEmail = "root@krz.sh"
 
     static var appStoreListing: URL { url("https://apps.apple.com/app/id\(appStoreID)") }
     static var writeReview: URL { url("https://apps.apple.com/app/id\(appStoreID)?action=write-review") }

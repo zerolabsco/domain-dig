@@ -7,21 +7,21 @@ final class AppInfoTests: XCTestCase {
 
     func testMailURLEncodesSubjectAndBody() throws {
         let url = try XCTUnwrap(AppInfoView.mailURL(
-            to: "hello@zerolabs.sh",
+            to: "root@krz.sh",
             subject: "DomainDig Issue Report",
             body: "line one\nline two"
         ))
 
         XCTAssertEqual(url.scheme, "mailto")
         let string = url.absoluteString
-        XCTAssertTrue(string.hasPrefix("mailto:hello@zerolabs.sh?"))
+        XCTAssertTrue(string.hasPrefix("mailto:root@krz.sh?"))
         XCTAssertTrue(string.contains("subject=DomainDig%20Issue%20Report"))
         XCTAssertTrue(string.contains("body=line%20one%0Aline%20two"))
     }
 
     func testMailURLOmitsEmptyQueryItems() throws {
-        let url = try XCTUnwrap(AppInfoView.mailURL(to: "hello@zerolabs.sh", subject: "", body: ""))
-        XCTAssertEqual(url.absoluteString, "mailto:hello@zerolabs.sh")
+        let url = try XCTUnwrap(AppInfoView.mailURL(to: "root@krz.sh", subject: "", body: ""))
+        XCTAssertEqual(url.absoluteString, "mailto:root@krz.sh")
     }
 
     func testVersionDisplayPairsMarketingVersionAndBuild() {
