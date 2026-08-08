@@ -2144,10 +2144,16 @@ struct IPGeolocation: Codable {
     let ip: String
     let city: String?
     let region: String?
-    let country_name: String?
+    let countryName: String?
     let org: String?
     let latitude: Double?
     let longitude: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case ip, city, region
+        case countryName = "country_name"
+        case org, latitude, longitude
+    }
 }
 
 // MARK: - Ownership Models
@@ -2616,14 +2622,26 @@ struct HistoryEntry: Identifiable, Codable {
 // MARK: - Cloudflare DNS-over-HTTPS Response
 
 struct CloudflareDNSResponse: Decodable {
-    let Status: Int
-    let AD: Bool?
-    let Answer: [CloudflareDNSAnswer]?
+    let status: Int
+    let authenticatedData: Bool?
+    let answer: [CloudflareDNSAnswer]?
+
+    enum CodingKeys: String, CodingKey {
+        case status = "Status"
+        case authenticatedData = "AD"
+        case answer = "Answer"
+    }
 
     struct CloudflareDNSAnswer: Decodable {
         let name: String
         let type: Int
-        let TTL: Int
+        let ttl: Int
         let data: String
+
+        enum CodingKeys: String, CodingKey {
+            case name, type
+            case ttl = "TTL"
+            case data
+        }
     }
 }

@@ -609,10 +609,10 @@ struct DomainInspectionService {
 
     private func confidenceForGeolocation(result: IPGeolocation?) -> ConfidenceLevel {
         guard let result else { return .low }
-        if result.city != nil && result.country_name != nil && result.latitude != nil && result.longitude != nil {
+        if result.city != nil && result.countryName != nil && result.latitude != nil && result.longitude != nil {
             return .high
         }
-        if result.country_name != nil || result.org != nil {
+        if result.countryName != nil || result.org != nil {
             return .medium
         }
         return .low

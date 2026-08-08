@@ -87,7 +87,7 @@ struct DNSLookupService {
                 } else {
                     value = answer.data.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
                 }
-                return DNSRecord(value: value, ttl: answer.TTL)
+                return DNSRecord(value: value, ttl: answer.ttl)
             }
     }
 
@@ -202,8 +202,8 @@ struct DNSLookupService {
         let dnsResponse = try JSONDecoder().decode(CloudflareDNSResponse.self, from: data)
 
         return DNSLookupResponse(
-            answers: dnsResponse.Answer ?? [],
-            authenticatedData: dnsResponse.AD ?? false
+            answers: dnsResponse.answer ?? [],
+            authenticatedData: dnsResponse.authenticatedData ?? false
         )
     }
 
