@@ -3564,7 +3564,7 @@ final class DomainViewModel {
         if let org = ipGeolocation.org {
             rows.append(InfoRowViewData(label: "Org / ISP", value: org, tone: .secondary))
         }
-        let location = [ipGeolocation.city, ipGeolocation.region, ipGeolocation.country_name].compactMap { $0 }.joined(separator: ", ")
+        let location = [ipGeolocation.city, ipGeolocation.region, ipGeolocation.countryName].compactMap { $0 }.joined(separator: ", ")
         if !location.isEmpty {
             rows.append(InfoRowViewData(label: "Location", value: location, tone: .secondary))
         }

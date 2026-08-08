@@ -440,7 +440,7 @@ struct DomainReportBuilder {
             return snapshot.ipGeolocationError ?? "Unavailable"
         }
 
-        let parts = [geolocation.city, geolocation.region, geolocation.country_name]
+        let parts = [geolocation.city, geolocation.region, geolocation.countryName]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
