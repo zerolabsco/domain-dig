@@ -12,7 +12,6 @@
 		47CD3BB1AE143733A73E0E5B /* DomainReportExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D7C7D97A4006831572F468 /* DomainReportExporterTests.swift */; };
 		4F96CEB875EC3501E784CE39 /* DataMigrationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435AFB3F99D579D3D7B58279 /* DataMigrationServiceTests.swift */; };
 		81359F63C7A23454B8FA0141 /* DomainReportBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82320955416797CFE59464A /* DomainReportBuilderTests.swift */; };
-		A1B2C3D40000000000000102 /* HistoryEntryCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000101 /* HistoryEntryCodableTests.swift */; };
 		8BBFEF092F9874AE00E8E144 /* DomainInspectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF032F9874AE00E8E144 /* DomainInspectionService.swift */; };
 		8BBFEF0A2F9874AE00E8E144 /* DomainReportBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF042F9874AE00E8E144 /* DomainReportBuilder.swift */; };
 		8BBFEF0B2F9874AE00E8E144 /* DomainReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBFEF052F9874AE00E8E144 /* DomainReportExporter.swift */; };
@@ -23,6 +22,7 @@
 		8BDB00010000000000000002 /* DomainDigShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BDB00010000000000000001 /* DomainDigShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8BF9DA872F9B13FB00EF41D5 /* DomainDataPortabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */; };
 		99024E91EED2275FD80E83A9 /* AppInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499B99A1866999A38AC475F5 /* AppInfoTests.swift */; };
+		A1B2C3D40000000000000102 /* HistoryEntryCodableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000101 /* HistoryEntryCodableTests.swift */; };
 		A5AF921BC1C2E6E940CC05DC /* SnapshotFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA789D3607B55E3612E6FFA /* SnapshotFixture.swift */; };
 		C7CA9E02B0DC2708DE7A8563 /* DomainDataPortabilityServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC948A02EC0184228BC4630E /* DomainDataPortabilityServiceTests.swift */; };
 		E959C4D24DAAB3CB80D854B2 /* DiffServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A25DF2B8BB52589D49986B /* DiffServiceTests.swift */; };
@@ -95,11 +95,11 @@
 		8BDB00010000000000000001 /* DomainDigShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DomainDigShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BDC00010000000000000001 /* DomainDigUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DomainDigUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BF9DA842F9B13FB00EF41D5 /* DomainDataPortabilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityService.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000101 /* HistoryEntryCodableTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HistoryEntryCodableTests.swift; sourceTree = "<group>"; };
 		A77F7ED29E7C6669F5E61C04 /* DomainDigTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DomainDigTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC948A02EC0184228BC4630E /* DomainDataPortabilityServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainDataPortabilityServiceTests.swift; sourceTree = "<group>"; };
 		DE8B269A01CC5E593DA3DFC2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		E82320955416797CFE59464A /* DomainReportBuilderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DomainReportBuilderTests.swift; sourceTree = "<group>"; };
-		A1B2C3D40000000000000101 /* HistoryEntryCodableTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HistoryEntryCodableTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -139,8 +139,6 @@
 		};
 		8BDA0001000000000000000D /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Shared;
 			sourceTree = "<group>";
 		};
@@ -162,8 +160,6 @@
 		};
 		8BDC0001000000000000000E /* DomainDigUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = DomainDigUITests;
 			sourceTree = "<group>";
 		};
@@ -222,7 +218,6 @@
 			children = (
 				5CA789D3607B55E3612E6FFA /* SnapshotFixture.swift */,
 			);
-			name = Fixtures;
 			path = Fixtures;
 			sourceTree = "<group>";
 		};
@@ -239,7 +234,6 @@
 				499B99A1866999A38AC475F5 /* AppInfoTests.swift */,
 				A1B2C3D40000000000000101 /* HistoryEntryCodableTests.swift */,
 			);
-			name = DomainDigTests;
 			path = DomainDigTests;
 			sourceTree = "<group>";
 		};
@@ -718,7 +712,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DomainDig/DomainDig.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 47;
+				CURRENT_PROJECT_VERSION = 48;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -735,7 +729,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.0.2;
+				MARKETING_VERSION = 5.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -755,7 +749,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = DomainDig/DomainDig.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 47;
+				CURRENT_PROJECT_VERSION = 48;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -772,7 +766,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.0.2;
+				MARKETING_VERSION = 5.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -791,7 +785,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DomainDigWidget/DomainDigWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 47;
+				CURRENT_PROJECT_VERSION = 48;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DomainDigWidget/Info.plist;
@@ -802,7 +796,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.0.2;
+				MARKETING_VERSION = 5.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -820,7 +814,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DomainDigWidget/DomainDigWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 47;
+				CURRENT_PROJECT_VERSION = 48;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DomainDigWidget/Info.plist;
@@ -831,7 +825,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.0.2;
+				MARKETING_VERSION = 5.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -849,7 +843,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DomainDigShareExtension/DomainDigShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 47;
+				CURRENT_PROJECT_VERSION = 48;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DomainDigShareExtension/Info.plist;
@@ -860,7 +854,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.0.2;
+				MARKETING_VERSION = 5.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -878,7 +872,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DomainDigShareExtension/DomainDigShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 47;
+				CURRENT_PROJECT_VERSION = 48;
 				DEVELOPMENT_TEAM = ZCNAX3VL9D;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DomainDigShareExtension/Info.plist;
@@ -889,7 +883,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.0.2;
+				MARKETING_VERSION = 5.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = net.cleberg.DomainDig.DomainDigShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

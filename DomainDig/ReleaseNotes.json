@@ -1,9 +1,8 @@
 {
-  "version": "5.0.0",
+  "version": "5.0.3",
   "highlights": [
-    "The Local API now has a documented, versioned \"v1\" response contract, so scripts and automation you build against it stay stable across updates.",
-    "A versioned migration system keeps your tracked domains, history, audits, and settings safe and correctly upgraded across app versions.",
-    "A large internal cleanup: the two biggest source files were decomposed into focused units behind a new unit-test safety net, for faster and safer future releases.",
-    "App Info now links to documentation, source, privacy, and support, and can prefill an issue report with your app and device versions."
+    "Support, source, privacy, and documentation links in App Info have moved to their new home — support now reaches root@krz.sh.",
+    "Your saved inspection history is now covered by tests that pin its stored format, so history written by an earlier version keeps loading after an update.",
+    "Internal cleanup and build fixes across the inspection and monitoring code, with no change to how inspections behave."
   ]
 }
