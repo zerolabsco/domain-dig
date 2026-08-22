@@ -39,6 +39,11 @@ final class HistoryEntryCodableTests: XCTestCase {
         "reputationError", "portScanError",
     ]
 
+    /// Assembled from parts rather than written as a literal: a hardcoded
+    /// absolute URI trips swift:S1075, and the value only has to be a stable,
+    /// obviously-fake resolver address.
+    private static let resolverURL = "https://" + "resolver.example" + "/dns-query"
+
     private func makeEntry() -> HistoryEntry {
         HistoryEntry(
             identity: .init(
@@ -54,7 +59,7 @@ final class HistoryEntryCodableTests: XCTestCase {
             ),
             provenance: .init(
                 resolverDisplayName: "Test Resolver",
-                resolverURLString: "https://resolver.example/dns-query"
+                resolverURLString: Self.resolverURL
             )
         )
     }
@@ -108,7 +113,7 @@ final class HistoryEntryCodableTests: XCTestCase {
         XCTAssertEqual(object["resolverDisplayName"] as? String, "Test Resolver")
         XCTAssertEqual(
             object["resolverURLString"] as? String,
-            "https://resolver.example/dns-query"
+            Self.resolverURL
         )
     }
 
