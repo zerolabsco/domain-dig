@@ -364,7 +364,7 @@ struct DNSLookupService {
             answers.append(.init(
                 name: name,
                 type: type,
-                TTL: ttl,
+                ttl: ttl,
                 data: parsedValue
             ))
         }
