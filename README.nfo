@@ -60,7 +60,6 @@ DOCS
   local api:      Docs/local-api.txt
   data migration: Docs/data-migration.txt
   accessibility:  Docs/ACCESSIBILITY.txt
-  releases:       RELEASE_ROADMAP.txt  (v4.4.1 -> v5.0.0)
   security:       SECURITY.txt
 
 LICENSE
