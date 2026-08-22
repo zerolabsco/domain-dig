@@ -14,10 +14,29 @@ enum OwnerAccess {
 
     static var isConfigured: Bool { !ownerUserRecordID.isEmpty }
 
+    /// Whether this build actually carries its entitlements.
+    ///
+    /// Touching CloudKit without the iCloud container entitlement does not
+    /// return an error — it raises an Objective-C exception from inside a
+    /// `dispatch_once`, which Swift cannot catch, so the process aborts before
+    /// the first screen draws. That is what any unsigned build does, including
+    /// CI: `xcodebuild ... CODE_SIGNING_ALLOWED=NO` embeds no entitlements.
+    ///
+    /// The App Group is declared in the same entitlements file and is stripped
+    /// by the same mechanism, but asking for its container returns nil rather
+    /// than raising. So it answers the question CloudKit will not: does this
+    /// process have its entitlements at all?
+    private static var hasEntitlements: Bool {
+        FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: DomainDigWidgetStore.appGroupID
+        ) != nil
+    }
+
     /// The current iCloud user's record name for this app's container, or nil if
-    /// it is unavailable (not signed into iCloud, restricted, or offline before
-    /// the first fetch).
+    /// it is unavailable (not signed into iCloud, restricted, offline before the
+    /// first fetch, or running from a build without entitlements).
     static func currentUserRecordName() async -> String? {
+        guard hasEntitlements else { return nil }
         do {
             return try await CKContainer.default().userRecordID().recordName
         } catch {
