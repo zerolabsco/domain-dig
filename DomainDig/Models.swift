@@ -1267,6 +1267,86 @@ struct MonitoringPendingAlert: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+
+// Declared in an extension so the struct keeps its synthesized memberwise
+// initializer: adding one inside the body would suppress it.
+extension HistoryEntry.Inspection {
+    /// Every field here is copied straight off the snapshot, and both call
+    /// sites did exactly that. Naming it once keeps them from drifting.
+    init(snapshot: LookupSnapshot) {
+        self.init(
+            dnsSections: snapshot.dnsSections,
+            sslInfo: snapshot.sslInfo,
+            httpHeaders: snapshot.httpHeaders,
+            reachabilityResults: snapshot.reachabilityResults,
+            ipGeolocation: snapshot.ipGeolocation,
+            emailSecurity: snapshot.emailSecurity,
+            mtaSts: snapshot.emailSecurity?.mtaSts,
+            ptrRecord: snapshot.ptrRecord,
+            redirectChain: snapshot.redirectChain,
+            subdomains: snapshot.subdomains,
+            extendedSubdomains: snapshot.extendedSubdomains,
+            dnsHistory: snapshot.dnsHistory,
+            portScanResults: snapshot.portScanResults,
+            hstsPreloaded: snapshot.hstsPreloaded,
+            availabilityResult: snapshot.availabilityResult,
+            suggestions: snapshot.suggestions
+        )
+    }
+}
+
+// Declared in an extension so the struct keeps its synthesized memberwise
+// initializer: adding one inside the body would suppress it.
+extension HistoryEntry.Provenance {
+    /// Every field here is copied straight off the snapshot, and both call
+    /// sites did exactly that. Naming it once keeps them from drifting.
+    init(snapshot: LookupSnapshot) {
+        self.init(
+            appVersion: snapshot.appVersion,
+            resultSource: snapshot.resultSource,
+            dataSources: snapshot.dataSources,
+            provenanceBySection: snapshot.provenanceBySection,
+            availabilityConfidence: snapshot.availabilityConfidence,
+            ownershipConfidence: snapshot.ownershipConfidence,
+            subdomainConfidence: snapshot.subdomainConfidence,
+            emailSecurityConfidence: snapshot.emailSecurityConfidence,
+            geolocationConfidence: snapshot.geolocationConfidence,
+            isPartialSnapshot: snapshot.isPartialSnapshot,
+            validationIssues: snapshot.validationIssues,
+            resolverDisplayName: snapshot.resolverDisplayName,
+            resolverURLString: snapshot.resolverURLString,
+            totalLookupDurationMs: snapshot.totalLookupDurationMs
+        )
+    }
+}
+
+// Declared in an extension so the struct keeps its synthesized memberwise
+// initializer: adding one inside the body would suppress it.
+extension HistoryEntry.Failures {
+    /// Every field here is copied straight off the snapshot, and both call
+    /// sites did exactly that. Naming it once keeps them from drifting.
+    init(snapshot: LookupSnapshot) {
+        self.init(
+            errorDetails: snapshot.errorDetails,
+            sslError: snapshot.sslError,
+            httpHeadersError: snapshot.httpHeadersError,
+            reachabilityError: snapshot.reachabilityError,
+            ipGeolocationError: snapshot.ipGeolocationError,
+            emailSecurityError: snapshot.emailSecurityError,
+            ownershipError: snapshot.ownershipError,
+            ownershipHistoryError: snapshot.ownershipHistoryError,
+            ptrError: snapshot.ptrError,
+            redirectChainError: snapshot.redirectChainError,
+            subdomainsError: snapshot.subdomainsError,
+            extendedSubdomainsError: snapshot.extendedSubdomainsError,
+            dnsHistoryError: snapshot.dnsHistoryError,
+            domainPricingError: snapshot.domainPricingError,
+            reputationError: snapshot.reputationError,
+            portScanError: snapshot.portScanError
+        )
+    }
+}
+
 struct TrackedDomain: Codable, Identifiable, Equatable {
     let id: UUID
     var domain: String
@@ -2399,113 +2479,199 @@ struct HistoryEntry: Identifiable, Codable {
     var reputationError: String?
     var portScanError: String?
 
-    init(domain: String, timestamp: Date, trackedDomainID: UUID? = nil, note: String? = nil, dnsSections: [DNSSection],
-         sslInfo: SSLCertificateInfo?, httpHeaders: [HTTPHeader],
-         reachabilityResults: [PortReachability], ipGeolocation: IPGeolocation?,
-         emailSecurity: EmailSecurityResult? = nil, mtaSts: MTASTSResult? = nil, ownership: DomainOwnership? = nil,
-         ownershipHistory: [DomainOwnershipHistoryEvent] = [],
-         inferredProvider: InferredProviderFingerprint? = nil, priorProviders: [String] = [],
-         domainClassification: DomainClassificationSummary? = nil,
-         ownershipTransitions: [OwnershipTransitionEvent] = [],
-         hostingTransitions: [HostingTransitionEvent] = [],
-         subdomainHistory: [SubdomainHistoryEntry] = [],
-         riskSignals: [IntelligenceRiskSignal] = [],
-         intelligenceTimeline: [IntelligenceTimelineEvent] = [],
-         ptrRecord: String? = nil, redirectChain: [RedirectHop] = [], subdomains: [DiscoveredSubdomain] = [],
-         extendedSubdomains: [DiscoveredSubdomain] = [], dnsHistory: [DNSHistoryEvent] = [],
-         domainPricing: DomainPricingInsight? = nil,
-         reputation: DomainReputationResult? = nil,
-         portScanResults: [PortScanResult] = [],
-         hstsPreloaded: Bool? = nil, availabilityResult: DomainAvailabilityResult? = nil,
-         suggestions: [DomainSuggestionResult] = [], appVersion: String = "2.7.0",
-         resultSource: LookupResultSource = .snapshot, dataSources: [String] = [],
-         provenanceBySection: [LookupSectionKind: SectionProvenance] = [:],
-         availabilityConfidence: ConfidenceLevel? = nil, ownershipConfidence: ConfidenceLevel? = nil,
-         subdomainConfidence: ConfidenceLevel? = nil, emailSecurityConfidence: ConfidenceLevel? = nil,
-         geolocationConfidence: ConfidenceLevel? = nil,
-         errorDetails: [LookupSectionKind: InspectionFailure] = [:], isPartialSnapshot: Bool = false,
-         validationIssues: [String] = [], resolverDisplayName: String, resolverURLString: String,
-         totalLookupDurationMs: Int? = nil, primaryIP: String? = nil, finalRedirectURL: String? = nil,
-         tlsStatusSummary: String? = nil, emailSecuritySummary: String? = nil, httpGradeSummary: String? = nil,
-         changeSummary: DomainChangeSummary? = nil, snapshotIndex: Int? = nil, previousSnapshotID: UUID? = nil,
-         changeCount: Int = 0, severitySummary: ChangeSeverity? = nil, sslError: String? = nil, httpHeadersError: String? = nil,
-         reachabilityError: String? = nil, ipGeolocationError: String? = nil,
-         emailSecurityError: String? = nil, ownershipError: String? = nil, ownershipHistoryError: String? = nil,
-         ptrError: String? = nil, redirectChainError: String? = nil, subdomainsError: String? = nil,
-         extendedSubdomainsError: String? = nil, dnsHistoryError: String? = nil,
-         domainPricingError: String? = nil, reputationError: String? = nil, portScanError: String? = nil) {
-        self.domain = domain
-        self.timestamp = timestamp
-        self.trackedDomainID = trackedDomainID
-        self.note = note
-        self.dnsSections = dnsSections
-        self.sslInfo = sslInfo
-        self.httpHeaders = httpHeaders
-        self.reachabilityResults = reachabilityResults
-        self.ipGeolocation = ipGeolocation
-        self.emailSecurity = emailSecurity
-        self.mtaSts = mtaSts ?? emailSecurity?.mtaSts
-        self.ownership = ownership
-        self.ownershipHistory = ownershipHistory
-        self.inferredProvider = inferredProvider
-        self.priorProviders = priorProviders
-        self.domainClassification = domainClassification
-        self.ownershipTransitions = ownershipTransitions
-        self.hostingTransitions = hostingTransitions
-        self.subdomainHistory = subdomainHistory
-        self.riskSignals = riskSignals
-        self.intelligenceTimeline = intelligenceTimeline
-        self.ptrRecord = ptrRecord
-        self.redirectChain = redirectChain
-        self.subdomains = subdomains
-        self.extendedSubdomains = extendedSubdomains
-        self.dnsHistory = dnsHistory
-        self.domainPricing = domainPricing
-        self.reputation = reputation
-        self.portScanResults = portScanResults
-        self.hstsPreloaded = hstsPreloaded
-        self.availabilityResult = availabilityResult
-        self.suggestions = suggestions
-        self.appVersion = appVersion
-        self.resultSource = resultSource
-        self.dataSources = dataSources
-        self.provenanceBySection = provenanceBySection
-        self.availabilityConfidence = availabilityConfidence
-        self.ownershipConfidence = ownershipConfidence
-        self.subdomainConfidence = subdomainConfidence
-        self.emailSecurityConfidence = emailSecurityConfidence
-        self.geolocationConfidence = geolocationConfidence
-        self.errorDetails = errorDetails
-        self.isPartialSnapshot = isPartialSnapshot
-        self.validationIssues = validationIssues
-        self.resolverDisplayName = resolverDisplayName
-        self.resolverURLString = resolverURLString
-        self.totalLookupDurationMs = totalLookupDurationMs
-        self.primaryIP = primaryIP
-        self.finalRedirectURL = finalRedirectURL
-        self.tlsStatusSummary = tlsStatusSummary
-        self.emailSecuritySummary = emailSecuritySummary
-        self.httpGradeSummary = httpGradeSummary
-        self.changeSummary = changeSummary
-        self.snapshotIndex = snapshotIndex
-        self.previousSnapshotID = previousSnapshotID
-        self.changeCount = changeCount
-        self.severitySummary = severitySummary
-        self.sslError = sslError
-        self.httpHeadersError = httpHeadersError
-        self.reachabilityError = reachabilityError
-        self.ipGeolocationError = ipGeolocationError
-        self.emailSecurityError = emailSecurityError
-        self.ownershipError = ownershipError
-        self.ownershipHistoryError = ownershipHistoryError
-        self.ptrError = ptrError
-        self.redirectChainError = redirectChainError
-        self.subdomainsError = subdomainsError
-        self.extendedSubdomainsError = extendedSubdomainsError
-        self.dnsHistoryError = dnsHistoryError
-        self.domainPricingError = domainPricingError
-        self.reputationError = reputationError
-        self.portScanError = portScanError
+    // A full inspection produces 73 stored properties, and passing them as one
+    // flat argument list made a 72-parameter initializer no call site could read
+    // (SonarCloud swift:S107). They are grouped below by what they describe.
+    //
+    // The stored properties stay flat, deliberately. This type is persisted to
+    // UserDefaults and read back out of backup files, and both decode paths drop
+    // entries that will not parse rather than raising — so nesting a value would
+    // change the encoded shape and silently discard history written by an older
+    // build. These groups exist at the call boundary only; the JSON is unchanged,
+    // which HistoryEntryCodableTests pins.
+
+    /// What was inspected, and when.
+    struct Identity {
+        var domain: String
+        var timestamp: Date
+        var trackedDomainID: UUID? = nil
+        var note: String? = nil
+    }
+
+    /// The live probe results for this snapshot.
+    struct Inspection {
+        var dnsSections: [DNSSection]
+        var sslInfo: SSLCertificateInfo?
+        var httpHeaders: [HTTPHeader]
+        var reachabilityResults: [PortReachability]
+        var ipGeolocation: IPGeolocation?
+        var emailSecurity: EmailSecurityResult? = nil
+        var mtaSts: MTASTSResult? = nil
+        var ptrRecord: String? = nil
+        var redirectChain: [RedirectHop] = []
+        var subdomains: [DiscoveredSubdomain] = []
+        var extendedSubdomains: [DiscoveredSubdomain] = []
+        var dnsHistory: [DNSHistoryEvent] = []
+        var portScanResults: [PortScanResult] = []
+        var hstsPreloaded: Bool? = nil
+        var availabilityResult: DomainAvailabilityResult? = nil
+        var suggestions: [DomainSuggestionResult] = []
+
+    }
+
+    /// Who owns the domain and where it is hosted.
+    struct Registration {
+        var ownership: DomainOwnership? = nil
+        var ownershipHistory: [DomainOwnershipHistoryEvent] = []
+        var inferredProvider: InferredProviderFingerprint? = nil
+        var priorProviders: [String] = []
+        var domainClassification: DomainClassificationSummary? = nil
+        var ownershipTransitions: [OwnershipTransitionEvent] = []
+        var hostingTransitions: [HostingTransitionEvent] = []
+        var domainPricing: DomainPricingInsight? = nil
+    }
+
+    /// Derived signals rather than direct observations.
+    struct Intelligence {
+        var subdomainHistory: [SubdomainHistoryEntry] = []
+        var riskSignals: [IntelligenceRiskSignal] = []
+        var intelligenceTimeline: [IntelligenceTimelineEvent] = []
+        var reputation: DomainReputationResult? = nil
+    }
+
+    /// Where the data came from, and how much to trust it.
+    struct Provenance {
+        var appVersion: String = "2.7.0"
+        var resultSource: LookupResultSource = .snapshot
+        var dataSources: [String] = []
+        var provenanceBySection: [LookupSectionKind: SectionProvenance] = [:]
+        var availabilityConfidence: ConfidenceLevel? = nil
+        var ownershipConfidence: ConfidenceLevel? = nil
+        var subdomainConfidence: ConfidenceLevel? = nil
+        var emailSecurityConfidence: ConfidenceLevel? = nil
+        var geolocationConfidence: ConfidenceLevel? = nil
+        var isPartialSnapshot: Bool = false
+        var validationIssues: [String] = []
+        var resolverDisplayName: String
+        var resolverURLString: String
+        var totalLookupDurationMs: Int? = nil
+
+    }
+
+    /// Precomputed display values and change tracking.
+    struct Summary {
+        var primaryIP: String? = nil
+        var finalRedirectURL: String? = nil
+        var tlsStatusSummary: String? = nil
+        var emailSecuritySummary: String? = nil
+        var httpGradeSummary: String? = nil
+        var changeSummary: DomainChangeSummary? = nil
+        var snapshotIndex: Int? = nil
+        var previousSnapshotID: UUID? = nil
+        var changeCount: Int = 0
+        var severitySummary: ChangeSeverity? = nil
+    }
+
+    /// Per-section failures: a snapshot records what it could not collect.
+    struct Failures {
+        var errorDetails: [LookupSectionKind: InspectionFailure] = [:]
+        var sslError: String? = nil
+        var httpHeadersError: String? = nil
+        var reachabilityError: String? = nil
+        var ipGeolocationError: String? = nil
+        var emailSecurityError: String? = nil
+        var ownershipError: String? = nil
+        var ownershipHistoryError: String? = nil
+        var ptrError: String? = nil
+        var redirectChainError: String? = nil
+        var subdomainsError: String? = nil
+        var extendedSubdomainsError: String? = nil
+        var dnsHistoryError: String? = nil
+        var domainPricingError: String? = nil
+        var reputationError: String? = nil
+        var portScanError: String? = nil
+
+    }
+
+    init(identity: Identity,
+         inspection: Inspection,
+         registration: Registration = Registration(),
+         intelligence: Intelligence = Intelligence(),
+         provenance: Provenance,
+         summary: Summary = Summary(),
+         failures: Failures = Failures()) {
+        self.domain = identity.domain
+        self.timestamp = identity.timestamp
+        self.trackedDomainID = identity.trackedDomainID
+        self.note = identity.note
+        self.dnsSections = inspection.dnsSections
+        self.sslInfo = inspection.sslInfo
+        self.httpHeaders = inspection.httpHeaders
+        self.reachabilityResults = inspection.reachabilityResults
+        self.ipGeolocation = inspection.ipGeolocation
+        self.emailSecurity = inspection.emailSecurity
+        self.mtaSts = inspection.mtaSts ?? inspection.emailSecurity?.mtaSts
+        self.ptrRecord = inspection.ptrRecord
+        self.redirectChain = inspection.redirectChain
+        self.subdomains = inspection.subdomains
+        self.extendedSubdomains = inspection.extendedSubdomains
+        self.dnsHistory = inspection.dnsHistory
+        self.portScanResults = inspection.portScanResults
+        self.hstsPreloaded = inspection.hstsPreloaded
+        self.availabilityResult = inspection.availabilityResult
+        self.suggestions = inspection.suggestions
+        self.ownership = registration.ownership
+        self.ownershipHistory = registration.ownershipHistory
+        self.inferredProvider = registration.inferredProvider
+        self.priorProviders = registration.priorProviders
+        self.domainClassification = registration.domainClassification
+        self.ownershipTransitions = registration.ownershipTransitions
+        self.hostingTransitions = registration.hostingTransitions
+        self.domainPricing = registration.domainPricing
+        self.subdomainHistory = intelligence.subdomainHistory
+        self.riskSignals = intelligence.riskSignals
+        self.intelligenceTimeline = intelligence.intelligenceTimeline
+        self.reputation = intelligence.reputation
+        self.appVersion = provenance.appVersion
+        self.resultSource = provenance.resultSource
+        self.dataSources = provenance.dataSources
+        self.provenanceBySection = provenance.provenanceBySection
+        self.availabilityConfidence = provenance.availabilityConfidence
+        self.ownershipConfidence = provenance.ownershipConfidence
+        self.subdomainConfidence = provenance.subdomainConfidence
+        self.emailSecurityConfidence = provenance.emailSecurityConfidence
+        self.geolocationConfidence = provenance.geolocationConfidence
+        self.isPartialSnapshot = provenance.isPartialSnapshot
+        self.validationIssues = provenance.validationIssues
+        self.resolverDisplayName = provenance.resolverDisplayName
+        self.resolverURLString = provenance.resolverURLString
+        self.totalLookupDurationMs = provenance.totalLookupDurationMs
+        self.primaryIP = summary.primaryIP
+        self.finalRedirectURL = summary.finalRedirectURL
+        self.tlsStatusSummary = summary.tlsStatusSummary
+        self.emailSecuritySummary = summary.emailSecuritySummary
+        self.httpGradeSummary = summary.httpGradeSummary
+        self.changeSummary = summary.changeSummary
+        self.snapshotIndex = summary.snapshotIndex
+        self.previousSnapshotID = summary.previousSnapshotID
+        self.changeCount = summary.changeCount
+        self.severitySummary = summary.severitySummary
+        self.errorDetails = failures.errorDetails
+        self.sslError = failures.sslError
+        self.httpHeadersError = failures.httpHeadersError
+        self.reachabilityError = failures.reachabilityError
+        self.ipGeolocationError = failures.ipGeolocationError
+        self.emailSecurityError = failures.emailSecurityError
+        self.ownershipError = failures.ownershipError
+        self.ownershipHistoryError = failures.ownershipHistoryError
+        self.ptrError = failures.ptrError
+        self.redirectChainError = failures.redirectChainError
+        self.subdomainsError = failures.subdomainsError
+        self.extendedSubdomainsError = failures.extendedSubdomainsError
+        self.dnsHistoryError = failures.dnsHistoryError
+        self.domainPricingError = failures.domainPricingError
+        self.reputationError = failures.reputationError
+        self.portScanError = failures.portScanError
     }
 
     init(from decoder: Decoder) throws {
