@@ -1267,6 +1267,86 @@ struct MonitoringPendingAlert: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+
+// Declared in an extension so the struct keeps its synthesized memberwise
+// initializer: adding one inside the body would suppress it.
+extension HistoryEntry.Inspection {
+    /// Every field here is copied straight off the snapshot, and both call
+    /// sites did exactly that. Naming it once keeps them from drifting.
+    init(snapshot: LookupSnapshot) {
+        self.init(
+            dnsSections: snapshot.dnsSections,
+            sslInfo: snapshot.sslInfo,
+            httpHeaders: snapshot.httpHeaders,
+            reachabilityResults: snapshot.reachabilityResults,
+            ipGeolocation: snapshot.ipGeolocation,
+            emailSecurity: snapshot.emailSecurity,
+            mtaSts: snapshot.emailSecurity?.mtaSts,
+            ptrRecord: snapshot.ptrRecord,
+            redirectChain: snapshot.redirectChain,
+            subdomains: snapshot.subdomains,
+            extendedSubdomains: snapshot.extendedSubdomains,
+            dnsHistory: snapshot.dnsHistory,
+            portScanResults: snapshot.portScanResults,
+            hstsPreloaded: snapshot.hstsPreloaded,
+            availabilityResult: snapshot.availabilityResult,
+            suggestions: snapshot.suggestions
+        )
+    }
+}
+
+// Declared in an extension so the struct keeps its synthesized memberwise
+// initializer: adding one inside the body would suppress it.
+extension HistoryEntry.Provenance {
+    /// Every field here is copied straight off the snapshot, and both call
+    /// sites did exactly that. Naming it once keeps them from drifting.
+    init(snapshot: LookupSnapshot) {
+        self.init(
+            appVersion: snapshot.appVersion,
+            resultSource: snapshot.resultSource,
+            dataSources: snapshot.dataSources,
+            provenanceBySection: snapshot.provenanceBySection,
+            availabilityConfidence: snapshot.availabilityConfidence,
+            ownershipConfidence: snapshot.ownershipConfidence,
+            subdomainConfidence: snapshot.subdomainConfidence,
+            emailSecurityConfidence: snapshot.emailSecurityConfidence,
+            geolocationConfidence: snapshot.geolocationConfidence,
+            isPartialSnapshot: snapshot.isPartialSnapshot,
+            validationIssues: snapshot.validationIssues,
+            resolverDisplayName: snapshot.resolverDisplayName,
+            resolverURLString: snapshot.resolverURLString,
+            totalLookupDurationMs: snapshot.totalLookupDurationMs
+        )
+    }
+}
+
+// Declared in an extension so the struct keeps its synthesized memberwise
+// initializer: adding one inside the body would suppress it.
+extension HistoryEntry.Failures {
+    /// Every field here is copied straight off the snapshot, and both call
+    /// sites did exactly that. Naming it once keeps them from drifting.
+    init(snapshot: LookupSnapshot) {
+        self.init(
+            errorDetails: snapshot.errorDetails,
+            sslError: snapshot.sslError,
+            httpHeadersError: snapshot.httpHeadersError,
+            reachabilityError: snapshot.reachabilityError,
+            ipGeolocationError: snapshot.ipGeolocationError,
+            emailSecurityError: snapshot.emailSecurityError,
+            ownershipError: snapshot.ownershipError,
+            ownershipHistoryError: snapshot.ownershipHistoryError,
+            ptrError: snapshot.ptrError,
+            redirectChainError: snapshot.redirectChainError,
+            subdomainsError: snapshot.subdomainsError,
+            extendedSubdomainsError: snapshot.extendedSubdomainsError,
+            dnsHistoryError: snapshot.dnsHistoryError,
+            domainPricingError: snapshot.domainPricingError,
+            reputationError: snapshot.reputationError,
+            portScanError: snapshot.portScanError
+        )
+    }
+}
+
 struct TrackedDomain: Codable, Identifiable, Equatable {
     let id: UUID
     var domain: String
@@ -2436,6 +2516,7 @@ struct HistoryEntry: Identifiable, Codable {
         var hstsPreloaded: Bool? = nil
         var availabilityResult: DomainAvailabilityResult? = nil
         var suggestions: [DomainSuggestionResult] = []
+
     }
 
     /// Who owns the domain and where it is hosted.
@@ -2474,6 +2555,7 @@ struct HistoryEntry: Identifiable, Codable {
         var resolverDisplayName: String
         var resolverURLString: String
         var totalLookupDurationMs: Int? = nil
+
     }
 
     /// Precomputed display values and change tracking.
@@ -2508,6 +2590,7 @@ struct HistoryEntry: Identifiable, Codable {
         var domainPricingError: String? = nil
         var reputationError: String? = nil
         var portScanError: String? = nil
+
     }
 
     init(identity: Identity,

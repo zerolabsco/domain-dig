@@ -1942,24 +1942,7 @@ final class DomainViewModel {
                 trackedDomainID: trackedDomainID,
                 note: currentHistoryEntry?.note
             ),
-            inspection: HistoryEntry.Inspection(
-                dnsSections: snapshot.dnsSections,
-                sslInfo: snapshot.sslInfo,
-                httpHeaders: snapshot.httpHeaders,
-                reachabilityResults: snapshot.reachabilityResults,
-                ipGeolocation: snapshot.ipGeolocation,
-                emailSecurity: snapshot.emailSecurity,
-                mtaSts: snapshot.emailSecurity?.mtaSts,
-                ptrRecord: snapshot.ptrRecord,
-                redirectChain: snapshot.redirectChain,
-                subdomains: snapshot.subdomains,
-                extendedSubdomains: snapshot.extendedSubdomains,
-                dnsHistory: snapshot.dnsHistory,
-                portScanResults: snapshot.portScanResults,
-                hstsPreloaded: snapshot.hstsPreloaded,
-                availabilityResult: snapshot.availabilityResult,
-                suggestions: snapshot.suggestions
-            ),
+            inspection: .init(snapshot: snapshot),
             registration: HistoryEntry.Registration(
                 ownership: snapshot.ownership,
                 ownershipHistory: snapshot.ownershipHistory,
@@ -1976,22 +1959,7 @@ final class DomainViewModel {
                 intelligenceTimeline: intelligence.timelineEvents,
                 reputation: snapshot.reputation
             ),
-            provenance: HistoryEntry.Provenance(
-                appVersion: snapshot.appVersion,
-                resultSource: snapshot.resultSource,
-                dataSources: snapshot.dataSources,
-                provenanceBySection: snapshot.provenanceBySection,
-                availabilityConfidence: snapshot.availabilityConfidence,
-                ownershipConfidence: snapshot.ownershipConfidence,
-                subdomainConfidence: snapshot.subdomainConfidence,
-                emailSecurityConfidence: snapshot.emailSecurityConfidence,
-                geolocationConfidence: snapshot.geolocationConfidence,
-                isPartialSnapshot: snapshot.isPartialSnapshot,
-                validationIssues: snapshot.validationIssues,
-                resolverDisplayName: snapshot.resolverDisplayName,
-                resolverURLString: snapshot.resolverURLString,
-                totalLookupDurationMs: snapshot.totalLookupDurationMs
-            ),
+            provenance: .init(snapshot: snapshot),
             summary: HistoryEntry.Summary(
                 primaryIP: Self.primaryIPAddress(from: snapshot),
                 finalRedirectURL: Self.finalRedirectTarget(from: snapshot),
@@ -2004,24 +1972,7 @@ final class DomainViewModel {
                 changeCount: domainDiff?.changeCount ?? changeSummary?.changedSections.count ?? 0,
                 severitySummary: changeSummary?.severity
             ),
-            failures: HistoryEntry.Failures(
-                errorDetails: snapshot.errorDetails,
-                sslError: snapshot.sslError,
-                httpHeadersError: snapshot.httpHeadersError,
-                reachabilityError: snapshot.reachabilityError,
-                ipGeolocationError: snapshot.ipGeolocationError,
-                emailSecurityError: snapshot.emailSecurityError,
-                ownershipError: snapshot.ownershipError,
-                ownershipHistoryError: snapshot.ownershipHistoryError,
-                ptrError: snapshot.ptrError,
-                redirectChainError: snapshot.redirectChainError,
-                subdomainsError: snapshot.subdomainsError,
-                extendedSubdomainsError: snapshot.extendedSubdomainsError,
-                dnsHistoryError: snapshot.dnsHistoryError,
-                domainPricingError: snapshot.domainPricingError,
-                reputationError: snapshot.reputationError,
-                portScanError: snapshot.portScanError
-            )
+            failures: .init(snapshot: snapshot)
         )
 
         if updateCurrentState {
