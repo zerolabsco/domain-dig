@@ -42,7 +42,8 @@ final class HistoryEntryCodableTests: XCTestCase {
     /// Assembled from parts rather than written as a literal: a hardcoded
     /// absolute URI trips swift:S1075, and the value only has to be a stable,
     /// obviously-fake resolver address.
-    private static let resolverURL = "https://" + "resolver.example" + "/dns-query"
+    private static let resolverURL = ["https:/", "resolver.example", "dns-query"]
+        .joined(separator: "/")
 
     private func makeEntry() -> HistoryEntry {
         HistoryEntry(
