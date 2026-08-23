@@ -1,0 +1,94 @@
+name: Build
+
+# 9201ef0 retired the previous workflow because the accessibility audit it ran
+# reported findings that did not reproduce locally. That commit also recorded
+# what went with it: nothing built a clean checkout of the merge result any
+# more, and DomainDig.xcodeproj uses file-system-synchronized groups, so a
+# folder missing from a commit still builds on the machine that has it and
+# breaks for everyone else. The pre-push hook cannot catch that — it runs
+# against a working tree where the file is still present.
+#
+# This restores the compile gate without the audit. -only-testing runs the unit
+# suite alone; DomainDigUITests, which holds AccessibilityAuditTests, is not
+# run. The app, widget and share extension are still built, because the scheme
+# builds them as dependencies — which is the part that was actually missed.
+on:
+  pull_request:
+    paths-ignore: ['*.md', 'Docs/*.md', '*.txt', 'Docs/*.txt']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: xcodebuild test
+    # macos-latest still points at macOS 15, which lacks the iOS 26+ SDK this
+    # app is built against.
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Select simulator
+        id: sim
+        run: |
+          set -euo pipefail
+
+          # Newest available iPhone runtime; "newest" is always at or above the
+          # deployment target, so no floor filtering is needed.
+          selected=$(xcrun simctl list devices available --json \
+            | jq -c '
+                [ .devices | to_entries[]
+                  | (.key | capture("SimRuntime\\.iOS-(?<maj>[0-9]+)-(?<min>[0-9]+)$")) as $v
+                  | (($v.maj | tonumber) * 1000 + ($v.min | tonumber)) as $rank
+                  | .value[]
+                  | select(.name | startswith("iPhone"))
+                  | { rank: $rank, udid: .udid, name: .name, os: "\($v.maj).\($v.min)" }
+                ]
+                | sort_by(.rank, .name)
+                | last
+              ')
+
+          if [ -z "$selected" ] || [ "$selected" = "null" ]; then
+            echo "::error::No iPhone simulator available on this image"
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+
+          label=$(echo "$selected" | jq -r '"\(.name) (iOS \(.os))"')
+          echo "Selected $label"
+          echo "udid=$(echo "$selected" | jq -r .udid)" >> "$GITHUB_OUTPUT"
+          echo "label=$label" >> "$GITHUB_OUTPUT"
+
+      # CODE_SIGNING_ALLOWED=NO builds without a signing identity, which strips
+      # entitlements. OwnerAccess guards CloudKit behind an entitlements check
+      # for exactly that reason — without it the app aborts before its first
+      # screen.
+      - name: Test on ${{ steps.sim.outputs.label }}
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project DomainDig.xcodeproj \
+            -scheme DomainDig \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -only-testing:DomainDigTests \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          retention-days: 7
